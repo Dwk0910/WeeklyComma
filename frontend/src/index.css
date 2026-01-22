@@ -5,6 +5,15 @@
     src: url("./assets/fonts/suite.woff2");
 }
 
+@font-face {
+    font-family: "batang";
+    src: url("./assets/fonts/batang.woff2");
+}
+
 .font-suite {
     font-family: "suite", monospace;
+}
+
+.font-batang {
+    font-family: "batang", monospace;
 }
