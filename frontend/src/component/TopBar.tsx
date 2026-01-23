@@ -14,15 +14,6 @@ export default function TopBar() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isMenuOpened, setMenuOpen] = useState(false);
 
-    // <span className={"text-[.8rem] text-neutral-500 mt-2"}>주간쉼표란?</span>
-    // <div className={"border-l border-l-gray-400 w-1 h-3 mt-2 ml-2 mr-1"}></div>
-    // <span className={"text-[.8rem] text-neutral-500 mt-2"}>공지</span>
-    // <div className={"border-l border-l-gray-400 w-1 h-3 mt-2 ml-2 mr-1"}></div>
-    // <span className={"text-[.8rem] text-neutral-500 mt-2"}>주간추천</span>
-    // <div className={"border-l border-l-gray-400 w-1 h-3 mt-2 ml-2 mr-1"}></div>
-    // <span className={"text-[.8rem] text-neutral-500 mt-2"}>일반추천</span>
-    // <div className={"border-l border-l-gray-400 w-1 h-3 mt-2 ml-2 mr-1"}></div>
-
     return (
         <>
             <div className={"w-full flex items-center mt-10"}>
