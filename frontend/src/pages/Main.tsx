@@ -1,21 +1,41 @@
 import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { CiStar } from "react-icons/ci";
 
+import b_1 from "../assets/test/1.jpg";
+import ad_1 from "../assets/test/ad_1.png";
+
 export default function Main() {
     return (
         <div className={"mx-5"}>
             <div className={"flex mt-5"}>
                 <div className={"flex flex-col"}>
-                    <div className={"w-215 h-10 border border-gray-300 rounded-lg"}>
-                        {"<<중요 공지>>"}
+                    <div className={"w-215 h-10 flex items-center border-b border-gray-200 pb-2"}>
+                        <span
+                            className={
+                                "w-15 h-8 flex items-center rounded-lg justify-center bg-red-400 text-white font-suite"
+                            }
+                        >
+                            공지
+                        </span>
+                        <span className={"font-suite ml-3 font-bold text-[1.1rem]"}>
+                            공지 제목 입력
+                        </span>
                     </div>
-                    <div className={"w-215 h-100 border border-gray-300 rounded-lg mt-5"}>
-                        {"<< 배너를 여기에 >>"}
+                    <div className={"w-215 h-100 rounded-lg mt-5 overflow-hidden"}>
+                        {/*{"<< 배너를 여기에 >>"}*/}
+                        <img src={b_1} alt={"banner"} className={"w-full h-full"} />
                     </div>
                 </div>
                 <div className={"flex flex-col ml-10"}>
-                    <div className={"border border-gray-300 rounded-lg w-63 h-75"}>광고1</div>
-                    <div className={"w-63 h-30 mt-10 border border-gray-300 rounded-lg"}>광고2</div>
+                    <div className={"rounded-lg w-63 h-75 overflow-hidden"}>
+                        {/*광고1*/}
+                        <img src={ad_1} alt={"ad_1"} className={"w-full h-full"} />
+                    </div>
+                    <div
+                        className={"w-63 h-30 mt-10 border border-gray-300 rounded-lg bg-[#14897B]"}
+                    >
+                        광고2
+                    </div>
                 </div>
             </div>
             <div className={"flex flex-col mt-15"}>
@@ -53,7 +73,7 @@ export default function Main() {
                             <IoChatbubbleEllipsesOutline />
                             <span className={"ml-2"}>책 개요</span>
                         </span>
-                        <div className={"text-[1.02rem] mt-1 text-neutral-500 font-batang"}>
+                        <div className={"text-[1.02rem] mt-1 font-batang font-bold"}>
                             초반부터 꼼꼼히 읽으면 충격적인 반전이 기다리고 있..............
                             <br />
                             예상치 못한 전개가 독자의 마음을 사로잡을 책
