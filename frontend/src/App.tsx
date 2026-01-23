@@ -9,18 +9,20 @@ import Main from "./pages/Main.tsx";
 export default function App() {
     return (
         <>
-            <div className={"w-full flex relative flex-col items-center"}>
+            <div className={"w-full relative flex flex-col mx-auto"}>
                 <div className={"w-full absolute bg-gray-200 h-10 z-0"} />
-                <div className={"w-300 z-10"}>
-                    <PreTopBar />
-                    <TopBar />
-                    <Routes>
-                        <Route index element={<Main />} />
-                    </Routes>
-                </div>
-                <div className={"w-full border-t border-gray-400 mt-15"} />
-                <div className={"w-300 z-10"}>
-                    <Footer />
+                <div className={"w-300 mx-auto z-10"}>
+                    <div className={"w-300"}>
+                        <PreTopBar />
+                        <TopBar />
+                        <Routes>
+                            <Route index element={<Main />} />
+                        </Routes>
+                    </div>
+                    <div className={"w-full border-t border-gray-400 mt-15"} />
+                    <div className={"w-300 z-10"}>
+                        <Footer />
+                    </div>
                 </div>
             </div>
         </>

@@ -5,17 +5,21 @@ export default function Main() {
     return (
         <div className={"mx-5"}>
             <div className={"flex mt-5"}>
-                <div className={"w-215 h-100 border border-gray-300 rounded-lg"}>
-                    {"<< 배너를 여기에 >>"}
+                <div className={"flex flex-col"}>
+                    <div className={"w-215 h-10 border border-gray-300 rounded-lg"}>
+                        {"<<중요 공지>>"}
+                    </div>
+                    <div className={"w-215 h-100 border border-gray-300 rounded-lg mt-5"}>
+                        {"<< 배너를 여기에 >>"}
+                    </div>
                 </div>
-                <div className={"border border-gray-300 rounded-lg w-63 h-100 ml-10"}>광고1</div>
+                <div className={"flex flex-col ml-10"}>
+                    <div className={"border border-gray-300 rounded-lg w-63 h-75"}>광고1</div>
+                    <div className={"w-63 h-30 mt-10 border border-gray-300 rounded-lg"}>광고2</div>
+                </div>
             </div>
-            <div className={"flex mt-10"}>
-                <div className={"w-220 h-20"}>여기다가뭘넣으면좋을까</div>
-                <div className={"ml-5 w-63 h-20 border border-gray-300 rounded-lg"}>광고2</div>
-            </div>
-            <div className={"flex flex-col"}>
-                <div className={"flex items-end mt-5 text-2xl"}>
+            <div className={"flex flex-col mt-15"}>
+                <div className={"flex items-end text-2xl"}>
                     <span className={"font-suite w-31"}>2026년 1월</span>
                     <span className={"font-suite w-62 text-3xl"}>
                         <span className={"font-bold pr-3"}>4주차</span>
@@ -56,7 +60,7 @@ export default function Main() {
                         </div>
                         <div className={"relative text-[1.02rem] mt-2"}>
                             <div
-                                className={"absolute w-200 h-45 flex justify-center items-end"}
+                                className={"absolute w-200 h-45 flex justify-center items-end z-1"}
                                 style={{
                                     background:
                                         "linear-gradient(0deg,rgba(255, 255, 255, 1) 0%, rgba(0, 61, 37, 0) 100%)"
@@ -66,19 +70,25 @@ export default function Main() {
                                     전체 글 보기
                                 </span>
                             </div>
-                            이 책은 논리적인 헌신을 통해 사랑의 깊이를 탐구합니다.
-                            <br />
-                            주인공의 철저한 계획과 헌신은 독자에게 강렬한 인상을 남깁니다.
-                            <br />
-                            Lorem Ipsum is simply dummy text of the printing and typesetting
-                            industry.
-                            <br />
-                            Lorem Ipsum has been the industry's standard dummy text ever since the
-                            1500s, when an unknown printer took a galley of type and scrambled it to
-                            make a type specimen book. It has survived not only five centuries, but
-                            also the leap into electronic typesetting, remaining essentially
-                            unchanged. It was popularised in the 1960s with the release of
-                            Letrasetalso the leap into electronic typesetting,
+                            <span className={"font-bold flex items-center text-green-600"}>
+                                <IoChatbubbleEllipsesOutline />
+                                <span className={"ml-2"}>쉼표지기의 추천</span>
+                            </span>
+                            <div className={"mt-1 overflow-hidden h-37.5 z-0"}>
+                                이 책은 논리적인 헌신을 통해 사랑의 깊이를 탐구합니다.
+                                <br />
+                                주인공의 철저한 계획과 헌신은 독자에게 강렬한 인상을 남깁니다.
+                                <br />
+                                Lorem Ipsum is simply dummy text of the printing and typesetting
+                                industry.
+                                <br />
+                                Lorem Ipsum has been the industry's standard dummy text ever since
+                                the 1500s, when an unknown printer took a galley of type and
+                                scrambled it to make a type specimen book. It has survived not only
+                                five centuries, but also the leap into electronic typesetting,
+                                typesetting, 안녕하세요 반갑습니다 안녕하세요 the leap into
+                                안녕하세요 반갑습니다 안녕하세요 반낙습ㄴ이ㅏ미ㅏㄴ럼ㄴ이ㅏ럼ㄴㅇ리
+                            </div>
                         </div>
                     </div>
                 </div>
