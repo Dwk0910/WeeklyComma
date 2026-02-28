@@ -1,6 +1,7 @@
 import axios from "axios";
+
 import { Routes, Route } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import PreTopBar from "./component/PreTopBar";
 import TopBar from "./component/TopBar";
@@ -8,7 +9,9 @@ import Footer from "./component/Footer.tsx";
 
 import Main from "./pages/Main.tsx";
 
-export const BACKEND_ADDRESS = import.meta.env.VITE_API_BACKEND_ADDRESS;
+export const BACKEND_ADDRESS =
+    (import.meta.env.VITE_API_BACKEND_PROTOCOL == "ns" ? "http://" : "https://") +
+    import.meta.env.VITE_API_BACKEND_ADDRESS;
 
 export default function App() {
     const [backendErr, setBackendErr] = useState<{
@@ -20,13 +23,22 @@ export default function App() {
     });
 
     // Backend server check
-    (async () => {
-        await axios(BACKEND_ADDRESS + "/health")
-            .then((res) => setBackendErr((prev) => ({ ...prev, error: res.data != "OK" })))
-            .catch((err) => setBackendErr({ error: true, info: err.toString() }));
-    })();
+    useEffect(() => {
+        (async () =>
+            await axios.get(BACKEND_ADDRESS + "/health").catch((res) => {
+                if (res.data != "OK") {
+                    setBackendErr((_) => ({
+                        error: true,
+                        info:
+                            res.status == 200
+                                ? `Backend server responded unexpectedly. ${res.data}`
+                                : res.toString()
+                    }));
+                }
+            }))();
+    }, []);
 
-    return !backendErr ? (
+    return !backendErr.error ? (
         <>
             <div className={"w-full relative flex flex-col"}>
                 <div className={"w-full absolute bg-gray-200 h-10 z-0"} />
@@ -47,7 +59,7 @@ export default function App() {
         </>
     ) : (
         <>
-            <div className={"w-full h-screen flex justify-center items-center"}>
+            <div className={"w-screen h-screen flex justify-center items-center"}>
                 <div
                     className={
                         "w-150 h-100 border border-gray-400 rounded-xs flex flex-col font-suite"
@@ -63,7 +75,7 @@ export default function App() {
                         <div className={"mt-2"}>오류가 지속되면 관리자에게 문의 바랍니다.</div>
                     </div>
                     <div className={"mx-7 mt-5 mb-1 border-b border-b-gray-400"} />
-                    <div className={"font-mono ml-7"}>
+                    <div className={"font-mono ml-7 overflow-y-scroll mb-7"}>
                         ERROR INFO
                         <br />
                         {backendErr.info}
