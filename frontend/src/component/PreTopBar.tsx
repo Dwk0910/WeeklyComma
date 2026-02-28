@@ -22,8 +22,8 @@ export default function PreTopBar() {
             </div>
             <div className={"flex items-center"}>
                 <span
-                    className={"text-[.8rem] text-neutral-500 mt-2"}
-                    onClick={() => window.location.assign("https://github.com/Dwk0910/WeeklyComma")}
+                    className={"text-[.8rem] text-neutral-500 mt-2 cursor-pointer"}
+                    onClick={() => window.open("https://github.com/Dwk0910/WeeklyComma")}
                 >
                     GitHub
                 </span>
