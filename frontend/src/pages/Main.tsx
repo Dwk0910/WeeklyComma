@@ -62,7 +62,7 @@ export default function Main() {
                             "flex items-center justify-center font-bold w-20 h-5 text-center text-white"
                         }
                     >
-                        <span>상급</span>
+                        <span className={"font-suite"}>상급</span>
                     </div>
                     <span className={"font-bold text-[2rem]"}>용의자 X의 헌신</span>
                     <span className={"font-bold text-[1.4rem] ml-0.75 -mt-1.25 text-neutral-400"}>
@@ -70,8 +70,8 @@ export default function Main() {
                     </span>
                     <div className={"ml-1 mt-3 w-200 h-70"}>
                         <span className={"font-bold flex items-center text-green-600"}>
-                            <IoChatbubbleEllipsesOutline />
-                            <span className={"ml-2"}>책 개요</span>
+                            <IoChatbubbleEllipsesOutline className={"mb-0.5"} />
+                            <span className={"font-seoulnamsan ml-2"}>책 개요</span>
                         </span>
                         <div className={"text-[1.02rem] mt-1 font-batang font-bold"}>
                             초반부터 꼼꼼히 읽으면 충격적인 반전이 기다리고 있..............
@@ -91,8 +91,8 @@ export default function Main() {
                                 </span>
                             </div>
                             <span className={"font-bold flex items-center text-green-600"}>
-                                <IoChatbubbleEllipsesOutline />
-                                <span className={"ml-2"}>쉼표지기의 추천</span>
+                                <IoChatbubbleEllipsesOutline className={"mb-0.5"} />
+                                <span className={"ml-2 font-seoulnamsan"}>쉼표지기의 추천</span>
                             </span>
                             <div className={"mt-1 overflow-hidden h-37.5 z-0"}>
                                 이 책은 논리적인 헌신을 통해 사랑의 깊이를 탐구합니다.
