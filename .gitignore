@@ -64,3 +64,4 @@ backend/.vscode/
 
 ### Mac OS ###
 backend/.DS_Store
+frontend/.env
