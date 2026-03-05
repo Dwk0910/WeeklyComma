@@ -1,4 +1,7 @@
 import { clsx } from "clsx";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
+import LoginButton from "./LoginButton";
 
 export default function PreTopBar() {
     return (
@@ -12,13 +15,15 @@ export default function PreTopBar() {
                 <span className={"text-[.75rem] text-neutral-500 mt-2"}>
                     주간쉼표에 오신 여러분들을 환영합니다
                 </span>
-                <div
-                    className={
-                        "text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"
-                    }
-                >
-                    큐레이터 로그인
-                </div>
+                <GoogleOAuthProvider clientId={import.meta.env.VITE_API_OAUTH_CLIENT_ID}>
+                    <LoginButton
+                        backend={
+                            (import.meta.env.VITE_API_BACKEND_PROTOCOL == "ns"
+                                ? "http://"
+                                : "https://") + import.meta.env.VITE_API_BACKEND_ADDRESS
+                        }
+                    />
+                </GoogleOAuthProvider>
             </div>
             <div className={"flex items-center"}>
                 <span
