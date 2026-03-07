@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+@font-face {
+    font-family: "suite";
+    src: url("./assets/fonts/suite.woff2");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "batang";
+    src: url("./assets/fonts/batang.woff2");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SeoulNamsanM";
+    src: url("./assets/fonts/SeoulNamsanM.woff2");
+    font-display: swap;
+}
+
+.font-suite {
+    font-family: "suite", monospace;
+}
+
+.font-batang {
+    font-family: "batang", monospace;
+}
+
+.font-seoulnamsan {
+    font-family: "seoulnamsan", monospace;
+}
