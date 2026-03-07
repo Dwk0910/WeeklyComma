@@ -5,14 +5,16 @@ import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.neatore.weeklycomma.service.UserVerifyService;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.file.Path;
@@ -48,8 +50,14 @@ public class WeeklyComma {
 
 @RestController
 class Controller {
+    private final UserVerifyService uvs;
+
+    public Controller(UserVerifyService uvs) {
+        this.uvs = uvs;
+    }
+
     @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("OK");
+    public ResponseEntity<String> health(@RequestParam(required = false) String sessionId) {
+        return uvs.verify(sessionId) ? ResponseEntity.ok("OK_LOGIN") : ResponseEntity.ok("OK");
     }
 }

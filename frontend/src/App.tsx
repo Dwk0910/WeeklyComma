@@ -8,12 +8,16 @@ import TopBar from "./component/TopBar";
 import Footer from "./component/Footer.tsx";
 
 import Main from "./pages/Main.tsx";
+import AuthCallBack from "./pages/redirect/AuthCallBack.tsx";
 
 export const BACKEND_ADDRESS =
     (import.meta.env.VITE_API_BACKEND_PROTOCOL == "ns" ? "http://" : "https://") +
-    import.meta.env.VITE_API_BACKEND_ADDRESS;
+    import.meta.env.VITE_API_BACKEND_ADDRESS +
+    "/";
 
 export default function App() {
+    const token = localStorage.getItem("wca_token");
+
     const [backendErr, setBackendErr] = useState<{
         error: boolean;
         info: string | null;
@@ -24,19 +28,25 @@ export default function App() {
 
     // Backend server check
     useEffect(() => {
-        (async () =>
-            await axios.get(BACKEND_ADDRESS + "/health").catch((res) => {
-                if (res.data != "OK") {
-                    setBackendErr((_) => ({
-                        error: true,
-                        info:
-                            res.status == 200
-                                ? `Backend server responded unexpectedly. ${res.data}`
-                                : res.toString()
-                    }));
-                }
-            }))();
-    }, []);
+        // Server health check
+        // Verify localstorage token is valid if it already exists
+        (async () => {
+            await axios
+                .get(BACKEND_ADDRESS + "health", { params: { sessionId: token } })
+                .then((res) => {
+                    if (res.data != "OK" && res.data != "OK_LOGIN") {
+                        setBackendErr((_) => ({
+                            error: true,
+                            info:
+                                res.status == 200
+                                    ? `Backend server responded unexpectedly: ${res.data}`
+                                    : res.toString()
+                        }));
+                    } else if (res.data == "OK_LOGIN") return;
+                    else if (res.data == "OK") localStorage.removeItem("wca_token");
+                });
+        })();
+    }, [token]);
 
     return !backendErr.error ? (
         <>
@@ -44,13 +54,14 @@ export default function App() {
                 <div className={"w-full absolute bg-gray-200 h-10 z-0"} />
                 <div className={"w-300 mx-auto z-10"}>
                     <div className={"w-300"}>
-                        <PreTopBar />
+                        <PreTopBar login={token != null} />
                         <TopBar />
                         <Routes>
                             <Route index element={<Main />} />
+                            <Route path={"/authcallback"} element={<AuthCallBack />} />
                         </Routes>
                     </div>
-                    <div className={"w-full border-t border-gray-400 mt-15"} />
+                    <div className={"w-full border-t border-gray-400"} />
                     <div className={"w-300 z-10"}>
                         <Footer />
                     </div>
