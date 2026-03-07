@@ -6,8 +6,8 @@ import ad_1 from "../assets/test/ad_1.png";
 
 export default function Main() {
     return (
-        <div className={"mx-5"}>
-            <div className={"flex mt-5"}>
+        <div className={"mx-5 my-5"}>
+            <div className={"flex"}>
                 <div className={"flex flex-col"}>
                     <div className={"w-215 h-10 flex items-center border-b border-gray-200 pb-2"}>
                         <span
