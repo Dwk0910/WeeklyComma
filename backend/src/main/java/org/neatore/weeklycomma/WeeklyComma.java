@@ -1,11 +1,12 @@
 package org.neatore.weeklycomma;
 
+import org.neatore.weeklycomma.service.UserVerifyService;
+
 import jakarta.annotation.PostConstruct;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import org.neatore.weeklycomma.service.UserVerifyService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.file.Path;
@@ -57,7 +58,7 @@ class Controller {
     }
 
     @GetMapping("/health")
-    public ResponseEntity<String> health(@RequestParam(required = false) String sessionId) {
+    public ResponseEntity<String> health(@RequestHeader(name = "X-Client-Session-ID", required = false) String sessionId) {
         return uvs.verify(sessionId) ? ResponseEntity.ok("OK_LOGIN") : ResponseEntity.ok("OK");
     }
 }

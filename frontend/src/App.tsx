@@ -32,9 +32,16 @@ export default function App() {
         // Verify localstorage token is valid if it already exists
         (async () => {
             await axios
-                .get(BACKEND_ADDRESS + "health", { params: { sessionId: token } })
+                .get(BACKEND_ADDRESS + "health", { headers: { "X-Client-Session-ID": token } })
                 .then((res) => {
-                    if (res.data != "OK" && res.data != "OK_LOGIN") {
+                    const token = localStorage.getItem("wca_token");
+                    if (res.data == "OK") {
+                        if (token) {
+                            localStorage.removeItem("wca_token");
+                            window.location.reload();
+                        }
+                    } else if (res.data == "OK_LOGIN") return;
+                    else {
                         setBackendErr((_) => ({
                             error: true,
                             info:
@@ -42,8 +49,13 @@ export default function App() {
                                     ? `Backend server responded unexpectedly: ${res.data}`
                                     : res.toString()
                         }));
-                    } else if (res.data == "OK_LOGIN") return;
-                    else if (res.data == "OK") localStorage.removeItem("wca_token");
+                    }
+                })
+                .catch((err) => {
+                    setBackendErr({
+                        error: true,
+                        info: err.toString()
+                    });
                 });
         })();
     }, [token]);
