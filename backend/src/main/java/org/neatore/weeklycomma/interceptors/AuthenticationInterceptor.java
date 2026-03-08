@@ -8,6 +8,7 @@ import org.neatore.weeklycomma.service.UserVerifyService;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -24,6 +25,9 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) {
+        // OPTION requests are preflight requests, and should be allowed to pass through without authentication
+        if (CorsUtils.isPreFlightRequest(request)) return true;
+
         HandlerMethod hm = (HandlerMethod) handler;
 
         if (AnnotationUtils.findAnnotation(hm.getMethod(), RequiresAuthorization.class) != null || AnnotationUtils.findAnnotation(hm.getBean().getClass(), RequiresAuthorization.class) != null) {
