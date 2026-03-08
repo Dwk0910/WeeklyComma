@@ -7,7 +7,10 @@ import PreTopBar from "./component/PreTopBar";
 import TopBar from "./component/TopBar";
 import Footer from "./component/Footer.tsx";
 
+// Router pages
 import Main from "./pages/Main.tsx";
+import Management from "./pages/admin/Management.tsx";
+
 import AuthCallBack from "./pages/redirect/AuthCallBack.tsx";
 
 export const BACKEND_ADDRESS =
@@ -60,17 +63,20 @@ export default function App() {
         })();
     }, [token]);
 
+    const login = token != null;
+
     return !backendErr.error ? (
         <>
             <div className={"w-full relative flex flex-col"}>
                 <div className={"w-full absolute bg-gray-200 h-10 z-0"} />
                 <div className={"w-300 mx-auto z-10"}>
                     <div className={"w-300"}>
-                        <PreTopBar login={token != null} />
-                        <TopBar />
+                        <PreTopBar login={login} />
+                        <TopBar login={login} />
                         <Routes>
                             <Route index element={<Main />} />
                             <Route path={"/authcallback"} element={<AuthCallBack />} />
+                            <Route path={"/management/*"} element={<Management />} />
                         </Routes>
                     </div>
                     <div className={"w-full border-t border-gray-400"} />
