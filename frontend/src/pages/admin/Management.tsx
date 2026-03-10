@@ -98,7 +98,7 @@ export default function Management() {
                         </div>
                     ))}
                 </div>
-                <div className={"flex-6/7 h-170"}>
+                <div className={"flex-6/7 h-170 overflow-y-scroll"}>
                     {menu.map(
                         (item) =>
                             item.name == currentMenu &&
