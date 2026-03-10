@@ -1,6 +1,7 @@
 import axios from "axios";
 import { BACKEND_ADDRESS } from "../../App";
 import { MdOutlineFileUpload } from "react-icons/md";
+import SubmitButton from "./lib_component/SubmitButton.tsx";
 
 export default function ManageMainPage() {
     return (
@@ -97,37 +98,25 @@ export default function ManageMainPage() {
                         ></div>
                     </div>
                 </div>
-                <div className={"flex ml-4 my-4"}>
-                    <div
-                        className={
-                            "bg-red-700/80 w-20 h-10 text-white font-suite px-2 flex items-center justify-center rounded-sm"
-                        }
-                    >
-                        원래대로
-                    </div>
-                    <div
-                        className={
-                            "bg-green-700/80 w-30 h-10 text-white font-suite px-2 ml-4 flex items-center justify-center rounded-sm"
-                        }
-                        onClick={() => {
-                            axios
-                                .post(
-                                    BACKEND_ADDRESS + "adminsettings",
-                                    { key: "weeklybook", value: "TEST222" },
-                                    {
-                                        headers: {
-                                            "X-Client-Session-ID": localStorage.getItem("wca_token")
-                                        }
+                <SubmitButton
+                    className={"ml-4 mt-4 mb-4"}
+                    onClick_revert={() => {}}
+                    onClick_apply={() => {
+                        axios
+                            .post(
+                                BACKEND_ADDRESS + "adminsettings",
+                                { key: "weeklybook", value: "TEST" },
+                                {
+                                    headers: {
+                                        "X-Client-Session-ID": localStorage.getItem("wca_token")
                                     }
-                                )
-                                .then((res) => {
-                                    alert(res.status);
-                                });
-                        }}
-                    >
-                        변경사항 적용
-                    </div>
-                </div>
+                                }
+                            )
+                            .then((res) => {
+                                alert(res.status);
+                            });
+                    }}
+                />
             </div>
         </div>
     );
