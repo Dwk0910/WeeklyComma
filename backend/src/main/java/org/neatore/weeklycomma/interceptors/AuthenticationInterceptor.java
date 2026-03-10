@@ -1,5 +1,6 @@
 package org.neatore.weeklycomma.interceptors;
 
+import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 import org.neatore.weeklycomma.annotations.RequiresAuthorization;
@@ -16,12 +17,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Component
+@RequiredArgsConstructor
 public class AuthenticationInterceptor implements HandlerInterceptor {
     private final UserVerifyService uvs;
-
-    public AuthenticationInterceptor(UserVerifyService uvs) {
-        this.uvs = uvs;
-    }
 
     @Override
     public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) {
