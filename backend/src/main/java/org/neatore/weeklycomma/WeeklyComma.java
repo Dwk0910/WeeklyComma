@@ -36,15 +36,15 @@ public class WeeklyComma {
     }
 
     public static void main(String[] args) {
-        Path path = Path.of(System.getProperty("user.dir"), "weeklycomma.properties");
-        if (!path.toFile().exists()) {
+        Path propertiesPath = Path.of(System.getProperty("user.dir"), "weeklycomma.properties");
+        if (!propertiesPath.toFile().exists()) {
             LOGGER.fatal("weeklycomma.properties not found. Please create the file with the required configuration.");
-            LOGGER.fatal("The properties file should be located at {}", path.toString());
+            LOGGER.fatal("The properties file should be located at {}", propertiesPath.toString());
             System.exit(-1);
         }
 
         new SpringApplicationBuilder(WeeklyComma.class)
-                .properties("spring.config.import=optional:file:" + path)
+                .properties("spring.config.import=optional:file:" + propertiesPath)
                 .run(args);
     }
 }
