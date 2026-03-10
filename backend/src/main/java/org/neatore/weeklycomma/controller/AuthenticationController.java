@@ -13,18 +13,16 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.Map;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/auth")
 public class AuthenticationController {
     private final AuthService authService;
     private final UserVerifyService uvs;
-
-    public AuthenticationController(AuthService authService, UserVerifyService uvs) {
-        this.authService = authService;
-        this.uvs = uvs;
-    }
 
     @PostMapping("/addSession")
     public ResponseEntity<String> addSession(@RequestBody Map<String, Object> param) {
