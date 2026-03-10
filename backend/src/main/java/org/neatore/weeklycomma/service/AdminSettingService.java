@@ -3,8 +3,11 @@ package org.neatore.weeklycomma.service;
 import org.neatore.weeklycomma.domain.AdminSetting;
 import org.neatore.weeklycomma.repository.AdminSettingRepository;
 
+import org.springframework.stereotype.Service;
+
 import lombok.RequiredArgsConstructor;
 
+@Service
 @RequiredArgsConstructor
 public class AdminSettingService {
     private final AdminSettingRepository adminSettingRepository;
