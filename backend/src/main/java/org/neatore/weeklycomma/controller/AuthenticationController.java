@@ -9,25 +9,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/auth")
 public class AuthenticationController {
     private final AuthService authService;
     private final UserVerifyService uvs;
 
-    public AuthenticationController(AuthService authService, UserVerifyService uvs) {
-        this.authService = authService;
-        this.uvs = uvs;
-    }
-
     @PostMapping("/addSession")
-    public ResponseEntity<String> getToken(@RequestBody Map<String, Object> param) {
+    public ResponseEntity<String> addSession(@RequestBody Map<String, Object> param) {
         String redirect_uri = param.getOrDefault("redirect_uri", "").toString();
         String auth_code = param.getOrDefault("auth_code", "").toString();
         String state = param.getOrDefault("state", "").toString();
@@ -37,7 +35,7 @@ public class AuthenticationController {
     }
 
     @GetMapping("/removeSession")
-    public ResponseEntity<?> removeSession(@RequestParam String session_id) {
+    public ResponseEntity<?> removeSession(@RequestHeader(name = "X-Client-Session-ID") String session_id) {
         uvs.removeSession(session_id);
         return ResponseEntity.ok().build();
     }

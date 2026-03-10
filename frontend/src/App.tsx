@@ -7,7 +7,10 @@ import PreTopBar from "./component/PreTopBar";
 import TopBar from "./component/TopBar";
 import Footer from "./component/Footer.tsx";
 
+// Router pages
 import Main from "./pages/Main.tsx";
+import Management from "./pages/admin/Management.tsx";
+
 import AuthCallBack from "./pages/redirect/AuthCallBack.tsx";
 
 export const BACKEND_ADDRESS =
@@ -32,9 +35,16 @@ export default function App() {
         // Verify localstorage token is valid if it already exists
         (async () => {
             await axios
-                .get(BACKEND_ADDRESS + "health", { params: { sessionId: token } })
+                .get(BACKEND_ADDRESS + "health", { headers: { "X-Client-Session-ID": token } })
                 .then((res) => {
-                    if (res.data != "OK" && res.data != "OK_LOGIN") {
+                    const token = localStorage.getItem("wca_token");
+                    if (res.data == "OK") {
+                        if (token) {
+                            localStorage.removeItem("wca_token");
+                            window.location.reload();
+                        }
+                    } else if (res.data == "OK_LOGIN") return;
+                    else {
                         setBackendErr((_) => ({
                             error: true,
                             info:
@@ -42,11 +52,18 @@ export default function App() {
                                     ? `Backend server responded unexpectedly: ${res.data}`
                                     : res.toString()
                         }));
-                    } else if (res.data == "OK_LOGIN") return;
-                    else if (res.data == "OK") localStorage.removeItem("wca_token");
+                    }
+                })
+                .catch((err) => {
+                    setBackendErr({
+                        error: true,
+                        info: err.toString()
+                    });
                 });
         })();
     }, [token]);
+
+    const login = token != null;
 
     return !backendErr.error ? (
         <>
@@ -54,11 +71,12 @@ export default function App() {
                 <div className={"w-full absolute bg-gray-200 h-10 z-0"} />
                 <div className={"w-300 mx-auto z-10"}>
                     <div className={"w-300"}>
-                        <PreTopBar login={token != null} />
-                        <TopBar />
+                        <PreTopBar login={login} />
+                        <TopBar login={login} />
                         <Routes>
                             <Route index element={<Main />} />
                             <Route path={"/authcallback"} element={<AuthCallBack />} />
+                            <Route path={"/management/*"} element={<Management />} />
                         </Routes>
                     </div>
                     <div className={"w-full border-t border-gray-400"} />

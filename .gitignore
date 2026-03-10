@@ -68,3 +68,4 @@ frontend/.env
 .idea
 weeklycomma.properties
 frontend/src/.DS_Store
+data
