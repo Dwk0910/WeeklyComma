@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiresAuthorization
 @RequiredArgsConstructor
-@RequestMapping("/adminsettings")
+@RequestMapping("/admin")
 public class AdminSettingController {
     private final AdminSettingService adminSettingService;
 
