@@ -8,6 +8,7 @@ import Title from "../../component/Title.tsx";
 
 // Managment component imports
 import ManageMainPage from "./ManageMainPage.tsx";
+import ManageBoards from "./ManageBoards.tsx";
 
 export default function Management() {
     const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -30,14 +31,8 @@ export default function Management() {
             component: (key) => <ManageMainPage key={key} />
         },
         {
-            name: "공지글 작성",
-            component: (key) => {
-                return (
-                    <div key={key}>
-                        <span>공지글 작성 컴포넌트</span>
-                    </div>
-                );
-            }
+            name: "게시판 글 관리",
+            component: (key) => <ManageBoards key={key} />
         }
     ];
 
