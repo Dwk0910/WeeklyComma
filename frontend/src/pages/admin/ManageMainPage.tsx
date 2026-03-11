@@ -19,7 +19,7 @@ export default function ManageMainPage() {
                 <div className={"ml-4 font-suite text-gray-500"}>현재 정기추천중인 책</div>
                 <div
                     className={
-                        "w-120 h-25 border border-gray-300 bg-blue-300/40 rounded-sm ml-4 p-3"
+                        "w-120 h-25 border border-gray-300 bg-blue-300/25 rounded-sm ml-4 p-3"
                     }
                 >
                     <div
@@ -68,7 +68,7 @@ export default function ManageMainPage() {
                         <span>(지원 형식: jpeg, jpg, png)</span>
                     </div>
 
-                    <div className={"border-l border-gray-300 ml-7 pl-4"}>
+                    <div className={"border-l border-gray-300 ml-7 pl-4 pt-2"}>
                         <div className={"font-suite text-gray-500"}>
                             좌측 메인 배너
                             <span className={"text-[0.8rem] ml-2 text-gray-400"}>
@@ -96,6 +96,10 @@ export default function ManageMainPage() {
                         <div
                             className={"flex flex-col mt-2 border border-gray-300 w-100 h-20"}
                         ></div>
+                        <div className={"my-2 font-suite text-gray-400"}>
+                            ·&nbsp;&nbsp;우상단 배너와 우하단 배너는 등록 이미지 중 랜덤으로
+                            표출됩니다.
+                        </div>
                     </div>
                 </div>
                 <SubmitButton
