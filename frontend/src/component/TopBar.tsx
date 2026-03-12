@@ -32,6 +32,7 @@ export default function TopBar({ login }: { login: boolean }) {
                     {/*<TbTriangleFilled className={"ml-5 text-[.7rem] text-neutral-400 mt-[0.3vh]"} />*/}
                     <div className={"border-l border-l-neutral-300 h-5 mx-5"}></div>
                     <input
+                        id={"WEEKLYCOMMA_SEARCH"}
                         type={"text"}
                         placeholder={"검색어를 입력해 주세요"}
                         className={"w-120 outline-none"}
