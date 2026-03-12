@@ -1,14 +1,19 @@
+import * as React from "react";
 import { useEffect, useState, type ReactNode } from "react";
 import { BACKEND_ADDRESS } from "../../App.tsx";
 
 import { clsx } from "clsx";
 import axios from "axios";
 
+import { MdKeyboardArrowUp } from "react-icons/md";
+
 import Title from "../../component/Title.tsx";
 
 // Managment component imports
 import ManageMainPage from "./ManageMainPage.tsx";
 import ManageBoards from "./ManageBoards.tsx";
+import ManageNotifications from "./ManageBoards/ManageNotifications.tsx";
+import ManageEventBoards from "./ManageBoards/ManageEventBoards.tsx";
 
 export default function Management() {
     const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -25,6 +30,7 @@ export default function Management() {
     const menu: {
         name: string;
         component: (key: string) => ReactNode;
+        submenus?: { name: string; component: (key: string) => ReactNode }[];
     }[] = [
         {
             name: "메인 페이지 관리",
@@ -32,12 +38,30 @@ export default function Management() {
         },
         {
             name: "게시판 글 관리",
+            submenus: [
+                {
+                    name: "공지 게시판",
+                    component: (key) => {
+                        return <ManageNotifications key={key} />;
+                    }
+                },
+                {
+                    name: "이벤트 게시판",
+                    component: (key) => {
+                        return <ManageEventBoards key={key} />;
+                    }
+                }
+            ],
             component: (key) => <ManageBoards key={key} />
         }
     ];
 
     // Menu state
     const [currentMenu, setCurrentMenu] = useState<string>(menu[0].name);
+    const [subMenuOpen, setSubMenuOpen] = useState<{ open: boolean; which: string }>({
+        open: false,
+        which: ""
+    });
 
     // Authentication check
     useEffect(() => {
@@ -80,25 +104,77 @@ export default function Management() {
                 </style>
                 <div
                     className={
-                        "flex-2/7 flex flex-col border-r border-gray-300 dashboard_btn_container"
+                        "flex-2/7 flex flex-col border-r border-gray-300 dashboard_btn_container select-none"
                     }
                 >
-                    {menu.map((item) => (
-                        <div
-                            key={`dashboard_btn_container_${item.name}`}
-                            className={clsx(currentMenu == item.name && "bg-gray-200")}
-                            onClick={() => setCurrentMenu(item.name)}
-                        >
-                            {item.name}
-                        </div>
-                    ))}
+                    {menu.map((item) => {
+                        if (!item.submenus) {
+                            return (
+                                <div
+                                    key={`dashboard_btn_container_${item.name}`}
+                                    className={clsx(currentMenu == item.name && "bg-gray-200")}
+                                    onClick={() => setCurrentMenu(item.name)}
+                                >
+                                    {item.name}
+                                </div>
+                            );
+                        } else
+                            return (
+                                <React.Fragment
+                                    key={`dashboard_btn_container_collapsible_${item.name}`}
+                                >
+                                    <div
+                                        className={"flex items-center justify-between"}
+                                        onClick={() => {
+                                            setSubMenuOpen((prev) => ({
+                                                open: !prev.open,
+                                                which: item.name
+                                            }));
+                                        }}
+                                    >
+                                        {item.name}
+                                        <MdKeyboardArrowUp
+                                            className={clsx(
+                                                "transition-transform duration-200 ease-in-out",
+                                                subMenuOpen.open &&
+                                                    subMenuOpen.which == item.name &&
+                                                    "rotate-180"
+                                            )}
+                                        />
+                                    </div>
+                                    {item.submenus.map((submenu) => (
+                                        <div
+                                            key={`dashboard_submenu_btn_container_${submenu.name}`}
+                                            style={{
+                                                display:
+                                                    subMenuOpen.open &&
+                                                    subMenuOpen.which == item.name
+                                                        ? "block"
+                                                        : "none"
+                                            }}
+                                            className={clsx(
+                                                currentMenu == submenu.name && "bg-gray-200"
+                                            )}
+                                            onClick={() => {
+                                                setCurrentMenu(submenu.name);
+                                            }}
+                                        >
+                                            <span className={"ml-4"}>{submenu.name}</span>
+                                        </div>
+                                    ))}
+                                </React.Fragment>
+                            );
+                    })}
                 </div>
                 <div className={"flex-6/7 h-170 overflow-y-scroll"}>
-                    {menu.map(
-                        (item) =>
-                            item.name == currentMenu &&
-                            item.component(`dashboard_component_${item.name}`)
-                    )}
+                    {menu.map((item) => {
+                        const key = `dashboard_component_${item.name}`;
+                        if (item.name == currentMenu) return item.component(key);
+                        else if (item.submenus) {
+                            const submenu = item.submenus.find((q) => q.name == currentMenu);
+                            return submenu && submenu.component(key);
+                        }
+                    })}
                 </div>
             </div>
         </>
