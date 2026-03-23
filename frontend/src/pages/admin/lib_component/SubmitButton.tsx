@@ -1,11 +1,11 @@
 export default function SubmitButton({
+    className,
     onClick_revert,
-    onClick_apply,
-    className
+    onClick_apply
 }: {
+    className?: string;
     onClick_revert: () => void;
     onClick_apply: () => void;
-    className: string;
 }) {
     return (
         <div className={className}>
