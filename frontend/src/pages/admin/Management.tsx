@@ -11,7 +11,6 @@ import Title from "../../component/Title.tsx";
 
 // Managment component imports
 import ManageMainPage from "./ManageMainPage.tsx";
-import ManageBoards from "./ManageBoards.tsx";
 import ManageNotifications from "./ManageBoards/ManageNotifications.tsx";
 import ManageEventBoards from "./ManageBoards/ManageEventBoards.tsx";
 
@@ -29,7 +28,7 @@ export default function Management() {
     // Management menu definitions
     const menu: {
         name: string;
-        component: (key: string) => ReactNode;
+        component?: (key: string) => ReactNode;
         submenus?: { name: string; component: (key: string) => ReactNode }[];
     }[] = [
         {
@@ -51,8 +50,7 @@ export default function Management() {
                         return <ManageEventBoards key={key} />;
                     }
                 }
-            ],
-            component: (key) => <ManageBoards key={key} />
+            ]
         }
     ];
 
@@ -104,7 +102,7 @@ export default function Management() {
                 </style>
                 <div
                     className={
-                        "flex-2/7 flex flex-col border-r border-gray-300 dashboard_btn_container select-none"
+                        "flex-2/7 flex flex-col border-r border-l border-gray-300 dashboard_btn_container select-none"
                     }
                 >
                     {menu.map((item) => {
@@ -169,7 +167,7 @@ export default function Management() {
                 <div className={"flex-6/7 h-170 overflow-y-scroll"}>
                     {menu.map((item) => {
                         const key = `dashboard_component_${item.name}`;
-                        if (item.name == currentMenu) return item.component(key);
+                        if (item.name == currentMenu && item.component) return item.component(key);
                         else if (item.submenus) {
                             const submenu = item.submenus.find((q) => q.name == currentMenu);
                             return submenu && submenu.component(key);
