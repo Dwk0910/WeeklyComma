@@ -69,3 +69,4 @@ frontend/.env
 weeklycomma.properties
 frontend/src/.DS_Store
 data
+frontend/src/assets/.DS_Store
