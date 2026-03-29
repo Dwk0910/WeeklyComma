@@ -1,5 +1,6 @@
 import axios from "axios";
 import { clsx } from "clsx";
+import { BACKEND_ADDRESS } from "../App.tsx";
 
 export default function PreTopBar({ login }: { login: boolean }) {
     return (
@@ -11,9 +12,7 @@ export default function PreTopBar({ login }: { login: boolean }) {
         >
             <div className={"flex"}>
                 <span className={"text-[.75rem] text-neutral-500 mt-2"}>
-                    {login
-                        ? "쉼표지기 계정으로 로그인하셨습니다."
-                        : "주간쉼표에 오신 여러분들을 환영합니다"}
+                    {"주간쉼표에 오신 여러분들을 환영합니다"}
                 </span>
                 <LoginInteraction login={login} />
             </div>
@@ -32,14 +31,14 @@ export default function PreTopBar({ login }: { login: boolean }) {
 }
 
 const LoginInteraction = ({ login }: { login: boolean }) => {
+    console.log();
+
     return login ? (
         <div
             className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
             onClick={() => {
-                const token = localStorage.getItem("wca_token");
-                axios.get("auth/removeSession", { params: { session_id: token } }).then(() => {
-                    localStorage.removeItem("wca_token");
-                    window.location.reload();
+                axios.get(BACKEND_ADDRESS + "auth/logout").then((res) => {
+                    if (res.status === 200) window.location.reload();
                 });
             }}
         >
@@ -52,11 +51,11 @@ const LoginInteraction = ({ login }: { login: boolean }) => {
                 const client_id = import.meta.env.VITE_API_OAUTH_CLIENT_ID;
                 const state = crypto.randomUUID();
                 window.location.assign(
-                    `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauthcallback&state=${state}`
+                    `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=${window.location.origin + "/authcallback/oauth_naver"}&state=${state}`
                 );
             }}
         >
-            쉼표지기 로그인
+            유저 로그인
         </div>
     );
 };

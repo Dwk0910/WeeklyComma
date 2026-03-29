@@ -19,8 +19,7 @@ export const BACKEND_ADDRESS =
     "/";
 
 export default function App() {
-    const token = localStorage.getItem("wca_token");
-
+    const [login, setLogin] = useState<boolean>(false);
     const [backendErr, setBackendErr] = useState<{
         error: boolean;
         info: string | null;
@@ -31,19 +30,13 @@ export default function App() {
 
     // Backend server check
     useEffect(() => {
-        // Server health check
-        // Verify localstorage token is valid if it already exists
+        // Server health check & verify cookie
         (async () => {
             await axios
-                .get(BACKEND_ADDRESS + "health", { headers: { "X-Client-Session-ID": token } })
+                .get(BACKEND_ADDRESS + "health")
                 .then((res) => {
-                    const token = localStorage.getItem("wca_token");
-                    if (res.data == "OK") {
-                        if (token) {
-                            localStorage.removeItem("wca_token");
-                            window.location.reload();
-                        }
-                    } else if (res.data == "OK_LOGIN") return;
+                    if (res.data == "OK") setLogin(false);
+                    else if (res.data == "OK_LOGIN") setLogin(true);
                     else {
                         setBackendErr((_) => ({
                             error: true,
@@ -61,9 +54,7 @@ export default function App() {
                     });
                 });
         })();
-    }, [token]);
-
-    const login = token != null;
+    }, []);
 
     return !backendErr.error ? (
         <>
@@ -75,8 +66,8 @@ export default function App() {
                         <TopBar login={login} />
                         <Routes>
                             <Route index element={<Main />} />
-                            <Route path={"/authcallback"} element={<AuthCallBack />} />
-                            <Route path={"/management/*"} element={<Management />} />
+                            <Route path={"/authcallback/:oauth_type?"} element={<AuthCallBack />} />
+                            <Route path={"/management"} element={<Management />} />
                         </Routes>
                     </div>
                     <div className={"w-full border-t border-gray-400"} />
