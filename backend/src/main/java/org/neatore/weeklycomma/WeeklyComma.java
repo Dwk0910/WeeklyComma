@@ -1,25 +1,27 @@
 package org.neatore.weeklycomma;
 
-import org.neatore.weeklycomma.service.UserVerifyService;
+import org.neatore.weeklycomma.service.UserService;
 
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.file.Path;
 import java.util.Set;
+import java.util.TimeZone;
 
 @Component
 @SpringBootApplication
@@ -32,7 +34,11 @@ public class WeeklyComma {
 
     @PostConstruct
     public void init() {
+        // Insert allowed emails value into static variable
         ALLOWED_EMAILS = allowedEmailsValue;
+
+        // Set timezone to UTC(+0) (for DB)
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
     }
 
     public static void main(String[] args) {
@@ -50,15 +56,12 @@ public class WeeklyComma {
 }
 
 @RestController
+@RequiredArgsConstructor
 class Controller {
-    private final UserVerifyService uvs;
-
-    public Controller(UserVerifyService uvs) {
-        this.uvs = uvs;
-    }
+    private final UserService us;
 
     @GetMapping("/health")
-    public ResponseEntity<String> health(@RequestHeader(name = "X-Client-Session-ID", required = false) String sessionId) {
-        return uvs.verify(sessionId) ? ResponseEntity.ok("OK_LOGIN") : ResponseEntity.ok("OK");
+    public ResponseEntity<String> health(@CookieValue(name = "WCA_LOGIN", required = false) String sessionId) {
+        return (sessionId != null && us.hasToken(sessionId)) ? ResponseEntity.ok("OK_LOGIN") : ResponseEntity.ok("OK");
     }
 }
