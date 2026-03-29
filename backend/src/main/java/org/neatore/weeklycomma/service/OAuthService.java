@@ -1,17 +1,18 @@
 package org.neatore.weeklycomma.service;
 
-import org.neatore.weeklycomma.WeeklyComma;
-
 import org.json.JSONObject;
 
-import org.springframework.web.client.RestClient;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import lombok.RequiredArgsConstructor;
 
 import java.util.Objects;
 
 @Service
-public class AuthService {
-    public boolean authorize(String authCode, String redirectUri, String state) {
+@RequiredArgsConstructor
+public class OAuthService {
+    public String getEmail(String authCode, String redirectUri, String state) {
         // Access Token 구하기
         String clientId = System.getenv("OAUTH_CLIENT_ID");
         String clientKey = System.getenv("OAUTH_CLIENT_KEY");
@@ -52,9 +53,9 @@ public class AuthService {
                                     .body(String.class)
                     )).optJSONObject("response");
 
-            return WeeklyComma.ALLOWED_EMAILS.contains(userProfileResponse.optString("email"));
+            return userProfileResponse.optString("email");
         } catch (NullPointerException e) {
-            return false;
+            return null;
         }
     }
 }
