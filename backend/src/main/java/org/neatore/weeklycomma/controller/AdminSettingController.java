@@ -1,8 +1,9 @@
 package org.neatore.weeklycomma.controller;
 
+import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.AdminSettingDto;
 import org.neatore.weeklycomma.service.AdminSettingService;
-import org.neatore.weeklycomma.annotations.RequiresAuthorization;
+import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,8 +17,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequiresAuthorization
 @RequiredArgsConstructor
+@RequiresAuthentication(User.UserType.CURATOR)
 @RequestMapping("/admin")
 public class AdminSettingController {
     private final AdminSettingService adminSettingService;
