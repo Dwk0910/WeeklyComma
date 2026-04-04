@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +40,7 @@ public class PostController {
 
             if (post == null) return ResponseEntity.notFound().build();
 
-            return ResponseEntity.ok().body(new PostDto.GetRequest(post.getId(), post.getPostType(), post.getTitle(), post.getContent(), post.getAuthor(), post.getCreatedAt(), post.getModifiedAt()));
+            return ResponseEntity.ok().body(new PostDto.GetRequest(post.getId(), post.getPostType(), post.getTitle(), post.getContent(), post.getAuthor(), post.isPinned(), post.getCreatedAt().toEpochSecond(ZoneOffset.UTC), post.getModifiedAt().toEpochSecond(ZoneOffset.UTC)));
         } catch (IllegalArgumentException e) { return ResponseEntity.badRequest().build(); }
     }
 
@@ -53,8 +54,9 @@ public class PostController {
                         item.getTitle(),
                         item.getContent(),
                         item.getAuthor(),
-                        item.getCreatedAt(),
-                        item.getModifiedAt()
+                        item.isPinned(),
+                        item.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
+                        item.getModifiedAt().toEpochSecond(ZoneOffset.UTC)
                 ))
         );
 

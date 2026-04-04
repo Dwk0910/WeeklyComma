@@ -4,8 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 
 import org.neatore.weeklycomma.domain.Post;
 
-import java.time.LocalDateTime;
-
 public abstract class PostDto {
     public record GetRequest(
             @NotBlank Long id,
@@ -13,8 +11,9 @@ public abstract class PostDto {
             @NotBlank String title,
             @NotBlank String content,
             @NotBlank String author,
-            @NotBlank LocalDateTime createdAt,
-            @NotBlank LocalDateTime updatedAt
+            @NotBlank boolean isPinned,
+            @NotBlank long createdAt,
+            @NotBlank long updatedAt
     ) {}
 
     public record PostRequest(
