@@ -12,5 +12,6 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> searchByTitle(String title);
     List<Post> searchByContent(String content);
 
+    List<Post> getPostsByPostType(Post.PostType type);
     Post getPostById(long postId);
 }

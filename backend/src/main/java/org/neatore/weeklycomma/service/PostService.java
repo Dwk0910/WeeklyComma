@@ -29,8 +29,15 @@ public class PostService {
         else return post;
     }
 
+    /**
+     * @deprecated use {@link #getAllPosts(Post.PostType postType)} instead.
+     */
     public List<Post> getAllPosts() {
         return postRepository.findAll();
+    }
+
+    public List<Post> getAllPosts(Post.PostType type) {
+        return postRepository.getPostsByPostType(type);
     }
 
     public void pinPost(long id) {

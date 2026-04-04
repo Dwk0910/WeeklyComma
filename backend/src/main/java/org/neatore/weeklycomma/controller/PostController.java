@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.neatore.weeklycomma.dto.PostDto;
 import org.neatore.weeklycomma.domain.Post;
 import org.neatore.weeklycomma.service.PostService;
-import org.neatore.weeklycomma.annotations.RequiresAuthorization;
+import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,8 +26,8 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    @RequiresAuthorization
-    public ResponseEntity<Void> post(@RequestBody PostDto postDto) {
+    @RequiresAuthentication
+    public ResponseEntity<Void> post(@RequestBody PostDto.PostRequest postDto) {
         return ResponseEntity.created(URI.create("/getPost/" + postService.addPost(postDto.title(), postDto.content(), postDto.author(), postDto.type()))).build();
     }
 
@@ -39,20 +39,22 @@ public class PostController {
 
             if (post == null) return ResponseEntity.notFound().build();
 
-            return ResponseEntity.ok().body(new PostDto.GetRequest(post.getId(), post.getPostType(), post.getTitle(), post.getContent(), post.getAuthor()));
+            return ResponseEntity.ok().body(new PostDto.GetRequest(post.getId(), post.getPostType(), post.getTitle(), post.getContent(), post.getAuthor(), post.getCreatedAt(), post.getModifiedAt()));
         } catch (IllegalArgumentException e) { return ResponseEntity.badRequest().build(); }
     }
 
-    @GetMapping("/getAllPosts")
-    public ResponseEntity<List<PostDto>> getAllPosts() {
-        List<PostDto> response = new ArrayList<>();
-        postService.getAllPosts().forEach(item ->
-                response.add(new PostDto(
-                    item.getId(),
-                    item.getPostType(),
-                    item.getTitle(),
-                    item.getContent(),
-                    item.getAuthor()
+    @GetMapping("/getAllPosts/{postType}")
+    public ResponseEntity<List<PostDto.GetRequest>> getAllPosts(@PathVariable Post.PostType postType) {
+        List<PostDto.GetRequest> response = new ArrayList<>();
+        postService.getAllPosts(postType).forEach(item ->
+                response.add(new PostDto.GetRequest(
+                        item.getId(),
+                        item.getPostType(),
+                        item.getTitle(),
+                        item.getContent(),
+                        item.getAuthor(),
+                        item.getCreatedAt(),
+                        item.getModifiedAt()
                 ))
         );
 
