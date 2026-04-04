@@ -5,6 +5,7 @@ import axios from "axios";
 import { clsx } from "clsx";
 import { useState, useEffect } from "react";
 
+import { BsPinAngle } from "react-icons/bs";
 import loading_gif from "../../../assets/loading.gif";
 
 type Post = {
@@ -142,8 +143,11 @@ export default function ManageNotifications() {
                             </div>
                             <div className={"w-15 font-suite text-center"}>{item.id}</div>
                             <div className={"w-35 text-center"}>{item.author}</div>
-                            <div className={"w-110 cursor-pointer hover:underline"}>
+                            <div
+                                className={"w-110 cursor-pointer flex items-center hover:underline"}
+                            >
                                 {item.title}
+                                {item.isPinned && <BsPinAngle className={"text-gray-500 ml-1"} />}
                             </div>
                             {(() => {
                                 // JS Date 클래스는 밀리초 단위이므로 초 단위인 createdAt에 1000을 곱해줍니다.
