@@ -11,7 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -61,5 +63,14 @@ public class PostController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/pinPosts")
+    public ResponseEntity<Void> pinPost(@RequestHeader("X-Content-Type-Options") boolean pin,
+                                        @RequestBody List<Long> tPosts) {
+        try {
+            tPosts.forEach(t -> postService.pinPost(t, pin));
+        } catch (IllegalArgumentException e) { return ResponseEntity.badRequest().build(); }
+        return ResponseEntity.ok().build();
     }
 }

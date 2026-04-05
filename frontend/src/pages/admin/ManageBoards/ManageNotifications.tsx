@@ -20,21 +20,29 @@ type Post = {
 };
 
 export default function ManageNotifications() {
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isLoading, setIsLoading] = useState<boolean>();
     const [posts, setPosts] = useState<Array<Post>>([]);
-    const [selectedPosts, setSelectedPosts] = useState<Array<string>>([]);
+    const [selectedPosts, setSelectedPosts] = useState<Array<Post>>([]);
 
-    useEffect(() => {
-        axios.get(BACKEND_ADDRESS + "post/getAllPosts/NOTICE").then((res) => {
+    const getPosts: () => Promise<void> = async () => {
+        setIsLoading(true);
+        return axios.get(BACKEND_ADDRESS + "post/getAllPosts/NOTICE").then((res) => {
             const postList: Post[] = res.data;
-            setPosts(
+            setSelectedPosts([]);
+            setPosts(() =>
                 postList.sort((a, b) => {
                     if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-                    return b.updatedAt - a.updatedAt;
+                    return b.createdAt - a.createdAt;
                 })
             );
             setIsLoading(false);
         });
+    };
+
+    useEffect(() => {
+        (async () => {
+            await getPosts();
+        })();
     }, []);
 
     const menuBtnStyle: (isVariable: boolean, ...color: string[]) => string = (
@@ -67,7 +75,7 @@ export default function ManageNotifications() {
                 </button>
                 <button
                     className={menuBtnStyle(false, "bg-blue-500")}
-                    onClick={() => setSelectedPosts(posts.map((i) => i.id.toString()))}
+                    onClick={() => setSelectedPosts(posts)}
                 >
                     전체 선택
                 </button>
@@ -77,8 +85,40 @@ export default function ManageNotifications() {
                 >
                     선택 취소
                 </button>
-                <button className={menuBtnStyle(true, "bg-blue-500", "bg-neutral-400")}>
+                <button
+                    className={menuBtnStyle(true, "bg-blue-500", "bg-neutral-400")}
+                    onClick={async () => {
+                        await axios
+                            .put(
+                                BACKEND_ADDRESS + "post/pinPosts",
+                                selectedPosts.filter((i) => !i.isPinned).map((i) => i.id),
+                                {
+                                    headers: { "X-Content-Type-Options": 1 }
+                                }
+                            )
+                            .then(async () => {
+                                await getPosts();
+                            });
+                    }}
+                >
                     선택 고정
+                </button>
+                <button
+                    className={menuBtnStyle(true, "bg-blue-500", "bg-neutral-400")}
+                    style={{ width: "120px" }}
+                    onClick={async () => {
+                        await axios
+                            .put(
+                                BACKEND_ADDRESS + "post/pinPosts",
+                                selectedPosts.filter((i) => i.isPinned).map((i) => i.id),
+                                { headers: { "X-Content-Type-Options": 0 } }
+                            )
+                            .then(async () => {
+                                await getPosts();
+                            });
+                    }}
+                >
+                    선택 고정 해제
                 </button>
                 <button className={menuBtnStyle(true, "bg-red-400", "bg-neutral-400")}>
                     선택 삭제
@@ -127,16 +167,13 @@ export default function ManageNotifications() {
                             <div className={"w-15 flex justify-center"}>
                                 <input
                                     type={"checkbox"}
-                                    checked={selectedPosts.includes(item.id.toString())}
+                                    checked={selectedPosts.map((i) => i.id).includes(item.id)}
                                     onChange={(e) => {
                                         if (e.target.checked)
-                                            setSelectedPosts((prev) => [
-                                                ...prev,
-                                                item.id.toString()
-                                            ]);
+                                            setSelectedPosts((prev) => [...prev, item]);
                                         else
                                             setSelectedPosts((prev) =>
-                                                prev.filter((i) => i != item.id.toString())
+                                                prev.filter((i) => i.id != item.id)
                                             );
                                     }}
                                 />

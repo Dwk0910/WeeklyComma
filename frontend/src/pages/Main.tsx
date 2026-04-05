@@ -3,6 +3,8 @@ import { CiStar } from "react-icons/ci";
 
 import b_1 from "../assets/test/1.jpg";
 import ad_1 from "../assets/test/ad_1.png";
+import axios from "axios";
+import { BACKEND_ADDRESS } from "../App.tsx";
 
 export default function Main() {
     return (
@@ -38,6 +40,19 @@ export default function Main() {
                     </div>
                 </div>
             </div>
+            <button
+                onClick={async () => {
+                    await axios
+                        .put(BACKEND_ADDRESS + "post/pinPosts", [1, 2], {
+                            headers: { "X-Content-Type-Options": 0 }
+                        })
+                        .then((res) => {
+                            console.log(res.status);
+                        });
+                }}
+            >
+                선택 고정
+            </button>
             <div className={"flex flex-col mt-15"}>
                 <div className={"flex items-end text-2xl"}>
                     <span className={"font-suite w-31"}>2026년 1월</span>

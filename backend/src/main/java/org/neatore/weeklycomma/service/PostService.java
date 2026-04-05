@@ -22,7 +22,7 @@ public class PostService {
         return post.getId();
     }
 
-    public Post getPost(long id) throws IllegalArgumentException {
+    public Post getPost(long id) {
         Post post = postRepository.getPostById(id);
 
         if (post == null) throw new IllegalArgumentException("Post id " + id + " is not found.");
@@ -40,7 +40,9 @@ public class PostService {
         return postRepository.getPostsByPostType(type);
     }
 
-    public void pinPost(long id) {
-        getPost(id).setPinned(true);
+    public void pinPost(long id, boolean pin) {
+        Post post = getPost(id);
+        post.setPinned(pin);
+        postRepository.save(post);
     }
 }
