@@ -1,4 +1,5 @@
 import Component, { Title } from "../lib_component/Component";
+import Editor from "./Editor.tsx";
 import { BACKEND_ADDRESS } from "../../../App";
 
 import axios from "axios";
@@ -8,19 +9,22 @@ import { useState, useEffect } from "react";
 import { BsPinAngle } from "react-icons/bs";
 import loading_gif from "../../../assets/loading.gif";
 
-type Post = {
+export type PostType = "NOTICE" | "EVENT";
+
+export type Post = {
     id: number;
     title: string;
     author: string;
     createdAt: number;
     updatedAt: number;
     isPinned: boolean;
-    type: "NOTICE" | "EVENT";
+    type: PostType;
     content: string;
 };
 
 export default function ManageNotifications() {
     const [isLoading, setIsLoading] = useState<boolean>();
+    const [postEditorVisible, setPostEditorVisible] = useState<boolean>(false);
     const [posts, setPosts] = useState<Array<Post>>([]);
     const [selectedPosts, setSelectedPosts] = useState<Array<Post>>([]);
 
@@ -69,9 +73,14 @@ export default function ManageNotifications() {
     return (
         <Component>
             <Title>공지 관리</Title>
+            <Editor articleType={"NOTICE"} visible={postEditorVisible} />
             <div className={"flex"}>
-                <button className={menuBtnStyle(false, "bg-green-600")} style={{ marginLeft: 0 }}>
-                    새 글 작성
+                <button
+                    className={menuBtnStyle(false, "bg-green-600")}
+                    style={{ marginLeft: 0 }}
+                    onClick={() => setPostEditorVisible((prev) => !prev)}
+                >
+                    {postEditorVisible ? "닫기" : "새 글 작성"}
                 </button>
                 <button
                     className={menuBtnStyle(false, "bg-blue-500")}
