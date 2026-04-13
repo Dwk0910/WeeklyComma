@@ -10,6 +10,7 @@ import Footer from "./component/Footer.tsx";
 // Router pages
 import Main from "./pages/Main.tsx";
 import Management from "./pages/admin/Management.tsx";
+import About from "./pages/About.tsx";
 
 import AuthCallBack from "./pages/redirect/AuthCallBack.tsx";
 
@@ -68,6 +69,7 @@ export default function App() {
                             <Route index element={<Main />} />
                             <Route path={"/authcallback/:oauth_type?"} element={<AuthCallBack />} />
                             <Route path={"/management"} element={<Management />} />
+                            <Route path={"/about"} element={<About />} />
                         </Routes>
                     </div>
                     <div className={"w-full border-t border-gray-400"} />
