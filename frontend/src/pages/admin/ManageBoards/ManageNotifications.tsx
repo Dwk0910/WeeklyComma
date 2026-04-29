@@ -74,7 +74,7 @@ export default function ManageNotifications() {
         <Component>
             <Title>공지 관리</Title>
             <Editor articleType={"NOTICE"} visible={postEditorVisible} />
-            <div className={"mt-2 mb-10"}>
+            <div className={"mb-10"}>
                 <div className={"flex"}>
                     <button
                         className={menuBtnStyle(false, "bg-green-600")}
