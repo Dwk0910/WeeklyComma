@@ -134,9 +134,9 @@ export default function Management() {
                                         <MdKeyboardArrowUp
                                             className={clsx(
                                                 "transition-transform duration-200 ease-in-out",
-                                                subMenuOpen.open &&
-                                                    subMenuOpen.which == item.name &&
-                                                    "rotate-180"
+                                                subMenuOpen.open && subMenuOpen.which == item.name
+                                                    ? "rotate-0"
+                                                    : "rotate-180"
                                             )}
                                         />
                                     </div>
