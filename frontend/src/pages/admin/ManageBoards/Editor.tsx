@@ -1,15 +1,21 @@
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 
+import { BACKEND_ADDRESS } from "../../../App.tsx";
+import axios from "axios";
+
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { FontFamily } from "@tiptap/extension-font-family";
+import { Color } from "@tiptap/extension-color"; // 추가
+import Highlight from "@tiptap/extension-highlight"; // 추가
 import { FontSize } from "../../../extensions/FontSize.ts";
 import FontStyle, { FONTS } from "../../../assets/fonts/fonts.tsx";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { AnimatePresence, motion } from "framer-motion";
 import { clsx } from "clsx";
+
 import {
     LuBold,
     LuItalic,
@@ -22,13 +28,20 @@ import {
     LuUndo,
     LuRedo,
     LuMinus,
-    LuChevronDown
+    LuChevronDown,
+    LuHighlighter,
+    LuType,
+    LuSave
 } from "react-icons/lu";
+
+import { type IconType } from "react-icons";
 
 const extensions = [
     StarterKit,
     TextStyle,
     FontFamily,
+    Color, // 추가
+    Highlight.configure({ multicolor: true }), // 추가
     FontSize,
     Table.configure({ resizable: true }),
     TableRow,
@@ -36,7 +49,6 @@ const extensions = [
     TableHeader
 ];
 
-// 외부 클릭 감지를 위한 커스텀 훅
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, callback: () => void) {
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -51,7 +63,16 @@ function useOutsideClick(ref: React.RefObject<HTMLElement | null>, callback: () 
     }, [ref, callback]);
 }
 
-const ToolbarBtn = ({ onClick, active, icon: Icon, title, disabled }: any) => (
+type ToolbarBtnProps = {
+    onClick: () => void;
+    icon: IconType;
+    active?: boolean;
+    title?: string;
+    disabled?: boolean;
+    color?: React.CSSProperties["color"];
+};
+
+const ToolbarBtn = ({ onClick, active, icon: Icon, title, disabled, color }: ToolbarBtnProps) => (
     <button
         onClick={(e) => {
             e.preventDefault();
@@ -60,12 +81,12 @@ const ToolbarBtn = ({ onClick, active, icon: Icon, title, disabled }: any) => (
         title={title}
         disabled={disabled}
         className={clsx(
-            "p-1.5 rounded transition-colors",
+            "p-1.5 rounded transition-colors relative",
             disabled ? "opacity-30 cursor-not-allowed" : "hover:bg-gray-200 cursor-pointer",
             active ? "bg-gray-200 text-blue-600" : "text-gray-600"
         )}
     >
-        <Icon size={18} />
+        <Icon size={18} style={color ? { color } : {}} />
     </button>
 );
 
@@ -78,8 +99,6 @@ export default function Editor({
 }) {
     const [title, setTitle] = useState<string>("");
     const [fontSizeState, setFontSizeState] = useState<number>(16);
-
-    // 드롭다운 열림 상태
     const [fontDropdownOpen, setFontDropdownOpen] = useState<boolean>(false);
     const fontDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -103,32 +122,30 @@ export default function Editor({
             isOrderedList: ctx.editor.isActive("orderedList"),
             isBlockquote: ctx.editor.isActive("blockquote"),
             isCodeBlock: ctx.editor.isActive("codeBlock"),
+            isHighlight: ctx.editor.isActive("highlight"),
             canUndo: ctx.editor.can().undo(),
             canRedo: ctx.editor.can().redo(),
             fontSize: ctx.editor.getAttributes("textStyle").fontSize || "16px",
-            // 현재 선택된 폰트 패밀리 가져오기
-            fontFamily: ctx.editor.getAttributes("textStyle").fontFamily || "sans-serif"
+            fontFamily: ctx.editor.getAttributes("textStyle").fontFamily || "sans-serif",
+            currentColor: ctx.editor.getAttributes("textStyle").color || "#000000",
+            highlightColor: ctx.editor.getAttributes("highlight").color || "#ffff00"
         })
     });
 
-    // 외부 클릭 시 드롭다운 닫기
     useOutsideClick(fontDropdownRef, () => setFontDropdownOpen(false));
 
     useEffect(() => {
-        (() => {
-            const size = parseFloat(editorState.fontSize.replace("px", ""));
-            if (!isNaN(size)) setFontSizeState(size);
-        })();
+        const size = parseFloat(editorState.fontSize.replace("px", ""));
+        if (!isNaN(size)) (() => setFontSizeState(size))();
     }, [editorState.fontSize]);
 
-    // 현재 선택된 폰트 객체 찾기
     const currentFont = FONTS.find((f) => f.family === editorState.fontFamily) || FONTS[0];
+
     useEffect(() => {
-        // 찾은 폰트가 없어 FONTS[0]으로 설정되었을 경우 editor.chain()...을 통해 수동으로 직접 설정해주어 State와 상태를 맞춰야 함
-        if (currentFont == FONTS[0]) {
+        if (editor && editorState.fontFamily === "sans-serif" && currentFont === FONTS[0]) {
             editor.chain().focus().setFontFamily(FONTS[0].family).run();
         }
-    }, [editor, currentFont]);
+    }, [editor, currentFont, editorState.fontFamily]);
 
     if (!editor) return null;
 
@@ -136,6 +153,20 @@ export default function Editor({
         const cleanSize = Math.max(0.5, size);
         setFontSizeState(cleanSize);
         editor.chain().focus().setFontSize(`${cleanSize}px`).run();
+    };
+
+    const handleSave = () => {
+        const content = editor.getHTML();
+        axios
+            .post(BACKEND_ADDRESS + "post", {
+                type: articleType,
+                title: title,
+                content: content
+            })
+            .then(() => {
+                alert("글이 성공적으로 게시되었습니다.");
+                window.location.reload();
+            });
     };
 
     return (
@@ -149,7 +180,6 @@ export default function Editor({
                     transition={{ duration: 0.2 }}
                     className="mx-2 overflow-hidden border border-gray-300 rounded-lg shadow-sm bg-white"
                 >
-                    {/* @font-face 주입 */}
                     <FontStyle />
                     <style>{`
                         .prose ul { list-style-type: disc !important; padding-left: 1.5rem !important; }
@@ -157,24 +187,31 @@ export default function Editor({
                         .prose blockquote { border-left: 4px solid #ccc; padding-left: 1rem; font-style: italic; color: #666; }
                         .prose pre { background-color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
                         .prose code { background-color: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 0.25rem; }
+                        mark { border-radius: 0.25rem; padding: 0 0.2rem; }
                     `}</style>
 
-                    <input
-                        type="text"
-                        className="w-full px-4 py-2 border-b border-gray-300 outline-none text-lg font-bold"
-                        placeholder="제목을 입력하세요"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                    />
+                    <div className="flex items-center border-b border-gray-300">
+                        <input
+                            type="text"
+                            className="flex-1 px-4 py-3 outline-none text-lg font-bold"
+                            placeholder="제목을 입력하세요"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                        <button
+                            onClick={handleSave}
+                            className="flex items-center gap-2 mr-4 px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                            <LuSave size={18} />
+                            저장
+                        </button>
+                    </div>
 
                     <div className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-300 bg-gray-50/50 relative z-10">
-                        {/* 커스텀 폰트 드롭다운 */}
                         <div className="relative" ref={fontDropdownRef}>
                             <button
                                 onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
                                 className="flex items-center gap-2 text-sm px-3 py-1.5 border border-gray-300 rounded bg-white outline-none hover:border-gray-400 min-w-35 justify-between"
-                                title="폰트 패밀리"
-                                // 버튼 자체에도 현재 폰트 스타일 적용
                                 style={{ fontFamily: currentFont.family }}
                             >
                                 {currentFont.name}
@@ -187,14 +224,12 @@ export default function Editor({
                                 />
                             </button>
 
-                            {/* 드롭다운 목록 */}
                             <AnimatePresence>
                                 {fontDropdownOpen && (
                                     <motion.ul
                                         initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.15 }}
                                         className="absolute left-0 top-full mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded shadow-lg z-50 py-1"
                                     >
                                         {FONTS.map((font) => (
@@ -225,7 +260,6 @@ export default function Editor({
 
                         <div className="w-px h-6 mx-1 bg-gray-300" />
 
-                        {/* 폰트 사이즈 컨트롤 */}
                         <div className="flex items-center bg-white border border-gray-300 rounded overflow-hidden">
                             <button
                                 onClick={() => applyFontSize(fontSizeState - 1)}
@@ -234,19 +268,12 @@ export default function Editor({
                                 -
                             </button>
                             <input
-                                id="editor-font-size"
-                                name="editor-font-size"
                                 type="number"
                                 step="0.5"
                                 value={fontSizeState}
                                 onChange={(e) => setFontSizeState(parseFloat(e.target.value) || 0)}
                                 onBlur={(e) => applyFontSize(parseFloat(e.target.value) || 16)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter")
-                                        applyFontSize(parseFloat(e.currentTarget.value) || 16);
-                                }}
-                                className="w-14 text-center text-sm outline-none bg-transparent"
-                                title="폰트 사이즈"
+                                className="w-12 text-center text-xs outline-none bg-transparent"
                             />
                             <button
                                 onClick={() => applyFontSize(fontSizeState + 1)}
@@ -258,23 +285,66 @@ export default function Editor({
 
                         <div className="w-px h-6 mx-1 bg-gray-300" />
 
-                        {/* Undo/Redo */}
+                        <div className="flex items-center gap-0.5">
+                            <label
+                                className="p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center"
+                                title="글자 색상"
+                            >
+                                <LuType size={18} style={{ color: editorState.currentColor }} />
+                                <input
+                                    type="color"
+                                    className="w-0 h-0 opacity-0 p-0 m-0"
+                                    onInput={(e) =>
+                                        editor
+                                            .chain()
+                                            .focus()
+                                            .setColor((e.target as HTMLInputElement).value)
+                                            .run()
+                                    }
+                                    value={editorState.currentColor}
+                                />
+                            </label>
+
+                            <label
+                                className={clsx(
+                                    "p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center",
+                                    editorState.isHighlight && "bg-gray-200"
+                                )}
+                                title="하이라이트"
+                            >
+                                <LuHighlighter size={18} className={"text-black"} />
+                                <input
+                                    type="color"
+                                    className="w-0 h-0 opacity-0 p-0 m-0"
+                                    onInput={(e) =>
+                                        editor
+                                            .chain()
+                                            .focus()
+                                            .setHighlight({
+                                                color: (e.target as HTMLInputElement).value
+                                            })
+                                            .run()
+                                    }
+                                    value={editorState.highlightColor}
+                                />
+                            </label>
+                        </div>
+
+                        <div className="w-px h-6 mx-1 bg-gray-300" />
+
                         <ToolbarBtn
                             onClick={() => editor.chain().focus().undo().run()}
                             icon={LuUndo}
-                            title="Undo"
                             disabled={!editorState.canUndo}
                         />
                         <ToolbarBtn
                             onClick={() => editor.chain().focus().redo().run()}
                             icon={LuRedo}
-                            title="Redo"
                             disabled={!editorState.canRedo}
                         />
 
                         <div className="w-px h-6 mx-1 bg-gray-300" />
 
-                        {/* 서식 버튼들 */}
                         <ToolbarBtn
                             onClick={() => editor.chain().focus().toggleBold().run()}
                             active={editorState.isBold}
@@ -298,7 +368,6 @@ export default function Editor({
 
                         <div className="w-px h-6 mx-1 bg-gray-300" />
 
-                        {/* 리스트/블록 요소 */}
                         <ToolbarBtn
                             onClick={() => editor.chain().focus().toggleBulletList().run()}
                             active={editorState.isBulletList}

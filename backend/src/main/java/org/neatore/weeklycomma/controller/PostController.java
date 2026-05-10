@@ -2,6 +2,7 @@ package org.neatore.weeklycomma.controller;
 
 import lombok.RequiredArgsConstructor;
 
+import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.PostDto;
 import org.neatore.weeklycomma.domain.Post;
 import org.neatore.weeklycomma.service.PostService;
@@ -9,6 +10,7 @@ import org.neatore.weeklycomma.service.UserService;
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,8 +34,8 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    @RequiresAuthentication
-    public ResponseEntity<Void> post(@RequestHeader("Authorization") String userToken, @RequestBody PostDto.PostRequest postDto) {
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Void> post(@CookieValue("WCA_LOGIN") String userToken, @RequestBody PostDto.PostRequest postDto) {
         return ResponseEntity.created(URI.create("/getPost/" + postService.addPost(
                 postDto.title(),
                 postDto.content(),
