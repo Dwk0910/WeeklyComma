@@ -19,7 +19,6 @@ public abstract class PostDto {
     public record PostRequest(
             @NotBlank Post.PostType type,
             @NotBlank String title,
-            @NotBlank String content,
-            @NotBlank String author
+            @NotBlank String content
     ) {}
 }
