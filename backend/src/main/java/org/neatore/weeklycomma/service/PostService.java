@@ -22,6 +22,12 @@ public class PostService {
         return post.getId();
     }
 
+    @Transactional
+    public void deletePost(Long id) {
+        Post post = postRepository.getPostById(id);
+        postRepository.delete(post);
+    }
+
     public Post getPost(long id) {
         Post post = postRepository.getPostById(id);
 

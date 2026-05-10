@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { BACKEND_ADDRESS } from "../../../App.tsx";
 import axios from "axios";
 
-import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
+import { useEditor, useEditorState, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { FontFamily } from "@tiptap/extension-font-family";
@@ -92,10 +92,14 @@ const ToolbarBtn = ({ onClick, active, icon: Icon, title, disabled, color }: Too
 
 export default function Editor({
     articleType,
-    visible
+    visible,
+    refreshAction,
+    closeAction
 }: {
     articleType: string;
     visible: boolean;
+    refreshAction?: () => void;
+    closeAction?: () => void;
 }) {
     const [title, setTitle] = useState<string>("");
     const [fontSizeState, setFontSizeState] = useState<number>(16);
@@ -165,7 +169,17 @@ export default function Editor({
             })
             .then(() => {
                 alert("글이 성공적으로 게시되었습니다.");
-                window.location.reload();
+                if (!refreshAction) window.location.reload();
+                else refreshAction();
+
+                // close action
+                if (closeAction) {
+                    editor.commands.clearContent();
+                    setTitle("");
+                    setFontSizeState(16);
+                    setFontDropdownOpen(false);
+                    closeAction();
+                }
             });
     };
 

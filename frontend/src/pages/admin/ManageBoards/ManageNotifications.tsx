@@ -73,7 +73,14 @@ export default function ManageNotifications() {
     return (
         <Component>
             <Title>공지 관리</Title>
-            <Editor articleType={"NOTICE"} visible={postEditorVisible} />
+            <Editor
+                articleType={"NOTICE"}
+                visible={postEditorVisible}
+                refreshAction={getPosts}
+                closeAction={() => {
+                    setPostEditorVisible(false);
+                }}
+            />
             <div className={"mb-10"}>
                 <div className={"flex"}>
                     <button
@@ -130,7 +137,19 @@ export default function ManageNotifications() {
                     >
                         선택 고정 해제
                     </button>
-                    <button className={menuBtnStyle(true, "bg-red-400", "bg-neutral-400")}>
+                    <button
+                        className={menuBtnStyle(true, "bg-red-400", "bg-neutral-400")}
+                        onClick={async () => {
+                            if (confirm("정말 선택한 글들을 삭제하시겠습니까?")) {
+                                await axios.delete(BACKEND_ADDRESS + "post", {
+                                    params: {
+                                        targets: selectedPosts.map((i) => i.id).join(",")
+                                    }
+                                });
+                                await getPosts();
+                            }
+                        }}
+                    >
                         선택 삭제
                     </button>
                     <span
@@ -166,58 +185,70 @@ export default function ManageNotifications() {
                     </div>
                 ) : (
                     <div className={"w-full flex flex-col"}>
-                        {posts.map((item) => (
-                            <div
-                                className={clsx(
-                                    "w-full flex border-b py-1",
-                                    item.isPinned && "bg-red-500/8"
-                                )}
-                                key={`post-list-button-${item.id}`}
-                            >
-                                <div className={"w-15 flex justify-center"}>
-                                    <input
-                                        type={"checkbox"}
-                                        checked={selectedPosts.map((i) => i.id).includes(item.id)}
-                                        onChange={(e) => {
-                                            if (e.target.checked)
-                                                setSelectedPosts((prev) => [...prev, item]);
-                                            else
-                                                setSelectedPosts((prev) =>
-                                                    prev.filter((i) => i.id != item.id)
-                                                );
-                                        }}
-                                    />
-                                </div>
-                                <div className={"w-15 font-suite text-center"}>{item.id}</div>
-                                <div className={"w-35 text-center"}>{item.author}</div>
+                        {posts.length > 0 ? (
+                            posts.map((item) => (
                                 <div
-                                    className={
-                                        "w-110 cursor-pointer flex items-center hover:underline"
-                                    }
-                                >
-                                    {item.title}
-                                    {item.isPinned && (
-                                        <BsPinAngle className={"text-gray-500 ml-1"} />
+                                    className={clsx(
+                                        "w-full flex border-b py-1",
+                                        item.isPinned && "bg-red-500/8"
                                     )}
-                                </div>
-                                {(() => {
-                                    // JS Date 클래스는 밀리초 단위이므로 초 단위인 createdAt에 1000을 곱해줍니다.
-                                    const createdAtDate: Date = new Date(item.createdAt * 1000);
-                                    const updatedAtDate: Date = new Date(item.updatedAt * 1000);
+                                    key={`post-list-button-${item.id}`}
+                                >
+                                    <div className={"w-15 flex justify-center"}>
+                                        <input
+                                            type={"checkbox"}
+                                            checked={selectedPosts
+                                                .map((i) => i.id)
+                                                .includes(item.id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked)
+                                                    setSelectedPosts((prev) => [...prev, item]);
+                                                else
+                                                    setSelectedPosts((prev) =>
+                                                        prev.filter((i) => i.id != item.id)
+                                                    );
+                                            }}
+                                        />
+                                    </div>
+                                    <div className={"w-15 font-suite text-center"}>{item.id}</div>
+                                    <div className={"w-35 text-center"}>{item.author}</div>
+                                    <div
+                                        className={
+                                            "w-110 cursor-pointer flex items-center hover:underline"
+                                        }
+                                    >
+                                        {item.title}
+                                        {item.isPinned && (
+                                            <BsPinAngle className={"text-gray-500 ml-1"} />
+                                        )}
+                                    </div>
+                                    {(() => {
+                                        // JS Date 클래스는 밀리초 단위이므로 초 단위인 createdAt에 1000을 곱해줍니다.
+                                        const createdAtDate: Date = new Date(item.createdAt * 1000);
+                                        const updatedAtDate: Date = new Date(item.updatedAt * 1000);
 
-                                    return (
-                                        <>
-                                            <div className={"w-30 font-suite text-center"}>
-                                                {`${createdAtDate.getFullYear()}.${createdAtDate.getMonth() + 1}.${createdAtDate.getDate()}.`}
-                                            </div>
-                                            <div className={"w-30 font-suite text-center"}>
-                                                {`${updatedAtDate.getFullYear()}.${updatedAtDate.getMonth() + 1}.${updatedAtDate.getDate()}.`}
-                                            </div>
-                                        </>
-                                    );
-                                })()}
+                                        return (
+                                            <>
+                                                <div className={"w-30 font-suite text-center"}>
+                                                    {`${createdAtDate.getFullYear()}.${createdAtDate.getMonth() + 1}.${createdAtDate.getDate()}.`}
+                                                </div>
+                                                <div className={"w-30 font-suite text-center"}>
+                                                    {`${updatedAtDate.getFullYear()}.${updatedAtDate.getMonth() + 1}.${updatedAtDate.getDate()}.`}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            ))
+                        ) : (
+                            <div
+                                className={
+                                    "w-full h-25 flex justify-center items-center font-suite"
+                                }
+                            >
+                                글이 없습니다.
                             </div>
-                        ))}
+                        )}
                     </div>
                 )}
             </div>

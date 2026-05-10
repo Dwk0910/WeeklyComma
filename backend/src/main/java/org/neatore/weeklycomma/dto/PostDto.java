@@ -21,4 +21,8 @@ public abstract class PostDto {
             @NotBlank String title,
             @NotBlank String content
     ) {}
+
+    public record DeleteRequest(
+            @NotBlank Long id
+    ) {}
 }
