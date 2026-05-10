@@ -1,6 +1,7 @@
 package org.neatore.weeklycomma.interceptors;
 
 import org.jetbrains.annotations.NotNull;
+import lombok.RequiredArgsConstructor;
 
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 import org.neatore.weeklycomma.service.UserService;
@@ -14,12 +15,13 @@ import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import lombok.RequiredArgsConstructor;
-
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.util.WebUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @EnableJpaAuditing
@@ -41,9 +43,10 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             // Verify that the process has found the RequiresAuthentication annotation.
             if (annotation == null) return true;
 
-            String token = request.getHeader("Authorization");
+            Cookie tokenCookie = WebUtils.getCookie(request, "WCA_LOGIN");
+            String token = tokenCookie == null ? null : tokenCookie.getValue();
 
-            User user = us.getUserByToken(token);
+            User user = us.getUserByToken(Optional.ofNullable(token).orElse(""));
             if (user == null) {
                 unAuthorizedResponse.run();
                 return false;
