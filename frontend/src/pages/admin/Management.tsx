@@ -131,14 +131,16 @@ export default function Management() {
                                         }}
                                     >
                                         {item.name}
-                                        <MdKeyboardArrowUp
+                                        <span
                                             className={clsx(
                                                 "transition-transform duration-200 ease-in-out",
                                                 subMenuOpen.open && subMenuOpen.which == item.name
                                                     ? "rotate-0"
                                                     : "rotate-180"
                                             )}
-                                        />
+                                        >
+                                            <MdKeyboardArrowUp />
+                                        </span>
                                     </div>
                                     {item.submenus.map((submenu) => (
                                         <div

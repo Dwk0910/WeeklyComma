@@ -43,7 +43,7 @@ export default function App() {
                             error: true,
                             info:
                                 res.status == 200
-                                    ? `Backend server responded unexpectedly: ${res.data}`
+                                    ? `Backend server responded unexpected value: ${res.data}`
                                     : res.toString()
                         }));
                     }
