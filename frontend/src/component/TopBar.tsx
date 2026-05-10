@@ -106,7 +106,7 @@ export default function TopBar({ login }: { login: boolean }) {
                `}
             </style>
             <div className={"w-full flex mx-15 font-suite text-xl menucontainer"}>
-                <span>소개</span>
+                <span onClick={() => window.location.assign("/about")}>소개</span>
                 <span>공지</span>
                 <span>이벤트</span>
                 <span>정기추천</span>
