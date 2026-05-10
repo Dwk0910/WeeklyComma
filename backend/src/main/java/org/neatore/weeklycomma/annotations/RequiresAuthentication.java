@@ -10,6 +10,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.METHOD, ElementType.TYPE })
 public @interface RequiresAuthentication {
-    // Interceptor returns true if the UserType field is empty
+    // Interceptor checks only if the client is logged in when the value is empty.
+    // If the value is not empty, the interceptor checks if the user's type is included in the value.
     User.UserType[] value() default {};
 }

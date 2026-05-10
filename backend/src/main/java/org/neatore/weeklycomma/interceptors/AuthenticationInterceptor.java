@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import java.util.Arrays;
+import java.util.List;
 
 @Component
 @EnableJpaAuditing
@@ -33,18 +33,30 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         if (CorsUtils.isPreFlightRequest(request)) return true;
 
         if (handler instanceof HandlerMethod hm) {
+            Runnable unAuthorizedResponse = () -> response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
             // Try to find RequiresAuthentication annotation. If it doesn't exist, this interceptor must pass the request to controller.
             RequiresAuthentication annotation = AnnotatedElementUtils.findMergedAnnotation(hm.getMethod(), RequiresAuthentication.class);
 
             // Verify that the process has found the RequiresAuthentication annotation.
             if (annotation == null) return true;
 
+            String token = request.getHeader("Authorization");
+
+            User user = us.getUserByToken(token);
+            if (user == null) {
+                unAuthorizedResponse.run();
+                return false;
+            }
+
             User.UserType[] allowedTypes = annotation.value();
             if (allowedTypes.length == 0) return true;
 
-            String token = request.getHeader("Authorization");
-            User user = us.getUserByToken(token);
-            return user != null && Arrays.stream(allowedTypes).toList().contains(user.getUserType());
+            // Checks that the user is authenticated and has the required user type. If not, return an unauthorized response.
+            if (!(List.of(allowedTypes).contains(user.getUserType()))) {
+                unAuthorizedResponse.run();
+                return false;
+            }
         }
 
         return true;
