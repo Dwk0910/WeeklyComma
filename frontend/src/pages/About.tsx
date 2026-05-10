@@ -1,11 +1,13 @@
+import FontStyle from "../assets/fonts/fonts.tsx";
+
 export default function About() {
     return (
         <div className="min-h-screen text-[#2c2c2c] selection:bg-[#e2e2e2]">
-            {/* 폰트 설정: (바탕체 / Nanum Myeongjo / GOWUN BATANG) */}
+            {/* 폰트 설정: (함초롬바탕) */}
+            <FontStyle />
             <style>{`
-                @import url("https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap");
                 .font-serif-custom {
-                    font-family: 'Gowun Batang', serif;
+                    font-family: 'HCRBatang', serif;
                 }
             `}</style>
 

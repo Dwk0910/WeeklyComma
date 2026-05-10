@@ -11,7 +11,8 @@ import { FontFamily } from "@tiptap/extension-font-family";
 import { Color } from "@tiptap/extension-color"; // 추가
 import Highlight from "@tiptap/extension-highlight"; // 추가
 import { FontSize } from "../../../extensions/FontSize.ts";
-import FontStyle, { FONTS } from "../../../assets/fonts/fonts.tsx";
+import FontStyle from "../../../assets/fonts/fonts.tsx";
+import { FONTS } from "../../../assets/fonts/FONTS.def.ts";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { AnimatePresence, motion } from "framer-motion";
 import { clsx } from "clsx";
