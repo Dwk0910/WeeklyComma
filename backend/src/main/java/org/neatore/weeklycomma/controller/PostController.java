@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.neatore.weeklycomma.dto.PostDto;
 import org.neatore.weeklycomma.domain.Post;
 import org.neatore.weeklycomma.service.PostService;
+import org.neatore.weeklycomma.service.UserService;
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.time.ZoneOffset;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,12 +28,18 @@ import java.util.List;
 @RequestMapping("/post")
 @RequiredArgsConstructor
 public class PostController {
+    private final UserService userService;
     private final PostService postService;
 
     @PostMapping
     @RequiresAuthentication
-    public ResponseEntity<Void> post(@RequestBody PostDto.PostRequest postDto) {
-        return ResponseEntity.created(URI.create("/getPost/" + postService.addPost(postDto.title(), postDto.content(), postDto.author(), postDto.type()))).build();
+    public ResponseEntity<Void> post(@RequestHeader("Authorization") String userToken, @RequestBody PostDto.PostRequest postDto) {
+        return ResponseEntity.created(URI.create("/getPost/" + postService.addPost(
+                postDto.title(),
+                postDto.content(),
+                Objects.requireNonNull(userService.getUserByToken(userToken)).getUserName(),
+                postDto.type()
+        ))).build();
     }
 
     @GetMapping("/getPost/{id_}")
@@ -42,7 +50,16 @@ public class PostController {
 
             if (post == null) return ResponseEntity.notFound().build();
 
-            return ResponseEntity.ok().body(new PostDto.GetRequest(post.getId(), post.getPostType(), post.getTitle(), post.getContent(), post.getAuthor(), post.isPinned(), post.getCreatedAt().toEpochSecond(ZoneOffset.UTC), post.getModifiedAt().toEpochSecond(ZoneOffset.UTC)));
+            return ResponseEntity.ok().body(new PostDto.GetRequest(
+                    post.getId(),
+                    post.getPostType(),
+                    post.getTitle(),
+                    post.getContent(),
+                    post.getAuthor(),
+                    post.isPinned(),
+                    post.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
+                    post.getModifiedAt().toEpochSecond(ZoneOffset.UTC)
+            ));
         } catch (IllegalArgumentException e) { return ResponseEntity.badRequest().build(); }
     }
 
