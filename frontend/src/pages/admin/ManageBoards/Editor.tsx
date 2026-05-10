@@ -121,6 +121,15 @@ export default function Editor({
         })();
     }, [editorState.fontSize]);
 
+    // 현재 선택된 폰트 객체 찾기
+    const currentFont = FONTS.find((f) => f.family === editorState.fontFamily) || FONTS[0];
+    useEffect(() => {
+        // 찾은 폰트가 없어 FONTS[0]으로 설정되었을 경우 editor.chain()...을 통해 수동으로 직접 설정해주어 State와 상태를 맞춰야 함
+        if (currentFont == FONTS[0]) {
+            editor.chain().focus().setFontFamily(FONTS[0].family).run();
+        }
+    }, [editor, currentFont]);
+
     if (!editor) return null;
 
     const applyFontSize = (size: number) => {
@@ -128,16 +137,6 @@ export default function Editor({
         setFontSizeState(cleanSize);
         editor.chain().focus().setFontSize(`${cleanSize}px`).run();
     };
-
-    // 현재 선택된 폰트 객체 찾기
-    const currentFont = FONTS.find((f) => f.family === editorState.fontFamily) || FONTS[0];
-
-    useEffect(() => {
-        // 찾은 폰트가 없어 FONTS[0]으로 설정되었을 경우 editor.chain()...을 통해 수동으로 직접 설정해주어 State와 상태를 맞춰야 함
-        if (currentFont == FONTS[0]) {
-            editor.chain().focus().setFontFamily(FONTS[0].family).run();
-        }
-    }, []);
 
     return (
         <AnimatePresence mode="wait">
