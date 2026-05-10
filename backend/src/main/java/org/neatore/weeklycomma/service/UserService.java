@@ -37,7 +37,7 @@ public class UserService {
         loginedUsers.remove(DigestUtils.sha256Hex(token));
     }
 
-    public String newLoginedUserSession(User user) {
+    public String newLoginSession(User user) {
         String newToken = UUID.randomUUID().toString();
         loginedUsers.put(DigestUtils.sha256Hex(newToken), user);
 

@@ -35,7 +35,7 @@ public class AuthenticationController {
 
         // Generate cookie
         if (user != null) {
-            String newToken = userService.newLoginedUserSession(user);
+            String newToken = userService.newLoginSession(user);
             ResponseCookie cookie = ResponseCookie.from("WCA_LOGIN", newToken)
                     .httpOnly(true)
                     .path("/")
