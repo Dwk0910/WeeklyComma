@@ -15,7 +15,7 @@ export default function About() {
                 {/* 히어로 섹션 - 좌측 정렬 */}
                 <header className="mb-24">
                     <h1 className="text-4xl md:text-5xl mb-12 tracking-tighter text-[#1a1a1a] font-bold">
-                        《주간 쉼표》
+                        『주간 쉼표』
                     </h1>
 
                     <div className="space-y-8 text-lg md:text-xl leading-relaxed text-[#4a4a4a] max-w-2xl">
@@ -39,7 +39,7 @@ export default function About() {
                 <section className="space-y-16 leading-extra-relaxed mb-40 max-w-2xl text-[1.05rem]">
                     <div>
                         <h2 className="text-2xl mb-6 text-[#1a1a1a] font-bold">
-                            《주간 쉼표》는 그 막막한 밤의 정적 속에서 태어났습니다.
+                            『주간 쉼표』는 그 막막한 밤의 정적 속에서 태어났습니다.
                         </h2>
                         <p className="break-keep text-[#444]">
                             독서의 즐거움을 아는 이도, 이제 막 첫 문장을 떼기 시작한 이도, 그저 책의
