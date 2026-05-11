@@ -13,7 +13,47 @@ import Title from "../../component/Title.tsx";
 import ManageMainPage from "./ManageMainPage.tsx";
 import ManageNotifications from "./ManageBoards/ManageNotifications.tsx";
 import ManageEventBoards from "./ManageBoards/ManageEventBoards.tsx";
-import ManageCommonRecommandation from "./ManageCommonRecommandation.tsx";
+import ManageRecommendation from "./ManageRecommendation.tsx";
+
+// Management menu definitions
+type Menu = {
+    name: string;
+    component?: (key: string) => ReactNode;
+    submenus?: { name: string; component: (key: string) => ReactNode }[];
+};
+
+const menu: Menu[] = [
+    {
+        name: "메인 페이지 관리",
+        component: (key) => <ManageMainPage key={key} />
+    },
+    {
+        name: "게시판 글 관리",
+        submenus: [
+            {
+                name: "공지 게시판",
+                component: (key) => {
+                    return <ManageNotifications key={key} />;
+                }
+            },
+            {
+                name: "이벤트 게시판",
+                component: (key) => {
+                    return <ManageEventBoards key={key} />;
+                }
+            }
+        ]
+    },
+    {
+        name: "책 관리",
+        submenus: [
+            {
+                name: "추천 책 관리",
+                component: (key) => <ManageRecommendation key={key} />
+            }
+        ]
+    }
+];
 
 export default function Management() {
     const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -26,47 +66,11 @@ export default function Management() {
     // <div>쉼표지기 문의사항 관리 및 답변</div>
     // <div>기타 관리</div>
 
-    // Management menu definitions
-    const menu: {
-        name: string;
-        component?: (key: string) => ReactNode;
-        submenus?: { name: string; component: (key: string) => ReactNode }[];
-    }[] = [
-        {
-            name: "메인 페이지 관리",
-            component: (key) => <ManageMainPage key={key} />
-        },
-        {
-            name: "게시판 글 관리",
-            submenus: [
-                {
-                    name: "공지 게시판",
-                    component: (key) => {
-                        return <ManageNotifications key={key} />;
-                    }
-                },
-                {
-                    name: "이벤트 게시판",
-                    component: (key) => {
-                        return <ManageEventBoards key={key} />;
-                    }
-                }
-            ]
-        },
-        {
-            name: "일반추천 관리",
-            component: (key) => <ManageCommonRecommandation key={key} />
-        }
-    ];
-
     // Menu state
-    const [currentMenu, setCurrentMenu] = useState<string>(menu[0].name);
-    const [subMenuOpen, setSubMenuOpen] = useState<{ open: boolean; which: string }>({
-        open: false,
-        which: ""
-    });
+    const [currentMenu, setCurrentMenu] = useState<string>();
+    const [subMenuOpen, setSubMenuOpen] = useState<{ [collapsibleMenuName: string]: boolean }>({});
 
-    // Authentication check
+    // Authentication check & initial registering collapsible menu items to state values
     useEffect(() => {
         const token = localStorage.getItem("wca_token");
         axios
@@ -76,6 +80,17 @@ export default function Management() {
                 else setAuthenticated(false);
             })
             .catch((_) => setAuthenticated(false));
+
+        (() => {
+            setCurrentMenu(menu[0].name);
+            for (const item of menu) {
+                if (item.submenus)
+                    setSubMenuOpen((prev) => ({
+                        ...prev,
+                        [item.name]: false
+                    }));
+            }
+        })();
     }, []);
 
     if (authenticated == null) {
@@ -130,8 +145,8 @@ export default function Management() {
                                         className={"flex items-center justify-between"}
                                         onClick={() => {
                                             setSubMenuOpen((prev) => ({
-                                                open: !prev.open,
-                                                which: item.name
+                                                ...prev,
+                                                [item.name]: !prev[item.name]
                                             }));
                                         }}
                                     >
@@ -139,34 +154,26 @@ export default function Management() {
                                         <span
                                             className={clsx(
                                                 "transition-transform duration-200 ease-in-out",
-                                                subMenuOpen.open && subMenuOpen.which == item.name
-                                                    ? "rotate-0"
-                                                    : "rotate-180"
+                                                subMenuOpen[item.name] ? "rotate-0" : "rotate-180"
                                             )}
                                         >
                                             <MdKeyboardArrowUp />
                                         </span>
                                     </div>
-                                    {item.submenus.map((submenu) => (
-                                        <div
-                                            key={`dashboard_submenu_btn_container_${submenu.name}`}
-                                            style={{
-                                                display:
-                                                    subMenuOpen.open &&
-                                                    subMenuOpen.which == item.name
-                                                        ? "block"
-                                                        : "none"
-                                            }}
-                                            className={clsx(
-                                                currentMenu == submenu.name && "bg-gray-200"
-                                            )}
-                                            onClick={() => {
-                                                setCurrentMenu(submenu.name);
-                                            }}
-                                        >
-                                            <span className={"ml-4"}>{submenu.name}</span>
-                                        </div>
-                                    ))}
+                                    {subMenuOpen[item.name] &&
+                                        item.submenus.map((submenu) => (
+                                            <div
+                                                key={`dashboard_submenu_btn_container_${submenu.name}`}
+                                                className={clsx(
+                                                    currentMenu == submenu.name && "bg-gray-200"
+                                                )}
+                                                onClick={() => {
+                                                    setCurrentMenu(submenu.name);
+                                                }}
+                                            >
+                                                <span className={"ml-4"}>{submenu.name}</span>
+                                            </div>
+                                        ))}
                                 </React.Fragment>
                             );
                     })}
