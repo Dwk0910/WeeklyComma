@@ -13,6 +13,7 @@ import Title from "../../component/Title.tsx";
 import ManageMainPage from "./ManageMainPage.tsx";
 import ManageNotifications from "./ManageBoards/ManageNotifications.tsx";
 import ManageEventBoards from "./ManageBoards/ManageEventBoards.tsx";
+import ManageCommonRecommandation from "./ManageCommonRecommandation.tsx";
 
 export default function Management() {
     const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -51,6 +52,10 @@ export default function Management() {
                     }
                 }
             ]
+        },
+        {
+            name: "일반추천 관리",
+            component: (key) => <ManageCommonRecommandation key={key} />
         }
     ];
 
