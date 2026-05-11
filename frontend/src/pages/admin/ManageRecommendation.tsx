@@ -14,7 +14,7 @@ interface Recommendation {
 }
 
 export default function ManageRecommendation() {
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState<string>("");
     const [searchResults, setSearchResults] = useState<Recommendation[]>([]);
     const [recentRecommendations, setRecentRecommendations] = useState<Recommendation[]>([
         {
