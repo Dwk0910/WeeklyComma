@@ -13,7 +13,7 @@ import Title from "../../component/Title.tsx";
 import ManageMainPage from "./ManageMainPage.tsx";
 import ManageNotifications from "./ManageBoards/ManageNotifications.tsx";
 import ManageEventBoards from "./ManageBoards/ManageEventBoards.tsx";
-import ManageRecommendation from "./ManageRecommendation.tsx";
+import ManageRecommendation from "./ManageBooks/ManageRecommendation.tsx";
 
 // Management menu definitions
 type Menu = {

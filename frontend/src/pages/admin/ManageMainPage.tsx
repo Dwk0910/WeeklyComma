@@ -9,7 +9,7 @@ import Component, { Title, SubTitle } from "./lib_component/Component";
 const LEVEL_STYLES: Record<string, { label: string; color: string }> = {
     high: { label: "상급", color: "bg-red-600" },
     mid: { label: "중급", color: "bg-yellow-500" },
-    low: { label: "하급", color: "bg-blue-600" }
+    low: { label: "초급", color: "bg-blue-600" }
 };
 
 export default function ManageMainPage() {
