@@ -75,7 +75,6 @@ export default function ManageRecommendation() {
             const res = await axios.get(BACKEND_ADDRESS + "book/search", {
                 params: { query: searchQuery }
             });
-
             setSearchResults(res.data);
         } catch (err) {
             console.error(err);
@@ -132,7 +131,7 @@ export default function ManageRecommendation() {
                         <input
                             type="text"
                             className="w-full h-12 pl-12 pr-4 border border-gray-300 rounded-full font-suite outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                            placeholder="키워드로 검색 (저자, 이름 등)"
+                            placeholder="키워드로 검색 (저자, 도서 이름 등)"
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
