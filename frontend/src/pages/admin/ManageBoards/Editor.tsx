@@ -193,7 +193,7 @@ export default function Editor({
                     animate={{ height: "auto", opacity: 1, marginBottom: "20px" }}
                     exit={{ height: 0, opacity: 0, marginBottom: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="mx-2 overflow-hidden border border-gray-300 rounded-lg shadow-sm bg-white"
+                    className="overflow-hidden border border-gray-300 rounded-lg shadow-sm bg-white"
                 >
                     <FontStyle />
                     <style>{`

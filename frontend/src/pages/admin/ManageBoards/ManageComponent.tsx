@@ -79,14 +79,16 @@ export default function ManageComponent({
     return (
         <Component>
             <Title>{title}</Title>
-            <Editor
-                articleType={articleType}
-                visible={postEditorVisible}
-                refreshAction={getPosts}
-                closeAction={() => {
-                    setPostEditorVisible(false);
-                }}
-            />
+            <div className={"mr-4"}>
+                <Editor
+                    articleType={articleType}
+                    visible={postEditorVisible}
+                    refreshAction={getPosts}
+                    closeAction={() => {
+                        setPostEditorVisible(false);
+                    }}
+                />
+            </div>
             <div className={"mb-10"}>
                 <div className={"flex"}>
                     <button
