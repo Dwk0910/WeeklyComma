@@ -38,6 +38,7 @@ public class PostService {
     /**
      * @deprecated use {@link #getAllPosts(Post.PostType postType)} instead.
      */
+    @Deprecated
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
