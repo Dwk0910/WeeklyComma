@@ -60,6 +60,8 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
             alert("책에 대한 필수 정보가 비어 있습니다.");
             return;
         }
+
+        // TODO: 책 정보 서버로 업로드
     };
 
     const inputStyle =
