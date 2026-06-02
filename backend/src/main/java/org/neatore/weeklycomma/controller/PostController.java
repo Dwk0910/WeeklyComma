@@ -2,8 +2,8 @@ package org.neatore.weeklycomma.controller;
 
 import lombok.RequiredArgsConstructor;
 
-import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.PostDto;
+import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.domain.Post;
 import org.neatore.weeklycomma.service.PostService;
 import org.neatore.weeklycomma.service.UserService;
@@ -56,14 +56,14 @@ public class PostController {
     }
 
     @GetMapping("/getPost/{id_}")
-    public ResponseEntity<PostDto.GetRequest> getPost(@PathVariable String id_) {
+    public ResponseEntity<PostDto.GetResponse> getPost(@PathVariable String id_) {
         try {
             long id = Long.parseLong(id_);
             Post post = postService.getPost(id);
 
             if (post == null) return ResponseEntity.notFound().build();
 
-            return ResponseEntity.ok().body(new PostDto.GetRequest(
+            return ResponseEntity.ok().body(new PostDto.GetResponse(
                     post.getId(),
                     post.getPostType(),
                     post.getTitle(),
@@ -77,10 +77,11 @@ public class PostController {
     }
 
     @GetMapping("/getAllPosts/{postType}")
-    public ResponseEntity<List<PostDto.GetRequest>> getAllPosts(@PathVariable Post.PostType postType) {
-        List<PostDto.GetRequest> response = new ArrayList<>();
+    public ResponseEntity<List<PostDto.GetResponse>> getAllPosts(@PathVariable Post.PostType postType, @RequestParam(required = false) String bookId) {
+        if (bookId != null) System.out.println(bookId);
+        List<PostDto.GetResponse> response = new ArrayList<>();
         postService.getAllPosts(postType).forEach(item ->
-                response.add(new PostDto.GetRequest(
+                response.add(new PostDto.GetResponse(
                         item.getId(),
                         item.getPostType(),
                         item.getTitle(),

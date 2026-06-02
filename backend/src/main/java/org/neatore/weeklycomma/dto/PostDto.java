@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.neatore.weeklycomma.domain.Post;
 
 public abstract class PostDto {
-    public record GetRequest(
+    public record GetResponse(
             @NotBlank Long id,
             @NotBlank Post.PostType type,
             @NotBlank String title,
