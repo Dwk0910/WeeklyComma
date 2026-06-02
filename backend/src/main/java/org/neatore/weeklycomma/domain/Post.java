@@ -1,12 +1,15 @@
 package org.neatore.weeklycomma.domain;
 
 import lombok.AccessLevel;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -27,7 +30,7 @@ import java.time.LocalDateTime;
 @Getter
 public class Post {
     public enum PostType {
-        NOTICE, EVENT
+        NOTICE, EVENT, RECOMMANDATION
     }
 
     public Post(String title, String author, PostType postType, String content) {
@@ -40,6 +43,10 @@ public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+
+    @Embedded
+    @Setter
+    private Attribution attribution;
 
     @Enumerated(EnumType.STRING)
     private PostType postType;
@@ -61,6 +68,13 @@ public class Post {
 
     @Lob
     private String content;
+
+    @Data
+    @Embeddable
+    @NoArgsConstructor(access = AccessLevel.PROTECTED)
+    public static class Attribution {
+        public Long bookId;
+    }
 }
 
 
