@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BsPinAngle } from "react-icons/bs";
 import loading_gif from "../../../assets/loading.gif";
 
-export type PostType = "NOTICE" | "EVENT";
+export type PostType = "NOTICE" | "EVENT" | "RECOMMANDATION";
 
 export type Post = {
     id: number;
@@ -24,10 +24,12 @@ export type Post = {
 
 export default function ManageComponent({
     articleType,
-    title
+    title,
+    params
 }: {
     articleType: PostType;
     title: string;
+    params?: object;
 }) {
     const [isLoading, setIsLoading] = useState<boolean>();
     const [postEditorVisible, setPostEditorVisible] = useState<boolean>(false);
@@ -36,18 +38,20 @@ export default function ManageComponent({
 
     const getPosts: () => Promise<void> = useCallback(async () => {
         setIsLoading(true);
-        return axios.get(BACKEND_ADDRESS + `post/getAllPosts/${articleType}`).then((res) => {
-            const postList: Post[] = res.data;
-            setSelectedPosts([]);
-            setPosts(() =>
-                postList.sort((a, b) => {
-                    if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-                    return b.createdAt - a.createdAt;
-                })
-            );
-            setIsLoading(false);
-        });
-    }, [articleType]);
+        return axios
+            .get(BACKEND_ADDRESS + `post/getAllPosts/${articleType}`, { params })
+            .then((res) => {
+                const postList: Post[] = res.data;
+                setSelectedPosts([]);
+                setPosts(() =>
+                    postList.sort((a, b) => {
+                        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+                        return b.createdAt - a.createdAt;
+                    })
+                );
+                setIsLoading(false);
+            });
+    }, [articleType, params]);
 
     useEffect(() => {
         (async () => {
