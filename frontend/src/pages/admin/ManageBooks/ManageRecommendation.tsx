@@ -16,9 +16,10 @@ export type Book = {
     publisher: string;
     isbn: string;
     aladinId: string;
-    pubDate: string;
+    pubDate: number;
     coverImg: string;
     adult: boolean;
+    difficulty: "초급" | "중급" | "상급" | null;
     // recommendations: Recommendation[];
 };
 
@@ -42,8 +43,9 @@ export default function ManageRecommendation() {
         author: "김김김",
         publisher: "테스트",
         coverImg: "https://image.aladin.co.kr/product/11649/82/cover200/8990982707_1.jpg",
-        pubDate: "2025-00-00",
-        adult: false
+        pubDate: 2147483647,
+        adult: false,
+        difficulty: null
     });
 
     useEffect(() => {
