@@ -9,7 +9,18 @@ public class BookDto {
             String author,
             String publisher,
             String isbn,
-            String aladinId,
+            String pubDate,
+            String description,
+            String coverImg,
+            boolean adult
+    ) {}
+
+    public record RegisterRequest(
+            String title,
+            String subtitle,
+            String isbn,
+            String author,
+            String publisher,
             String pubDate,
             String description,
             String coverImg,

@@ -7,6 +7,8 @@ import org.neatore.weeklycomma.dto.BookDto;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,5 +24,11 @@ public class BookController {
     @GetMapping("/search")
     public ResponseEntity<List<BookDto.BookResponse>> searchBooks(@RequestParam String query) {
         return ResponseEntity.ok(bookService.apiSearchBookByName(query));
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<Void> registerBook(@RequestBody BookDto.RegisterRequest request) {
+        bookService.registerBook(request);
+        return ResponseEntity.ok().build();
     }
 }

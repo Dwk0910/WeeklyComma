@@ -45,7 +45,6 @@ public class BookService {
                             obj.getString("author"),
                             obj.getString("publisher"),
                             obj.getString("isbn"),
-                            obj.get("itemId").toString(),
                             obj.getString("pubDate"),
                             obj.getString("description"),
                             obj.getString("cover"),
@@ -61,5 +60,9 @@ public class BookService {
 
     public Book getBookByIsbn(String isbn) {
         return bookRepository.getBookByIsbn(isbn);
+    }
+
+    public void registerBook(BookDto.RegisterRequest registerRequest) {
+        bookRepository.save(new Book(registerRequest.isbn(), registerRequest.title(), registerRequest.author(), registerRequest.publisher(), registerRequest.pubDate(), registerRequest.description()));
     }
 }
