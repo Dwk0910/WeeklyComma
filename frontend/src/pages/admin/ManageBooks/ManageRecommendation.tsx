@@ -15,7 +15,6 @@ export type Book = {
     author: string;
     publisher: string;
     isbn: string;
-    aladinId: string;
     pubDate: number;
     coverImg: string;
     adult: boolean;
@@ -38,7 +37,6 @@ export default function ManageRecommendation() {
         subtitle: "제134회 나오키상 수상작",
         description:
             "히가시노 게이고 문학의 정수로 일컬어지는 &lt;용의자 X의 헌신&gt;이 새롭게 번역되어 출간됐다. 일본 문학 전문 번역가 양억관이 자신의 번역을 대폭 손질해 원작이 지닌 문학적 향기와 감동을 오롯이 되살려 냈다.",
-        aladinId: "386461993",
         isbn: "8990982707",
         author: "김김김",
         publisher: "테스트",

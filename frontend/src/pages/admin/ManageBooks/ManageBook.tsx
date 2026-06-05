@@ -15,7 +15,7 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        if (name == "aladinId" || name == "isbn") return;
+        if (name == "isbn") return;
 
         // 표준 Unix Timestamp인 '초(Seconds)' 단위 정수로 변환하여 저장
         if (name === "pubDate") {
@@ -38,7 +38,6 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
 
     const requiredFields = [
         "title",
-        "aladinId",
         "isbn",
         "author",
         "publisher",
@@ -125,6 +124,12 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
                     </div>
 
                     <span className={"text-gray-700 font-suite mt-6 font-bold"}>책 사양</span>
+
+                    <div className={"flex font-suite mt-3 text-gray-500"}>
+                        <span>ISBN</span>
+                        <span className={"ml-3 font-bold"}>{book.isbn}</span>
+                    </div>
+
                     <div className={"flex flex-col mt-2"}>
                         {[
                             { label: "저자", name: "author" },
@@ -157,13 +162,6 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
                                 onChange={handleChange}
                                 className={`${inputStyle} font-bold cursor-pointer`}
                             />
-                        </div>
-
-                        <div className={"flex font-suite mt-3 text-gray-500"}>
-                            <span>ISBN</span>
-                            <span className={"ml-3 font-bold"}>{book.isbn}</span>
-                            <span className={"ml-4"}>AID</span>
-                            <span className={"ml-3 font-bold"}>{book.aladinId}</span>
                         </div>
 
                         <div className="flex items-center gap-6 mt-3">
