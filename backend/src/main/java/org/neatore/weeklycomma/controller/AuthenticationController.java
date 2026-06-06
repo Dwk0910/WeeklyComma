@@ -1,6 +1,7 @@
 package org.neatore.weeklycomma.controller;
 
-import org.neatore.weeklycomma.dto.UserDto;
+import org.neatore.weeklycomma.dto.login.AuthDto;
+import org.neatore.weeklycomma.dto.login.AuthType;
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.service.OAuthService;
 import org.neatore.weeklycomma.service.UserService;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 
+import jakarta.validation.Valid;
+
 import java.time.Duration;
 
 @RestController
@@ -28,23 +31,41 @@ public class AuthenticationController {
     private final OAuthService oAuthService;
     private final UserService userService;
 
-    @PostMapping("/login/oauth_naver")
-    public ResponseEntity<Void> login(@RequestBody UserDto.NaverOAuthRequest naverOAuthRequest) {
-        String email = oAuthService.getEmail(naverOAuthRequest.auth_code(), naverOAuthRequest.redirect_uri(), naverOAuthRequest.state());
-        User user = userService.getUserByEmail(email);
+    private ResponseCookie newUser(User user) {
+        String newToken = userService.newLoginSession(user);
+        return ResponseCookie.from("WCA_LOGIN", newToken)
+                .httpOnly(true)
+                .path("/")
+                .maxAge(Duration.ofDays(365))
+                .sameSite("Lax")
+                .build();
+    }
 
-        // Generate cookie
-        if (user != null) {
-            String newToken = userService.newLoginSession(user);
-            ResponseCookie cookie = ResponseCookie.from("WCA_LOGIN", newToken)
-                    .httpOnly(true)
-                    .path("/")
-                    .maxAge(Duration.ofDays(365))
-                    .sameSite("Lax")
-                    .build();
+    @PostMapping
+    public ResponseEntity<Void> loginOAuth(@Valid @RequestBody AuthDto.LoginRequest request) {
+        if (request.authType() == AuthType.LOCAL) {
+            User user = userService.getUserByEmail(request.email());
+            if (user != null) {
+                // TODO: 비밀번호 검증
+            }
 
-            return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
-        } else return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else {
+            // OAUTH 로그인
+
+            String email = switch (request.authType()) {
+                case OAUTH_NAVER -> oAuthService.getEmailNaver(request.auth_code(), request.redirect_uri(), request.state());
+                default -> null;
+            };
+
+            User user = userService.getUserByEmail(email);
+
+            // Generate cookie
+            if (user != null) {
+                ResponseCookie cookie = this.newUser(user);
+                return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
+            } else return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @GetMapping("/logout")
