@@ -31,8 +31,6 @@ export default function PreTopBar({ login }: { login: boolean }) {
 }
 
 const LoginInteraction = ({ login }: { login: boolean }) => {
-    console.log();
-
     return login ? (
         <div
             className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
@@ -45,17 +43,35 @@ const LoginInteraction = ({ login }: { login: boolean }) => {
             로그아웃하기
         </div>
     ) : (
-        <div
-            className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
-            onClick={() => {
-                const client_id = import.meta.env.VITE_API_OAUTH_CLIENT_ID;
-                const state = crypto.randomUUID();
-                window.location.assign(
-                    `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=${window.location.origin + "/authcallback/oauth_naver"}&state=${state}`
-                );
-            }}
-        >
-            유저 로그인
-        </div>
+        <>
+            <div
+                className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
+                onClick={() => {
+                    const client_id = import.meta.env.VITE_API_OAUTH_NAVER_CLIENT_ID;
+                    const state = crypto.randomUUID();
+                    window.location.assign(
+                        `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=${window.location.origin + "/authcallback/OAUTH_NAVER"}&state=${state}`
+                    );
+                }}
+            >
+                유저 로그인
+            </div>
+            <div
+                className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
+                onClick={() => {
+                    const client_id = import.meta.env.VITE_API_OAUTH_NAVER_CLIENT_ID;
+                    const state = crypto.randomUUID();
+
+                    const userName = prompt("Type username") as string;
+                    localStorage.setItem("username", userName.replaceAll(" ", ""));
+
+                    window.location.assign(
+                        `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=${window.location.origin + "/signupcallback/OAUTH_NAVER"}&state=${state}`
+                    );
+                }}
+            >
+                회원가입
+            </div>
+        </>
     );
 };

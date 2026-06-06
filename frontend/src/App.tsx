@@ -12,7 +12,8 @@ import Main from "./pages/Main.tsx";
 import Management from "./pages/admin/Management.tsx";
 import About from "./pages/About.tsx";
 
-import AuthCallBack from "./pages/redirect/AuthCallBack.tsx";
+import AuthCallback from "./pages/redirect/AuthCallback.ts";
+import SignUpCallback from "./pages/redirect/SignUpCallback.ts";
 
 export const BACKEND_ADDRESS =
     (import.meta.env.VITE_API_BACKEND_PROTOCOL == "ns" ? "http://" : "https://") +
@@ -67,7 +68,11 @@ export default function App() {
                         <TopBar login={login} />
                         <Routes>
                             <Route index element={<Main />} />
-                            <Route path={"/authcallback/:oauth_type?"} element={<AuthCallBack />} />
+                            <Route path={"/authcallback/:oauth_type?"} element={<AuthCallback />} />
+                            <Route
+                                path={"/signupcallback/:oauth_type?"}
+                                element={<SignUpCallback />}
+                            />
                             <Route path={"/management"} element={<Management />} />
                             <Route path={"/about"} element={<About />} />
                         </Routes>
