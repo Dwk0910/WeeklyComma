@@ -10,17 +10,20 @@ import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.neatore.weeklycomma.dto.login.AuthType;
+
 import java.util.UUID;
 
 @Entity
 public class User {
     protected User() {}
 
-    public User(String userName, String email, String password, User.UserType role) {
+    public User(String userName, String email, String password, User.UserType role, AuthType authType) {
         this.userName = userName;
         this.email = email;
         this.password = password;
         this.userType = role;
+        this.authType = authType;
     }
 
     // User Type은 각 케이스에 따라 생성
@@ -40,6 +43,10 @@ public class User {
     @Getter
     @Enumerated(value = EnumType.STRING)
     private UserType userType;
+
+    @Getter
+    @Enumerated(value = EnumType.STRING)
+    private AuthType authType;
 
     @Getter
     @Setter
