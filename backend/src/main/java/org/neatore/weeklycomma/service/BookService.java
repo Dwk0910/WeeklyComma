@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 @Service
 @RequiredArgsConstructor
@@ -45,9 +47,9 @@ public class BookService {
                             obj.getString("author"),
                             obj.getString("publisher"),
                             obj.getString("isbn"),
-                            obj.getString("pubDate"),
-                            obj.getString("description"),
+                            Long.toString(LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(9))),
                             obj.getString("cover"),
+                            obj.getString("description"),
                             obj.getBoolean("adult")
                     ));
             }

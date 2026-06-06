@@ -23,7 +23,7 @@ import java.util.List;
 public class BookController {
     private final BookService bookService;
 
-    @GetMapping("/search")
+    @GetMapping("/searchAPI")
     public ResponseEntity<List<BookDto.BookResponse>> searchBooks(@Valid @RequestParam String query) {
         return ResponseEntity.ok(bookService.apiSearchBookByName(query));
     }
