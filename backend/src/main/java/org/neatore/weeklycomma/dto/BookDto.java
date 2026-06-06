@@ -1,29 +1,29 @@
 package org.neatore.weeklycomma.dto;
 
-import org.jetbrains.annotations.Nullable;
+import jakarta.validation.constraints.NotBlank;
 
 public class BookDto {
     public record BookResponse(
             String title,
-            @Nullable String subtitle,
+            String subtitle,
             String author,
             String publisher,
             String isbn,
             String pubDate,
-            String description,
             String coverImg,
-            boolean adult
+            String description,
+            Boolean adult
     ) {}
 
     public record RegisterRequest(
-            String title,
-            String subtitle,
-            String isbn,
-            String author,
-            String publisher,
-            String pubDate,
+            @NotBlank String title,
+            @NotBlank String subtitle,
+            @NotBlank String isbn,
+            @NotBlank String author,
+            @NotBlank String publisher,
+            @NotBlank String pubDate,
+            @NotBlank String coverImg,
             String description,
-            String coverImg,
-            boolean adult
+            Boolean adult
     ) {}
 }
