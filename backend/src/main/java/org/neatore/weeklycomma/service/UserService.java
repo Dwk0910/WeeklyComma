@@ -1,6 +1,8 @@
 package org.neatore.weeklycomma.service;
 
 import org.neatore.weeklycomma.domain.User;
+import org.neatore.weeklycomma.dto.login.AuthType;
+import org.neatore.weeklycomma.dto.login.UserDto;
 import org.neatore.weeklycomma.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
@@ -8,6 +10,8 @@ import jakarta.annotation.Nullable;
 
 import org.apache.commons.codec.digest.DigestUtils;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -19,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final OAuthService oauthService;
     private final ConcurrentHashMap<String, User> loginedUsers = new ConcurrentHashMap<>();
 
     public User getUserByEmail(String email) {
@@ -45,12 +50,25 @@ public class UserService {
     }
 
     @Transactional
-    public boolean addUser(String userName, String email, String password, User.UserType role) {
-        if (userRepository.getUserByEmail(email) == null) {
-            userRepository.save(new User(userName, email, password, role));
-            return true;
+    public ResponseEntity<Void> addUser(UserDto.SignupRequest request) {
+        ResponseEntity<Void> alreadyExist = ResponseEntity.status(HttpStatus.CONFLICT).build();
+        ResponseEntity<Void> success = ResponseEntity.ok().build();
+
+        String userName = request.userName(), email = request.email(), password = request.password();
+        AuthType authType = request.authType();
+
+        switch (request.authType()) {
+            case LOCAL -> {
+                if (userRepository.getUserByEmail(request.email()) != null) return alreadyExist;
+            }
+
+            case OAUTH_NAVER -> {
+                email = oauthService.getEmailNaver(request.auth_code(), request.redirect_uri(), request.state());
+                if (userRepository.getUserByEmail(email) != null) return alreadyExist;
+            }
         }
 
-        return false;
+        userRepository.save(new User(userName, email, password, User.UserType.GENERAL, authType));
+        return success;
     }
 }
