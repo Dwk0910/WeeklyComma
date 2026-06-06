@@ -61,6 +61,7 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
         }
 
         // TODO: 책 정보 서버로 업로드
+        console.log(book);
     };
 
     const inputStyle =
@@ -165,7 +166,7 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
                         </div>
 
                         <div className="flex items-center gap-6 mt-3">
-                            <span className="text-gray-700 font-bold w-30 shrink-0">
+                            <span className="text-gray-700 font-bold w-30 shrink-0 font-suite">
                                 추천 도서 난이도
                             </span>
                             <div className="flex items-center gap-4">
