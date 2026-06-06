@@ -72,7 +72,7 @@ export default function ManageRecommendation() {
         if (!searchQuery.trim()) return;
         setIsSearching(true);
         try {
-            const res = await axios.get(BACKEND_ADDRESS + "book/search", {
+            const res = await axios.get(BACKEND_ADDRESS + "book/searchAPI", {
                 params: { query: searchQuery }
             });
             setSearchResults(res.data);
@@ -105,7 +105,14 @@ export default function ManageRecommendation() {
                     <div className="flex items-center text-sm text-gray-500 mt-1">
                         <span className="font-semibold text-gray-600 mr-2">{item.author}</span>
                         <span className="mr-3">|</span>
-                        <span>{item.pubDate}</span>
+                        <span className="font-semibold text-gray-600 mr-3">{item.publisher}</span>
+                        <span className="mr-3">|</span>
+                        {(() => {
+                            const date: Date = new Date(item.pubDate * 1000);
+                            return (
+                                <span>{`${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDay()}.`}</span>
+                            );
+                        })()}
                         <span className="mx-3">|</span>
                         <span>{item.isbn}</span>
                     </div>
