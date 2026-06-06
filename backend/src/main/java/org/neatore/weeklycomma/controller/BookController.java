@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -22,12 +24,12 @@ public class BookController {
     private final BookService bookService;
 
     @GetMapping("/search")
-    public ResponseEntity<List<BookDto.BookResponse>> searchBooks(@RequestParam String query) {
+    public ResponseEntity<List<BookDto.BookResponse>> searchBooks(@Valid @RequestParam String query) {
         return ResponseEntity.ok(bookService.apiSearchBookByName(query));
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Void> registerBook(@RequestBody BookDto.RegisterRequest request) {
+    public ResponseEntity<Void> registerBook(@Valid @RequestBody BookDto.RegisterRequest request) {
         bookService.registerBook(request);
         return ResponseEntity.ok().build();
     }

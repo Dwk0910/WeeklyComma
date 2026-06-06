@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import java.net.URI;
 
 import java.time.ZoneOffset;
@@ -39,7 +41,7 @@ public class PostController {
 
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> post(@CookieValue("WCA_LOGIN") String userToken, @RequestBody PostDto.PostRequest postDto) {
+    public ResponseEntity<Void> post(@CookieValue("WCA_LOGIN") String userToken, @Valid @RequestBody PostDto.PostRequest postDto) {
         return ResponseEntity.created(URI.create("/getPost/" + postService.addPost(
                 postDto.title(),
                 postDto.content(),
