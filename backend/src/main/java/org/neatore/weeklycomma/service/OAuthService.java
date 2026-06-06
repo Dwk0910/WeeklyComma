@@ -3,6 +3,7 @@ package org.neatore.weeklycomma.service;
 import org.json.JSONObject;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestClient;
 
 import lombok.RequiredArgsConstructor;
@@ -12,11 +13,14 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class OAuthService {
-    public String getEmail(String authCode, String redirectUri, String state) {
-        // Access Token 구하기
-        String clientId = System.getenv("OAUTH_CLIENT_ID");
-        String clientKey = System.getenv("OAUTH_CLIENT_KEY");
+    @Value("${oauth_naver_cli_id}")
+    private String clientId;
 
+    @Value("${oauth_naver_cli_key}")
+    private String clientKey;
+
+    public String getEmailNaver(String authCode, String redirectUri, String state) {
+        // Access Token 구하기
         if (clientId == null || clientKey == null) throw new RuntimeException("OAuth Client ID/SECRET not set.");
 
         RestClient rc = RestClient.create();
