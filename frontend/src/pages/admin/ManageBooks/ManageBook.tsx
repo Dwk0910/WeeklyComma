@@ -84,13 +84,16 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
         <div className="relative">
             <FontStyle />
             <div className={"flex"}>
-                <div className="relative shrink-0" onClick={handleImageClick}>
+                <div className="relative shrink-0">
                     <img
                         src={previewImg}
                         alt={"cover"}
                         className={"w-60 h-90 border border-gray-500"}
                     />
-                    <div className="absolute w-full h-90 inset-0 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 cursor-pointer">
+                    <div
+                        className="absolute w-full h-90 inset-0 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 cursor-pointer"
+                        onClick={handleImageClick}
+                    >
                         <MdCameraAlt className="text-white text-[2rem]" />
                         <span className={"font-suite text-white"}>사진 바꾸기</span>
                     </div>
