@@ -26,7 +26,12 @@ export default defineConfig([
         },
         rules: {
             // ⭐ Prettier 결과를 ESLint 에러로
-            "prettier/prettier": "warn",
+            "prettier/prettier": [
+                "warn",
+                {
+                    endOfLine: "auto"
+                }
+            ],
 
             // ⭐ 세미콜론 안 쓰면 에러
             semi: ["error", "always"],
