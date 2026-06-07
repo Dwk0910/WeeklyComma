@@ -7,6 +7,7 @@ import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 import org.neatore.weeklycomma.service.UserService;
 import org.neatore.weeklycomma.domain.User;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.stereotype.Component;
@@ -14,11 +15,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.util.WebUtils;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.util.WebUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,9 @@ import java.util.Optional;
 public class AuthenticationInterceptor implements HandlerInterceptor {
     private final UserService us;
 
+    @Value("${csrf_token}")
+    private String corsToken;
+
     @Override
     public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) {
         // OPTION requests are preflight requests, and should be allowed to pass through without authentication
@@ -36,7 +40,13 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
 
         // Our API is only available to users who are using web browsers and using CORS Option (JavaScript).
         // If the request is not from the web browser, it should be blocked.
-        if ((request.getHeader("Sec-Fetch-Site") == null || request.getHeader("Sec-Fetch-Mode") == null) || !request.getHeader("Sec-Fetch-Mode").equals("cors")) {
+
+        // CSRF Token Verification: CSRF token here can be exposed.
+        // However, If attackers know the CSRF token, they can only make CORS request or Simple Request that cannot contain header field.
+        if (
+                ((request.getHeader("Sec-Fetch-Site") == null || request.getHeader("Sec-Fetch-Mode") == null) || !request.getHeader("Sec-Fetch-Mode").equals("cors"))
+                        || (request.getHeader("X-CSRF-TOKEN") == null || !request.getHeader("X-CSRF-TOKEN").equals(corsToken))
+        ) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return false;
         }
