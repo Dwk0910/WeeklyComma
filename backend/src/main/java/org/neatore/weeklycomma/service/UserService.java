@@ -8,10 +8,6 @@ import org.neatore.weeklycomma.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import jakarta.annotation.Nullable;
 
-import org.apache.commons.codec.digest.DigestUtils;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -31,44 +27,42 @@ public class UserService {
     }
 
     public @Nullable User getUserByToken(String token) {
-        return loginedUsers.get(DigestUtils.sha256Hex(token));
+        return loginedUsers.get(token);
     }
 
     public boolean hasToken(String token) {
-        return loginedUsers.containsKey(DigestUtils.sha256Hex(token));
+        return loginedUsers.containsKey(token);
     }
 
     public void removeToken(String token) {
-        loginedUsers.remove(DigestUtils.sha256Hex(token));
+        loginedUsers.remove(token);
     }
 
     public String newLoginSession(User user) {
         String newToken = UUID.randomUUID().toString();
-        loginedUsers.put(DigestUtils.sha256Hex(newToken), user);
+        loginedUsers.put(newToken, user);
 
         return newToken;
     }
 
     @Transactional
-    public ResponseEntity<Void> addUser(UserDto.SignupRequest request) {
-        ResponseEntity<Void> alreadyExist = ResponseEntity.status(HttpStatus.CONFLICT).build();
-        ResponseEntity<Void> success = ResponseEntity.ok().build();
-
+    public void addUser(UserDto.SignupRequest request) {
         String userName = request.userName(), email = request.email(), password = request.password();
         AuthType authType = request.authType();
 
+        boolean confilct = false;
+
         switch (request.authType()) {
             case LOCAL -> {
-                if (userRepository.getUserByEmail(request.email()) != null) return alreadyExist;
+                if (userRepository.getUserByEmail(request.email()) != null) confilct = true;
             }
 
             case OAUTH_NAVER -> {
                 email = oauthService.getEmailNaver(request.auth_code(), request.redirect_uri(), request.state());
-                if (userRepository.getUserByEmail(email) != null) return alreadyExist;
+                if (userRepository.getUserByEmail(email) != null) confilct = true;
             }
         }
 
-        userRepository.save(new User(userName, email, password, User.UserType.GENERAL, authType));
-        return success;
+        if (!confilct) userRepository.save(new User(userName, email, password, User.UserType.GENERAL, authType));
     }
 }

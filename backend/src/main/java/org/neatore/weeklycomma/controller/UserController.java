@@ -22,6 +22,7 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<Void> signUp(@Valid @RequestBody UserDto.SignupRequest request) {
-        return userService.addUser(request);
+        userService.addUser(request);
+        return ResponseEntity.ok().build();
     }
 }
