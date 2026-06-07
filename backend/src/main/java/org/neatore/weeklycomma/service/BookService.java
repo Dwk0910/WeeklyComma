@@ -26,7 +26,12 @@ public class BookService {
     private final BookRepository bookRepository;
     private final APIService apiService;
 
-    public List<BookDto.BookResponse> apiSearchBookByName(String name) {
+    public List<BookDto.BookResponse> searchBooks(String name) {
+        // TODO: DB와 연결
+        return List.of();
+    }
+
+    public List<BookDto.BookResponse> searchBooksAPI(String name) {
         List<BookDto.BookResponse> result = new ArrayList<>();
         try {
             JSONArray apiResult = apiService.searchBooks(name, "TITLE").optJSONArray("item", new JSONArray());
