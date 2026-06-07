@@ -2,6 +2,9 @@ spring:
   datasource:
     driver-class-name: org.sqlite.JDBC
     url: jdbc:sqlite:./data/weeklycomma.db
+  security.user:
+    name: admin
+    password: admin
 
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
