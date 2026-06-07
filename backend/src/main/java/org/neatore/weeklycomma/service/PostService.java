@@ -47,6 +47,7 @@ public class PostService {
         return postRepository.getPostsByPostType(type);
     }
 
+    @Transactional
     public void pinPost(long id, boolean pin) {
         Post post = getPost(id);
         post.setPinned(pin);
