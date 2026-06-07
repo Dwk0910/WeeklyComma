@@ -122,16 +122,16 @@ export default function ManageComponent({
                     <button
                         className={menuBtnStyle(true, "bg-blue-500", "bg-neutral-400")}
                         onClick={async () => {
-                            await axios
-                                .put(
-                                    BACKEND_ADDRESS + "posts/pin",
-                                    selectedPosts.filter((i) => !i.isPinned).map((i) => i.id),
-                                    {
-                                        headers: { "X-Content-Type-Options": 1 }
-                                    }
-                                )
-                                .then(async () => {
-                                    await getPosts();
+                            selectedPosts
+                                .filter((i) => !i.isPinned)
+                                .map((i) => {
+                                    axios
+                                        .patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
+                                            params: { pin: true }
+                                        })
+                                        .then(async () => {
+                                            await getPosts();
+                                        });
                                 });
                         }}
                     >
@@ -141,14 +141,16 @@ export default function ManageComponent({
                         className={menuBtnStyle(true, "bg-blue-500", "bg-neutral-400")}
                         style={{ width: "120px" }}
                         onClick={async () => {
-                            await axios
-                                .put(
-                                    BACKEND_ADDRESS + "posts/pin",
-                                    selectedPosts.filter((i) => i.isPinned).map((i) => i.id),
-                                    { headers: { "X-Content-Type-Options": 0 } }
-                                )
-                                .then(async () => {
-                                    await getPosts();
+                            selectedPosts
+                                .filter((i) => i.isPinned)
+                                .map((i) => {
+                                    axios
+                                        .patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
+                                            params: { pin: false }
+                                        })
+                                        .then(async () => {
+                                            await getPosts();
+                                        });
                                 });
                         }}
                     >
