@@ -34,6 +34,13 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         // OPTION requests are preflight requests, and should be allowed to pass through without authentication
         if (CorsUtils.isPreFlightRequest(request)) return true;
 
+        // Our API is only available to users who are using web browsers and using CORS Option (JavaScript).
+        // If the request is not from the web browser, it should be blocked.
+        if ((request.getHeader("Sec-Fetch-Site") == null || request.getHeader("Sec-Fetch-Mode") == null) || !request.getHeader("Sec-Fetch-Mode").equals("cors")) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return false;
+        }
+
         if (handler instanceof HandlerMethod hm) {
             Runnable unAuthorizedResponse = () -> response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
