@@ -13,11 +13,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/post")
+@RequestMapping("/posts")
 @RequiredArgsConstructor
 public class PostController {
     private final UserService userService;
@@ -42,7 +41,7 @@ public class PostController {
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> post(@CookieValue("WCA_LOGIN") String userToken, @Valid @RequestBody PostDto.PostRequest postDto) {
-        return ResponseEntity.created(URI.create("/getPost/" + postService.addPost(
+        return ResponseEntity.created(URI.create("/posts/" + postService.addPost(
                 postDto.title(),
                 postDto.content(),
                 Objects.requireNonNull(userService.getUserByToken(userToken)).getUserName(),
@@ -50,37 +49,15 @@ public class PostController {
         ))).build();
     }
 
-    @DeleteMapping
+    @DeleteMapping("/{target}")
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> deletePost(@RequestParam List<Long> targets) {
-        targets.forEach(postService::deletePost);
+    public ResponseEntity<Void> deletePost(@PathVariable Long target) {
+        postService.deletePost(target);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/getPost/{id_}")
-    public ResponseEntity<PostDto.GetResponse> getPost(@PathVariable String id_) {
-        try {
-            long id = Long.parseLong(id_);
-            Post post = postService.getPost(id);
-
-            if (post == null) return ResponseEntity.notFound().build();
-
-            return ResponseEntity.ok().body(new PostDto.GetResponse(
-                    post.getId(),
-                    post.getPostType(),
-                    post.getTitle(),
-                    post.getContent(),
-                    post.getAuthor(),
-                    post.isPinned(),
-                    post.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
-                    post.getModifiedAt().toEpochSecond(ZoneOffset.UTC)
-            ));
-        } catch (IllegalArgumentException e) { return ResponseEntity.badRequest().build(); }
-    }
-
-    @GetMapping("/getAllPosts/{postType}")
-    public ResponseEntity<List<PostDto.GetResponse>> getAllPosts(@PathVariable Post.PostType postType, @RequestParam(required = false) String bookId) {
-        if (bookId != null) System.out.println(bookId);
+    @GetMapping
+    public ResponseEntity<List<PostDto.GetResponse>> getPosts(@RequestParam Post.PostType postType, @RequestParam(required = false) String bookId) {
         List<PostDto.GetResponse> response = new ArrayList<>();
         postService.getAllPosts(postType).forEach(item ->
                 response.add(new PostDto.GetResponse(
@@ -98,11 +75,30 @@ public class PostController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/pinPosts")
-    public ResponseEntity<Void> pinPost(@RequestHeader("X-Content-Type-Options") boolean pin,
-                                        @RequestBody List<Long> tPosts) {
+    @GetMapping("/{id}")
+    public ResponseEntity<PostDto.GetResponse> getPost(@PathVariable Long id) {
+        Post post = postService.getPost(id);
+
+        if (post == null) return ResponseEntity.notFound().build();
+
+        return ResponseEntity.ok().body(new PostDto.GetResponse(
+                post.getId(),
+                post.getPostType(),
+                post.getTitle(),
+                post.getContent(),
+                post.getAuthor(),
+                post.isPinned(),
+                post.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
+                post.getModifiedAt().toEpochSecond(ZoneOffset.UTC)
+        ));
+    }
+
+    @PatchMapping("/{id}")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Void> pinPost(@RequestParam boolean pin,
+                                        @PathVariable Long id) {
         try {
-            tPosts.forEach(t -> postService.pinPost(t, pin));
+            postService.pinPost(id, pin);
         } catch (IllegalArgumentException e) { return ResponseEntity.badRequest().build(); }
         return ResponseEntity.ok().build();
     }

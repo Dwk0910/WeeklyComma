@@ -2,6 +2,8 @@ package org.neatore.weeklycomma.controller;
 
 import lombok.RequiredArgsConstructor;
 
+import org.neatore.weeklycomma.annotations.RequiresAuthentication;
+import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.service.BookService;
 import org.neatore.weeklycomma.dto.BookDto;
 
@@ -19,16 +21,22 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/book")
+@RequestMapping("/books")
 public class BookController {
     private final BookService bookService;
 
-    @GetMapping("/searchAPI")
-    public ResponseEntity<List<BookDto.BookResponse>> searchBooks(@Valid @RequestParam String query) {
-        return ResponseEntity.ok(bookService.apiSearchBookByName(query));
+    @GetMapping
+    public ResponseEntity<List<BookDto.BookResponse>> searchBooks(@RequestParam String query) {
+        return ResponseEntity.ok(bookService.searchBooks(query));
     }
 
-    @PostMapping("/register")
+    @GetMapping("/api")
+    public ResponseEntity<List<BookDto.BookResponse>> searchBooksAPI(@RequestParam String query) {
+        return ResponseEntity.ok(bookService.searchBooksAPI(query));
+    }
+
+    @PostMapping
+    @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> registerBook(@Valid @RequestBody BookDto.RegisterRequest request) {
         bookService.registerBook(request);
         return ResponseEntity.ok().build();

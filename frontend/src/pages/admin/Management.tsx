@@ -72,9 +72,8 @@ export default function Management() {
 
     // Authentication check & initial registering collapsible menu items to state values
     useEffect(() => {
-        const token = localStorage.getItem("wca_token");
         axios
-            .get(BACKEND_ADDRESS + "health", { headers: { "X-Client-Session-ID": token } })
+            .get(BACKEND_ADDRESS + "health")
             .then((e) => {
                 if (e.data == "OK_LOGIN") setAuthenticated(true);
                 else setAuthenticated(false);

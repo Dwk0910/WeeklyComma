@@ -17,7 +17,7 @@ export default function AuthCallback() {
 
     axios
         .post(
-            BACKEND_ADDRESS + `auth`,
+            BACKEND_ADDRESS + `authsessions`,
             {
                 authType: oauth_type,
                 auth_code,
@@ -27,7 +27,7 @@ export default function AuthCallback() {
             { withCredentials: true }
         )
         .then((res) => {
-            if (res.status == 200) window.location.assign("/");
+            if (res.status == 201) window.location.assign("/");
             else {
                 alert("Received http status code " + res.status);
                 window.location.assign("/");

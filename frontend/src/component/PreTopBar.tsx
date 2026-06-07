@@ -35,7 +35,7 @@ const LoginInteraction = ({ login }: { login: boolean }) => {
         <div
             className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
             onClick={() => {
-                axios.get(BACKEND_ADDRESS + "auth/logout").then((res) => {
+                axios.delete(BACKEND_ADDRESS + "authsessions").then((res) => {
                     if (res.status === 200) window.location.reload();
                 });
             }}

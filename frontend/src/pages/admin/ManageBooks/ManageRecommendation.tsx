@@ -72,7 +72,7 @@ export default function ManageRecommendation() {
         if (!searchQuery.trim()) return;
         setIsSearching(true);
         try {
-            const res = await axios.get(BACKEND_ADDRESS + "book/searchAPI", {
+            const res = await axios.get(BACKEND_ADDRESS + "books/api", {
                 params: { query: searchQuery }
             });
             setSearchResults(res.data);
