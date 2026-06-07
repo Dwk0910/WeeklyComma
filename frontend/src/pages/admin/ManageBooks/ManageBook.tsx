@@ -223,7 +223,7 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
 
             <div className="mt-2">
                 <ManageComponent
-                    articleType={"RECOMMANDATION"}
+                    postType={"RECOMMANDATION"}
                     title={"추천글 관리"}
                     params={{ bookId: book.isbn }}
                 />

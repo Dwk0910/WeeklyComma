@@ -92,12 +92,12 @@ const ToolbarBtn = ({ onClick, active, icon: Icon, title, disabled, color }: Too
 );
 
 export default function Editor({
-    articleType,
+    postType,
     visible,
     refreshAction,
     closeAction
 }: {
-    articleType: string;
+    postType: string;
     visible: boolean;
     refreshAction?: () => void;
     closeAction?: () => void;
@@ -163,8 +163,8 @@ export default function Editor({
     const handleSave = () => {
         const content = editor.getHTML();
         axios
-            .post(BACKEND_ADDRESS + "post", {
-                type: articleType,
+            .post(BACKEND_ADDRESS + "posts", {
+                type: postType,
                 title: title,
                 content: content
             })

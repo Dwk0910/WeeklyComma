@@ -23,11 +23,11 @@ export type Post = {
 };
 
 export default function ManageComponent({
-    articleType,
+    postType,
     title,
     params
 }: {
-    articleType: PostType;
+    postType: PostType;
     title: string;
     params?: object;
 }) {
@@ -39,7 +39,12 @@ export default function ManageComponent({
     const getPosts: () => Promise<void> = useCallback(async () => {
         setIsLoading(true);
         return axios
-            .get(BACKEND_ADDRESS + `post/getAllPosts/${articleType}`, { params })
+            .get(BACKEND_ADDRESS + `posts`, {
+                params: {
+                    ...params,
+                    postType
+                }
+            })
             .then((res) => {
                 const postList: Post[] = res.data;
                 setSelectedPosts([]);
@@ -51,7 +56,7 @@ export default function ManageComponent({
                 );
                 setIsLoading(false);
             });
-    }, [articleType, params]);
+    }, [postType, params]);
 
     useEffect(() => {
         (async () => {
@@ -85,7 +90,7 @@ export default function ManageComponent({
             <Title>{title}</Title>
             <div className={"mr-4"}>
                 <Editor
-                    articleType={articleType}
+                    postType={postType}
                     visible={postEditorVisible}
                     refreshAction={getPosts}
                     closeAction={() => {
@@ -119,7 +124,7 @@ export default function ManageComponent({
                         onClick={async () => {
                             await axios
                                 .put(
-                                    BACKEND_ADDRESS + "post/pinPosts",
+                                    BACKEND_ADDRESS + "posts/pin",
                                     selectedPosts.filter((i) => !i.isPinned).map((i) => i.id),
                                     {
                                         headers: { "X-Content-Type-Options": 1 }
@@ -138,7 +143,7 @@ export default function ManageComponent({
                         onClick={async () => {
                             await axios
                                 .put(
-                                    BACKEND_ADDRESS + "post/pinPosts",
+                                    BACKEND_ADDRESS + "posts/pin",
                                     selectedPosts.filter((i) => i.isPinned).map((i) => i.id),
                                     { headers: { "X-Content-Type-Options": 0 } }
                                 )
@@ -153,7 +158,7 @@ export default function ManageComponent({
                         className={menuBtnStyle(true, "bg-red-400", "bg-neutral-400")}
                         onClick={async () => {
                             if (confirm("정말 선택한 글들을 삭제하시겠습니까?")) {
-                                await axios.delete(BACKEND_ADDRESS + "post", {
+                                await axios.delete(BACKEND_ADDRESS + "posts", {
                                     params: {
                                         targets: selectedPosts.map((i) => i.id).join(",")
                                     }
