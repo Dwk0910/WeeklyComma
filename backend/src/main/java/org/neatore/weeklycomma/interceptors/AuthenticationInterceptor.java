@@ -31,7 +31,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     private final UserService us;
 
     @Value("${csrf_token}")
-    private String corsToken;
+    private String csrfToken;
 
     @Override
     public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) {
@@ -45,7 +45,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         // However, If attackers know the CSRF token, they can only make CORS request or Simple Request that cannot contain header field.
         if (
                 ((request.getHeader("Sec-Fetch-Site") == null || request.getHeader("Sec-Fetch-Mode") == null) || !request.getHeader("Sec-Fetch-Mode").equals("cors"))
-                        || (request.getHeader("X-CSRF-TOKEN") == null || !request.getHeader("X-CSRF-TOKEN").equals(corsToken))
+                        || (request.getHeader("X-CSRF-TOKEN") == null || !request.getHeader("X-CSRF-TOKEN").equals(csrfToken))
         ) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return false;
