@@ -8,7 +8,7 @@ import "./index.css";
 
 axios.defaults.withCredentials = true;
 axios.interceptors.request.use((config) => {
-    config.headers["X-CSRF-TOKEN"] = import.meta.env.VITE_API_CSRF_TOKEN;
+    config.headers["X-Csrf-Token"] = import.meta.env.VITE_API_CSRF_TOKEN;
     return config;
 });
 

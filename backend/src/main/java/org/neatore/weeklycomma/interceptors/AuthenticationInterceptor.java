@@ -45,7 +45,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         // However, If attackers know the CSRF token, they can only make CORS request or Simple Request that cannot contain header field.
         if (
                 ((request.getHeader("Sec-Fetch-Site") == null || request.getHeader("Sec-Fetch-Mode") == null) || !request.getHeader("Sec-Fetch-Mode").equals("cors"))
-                        || (request.getHeader("X-CSRF-TOKEN") == null || !request.getHeader("X-CSRF-TOKEN").equals(csrfToken))
+                        || (request.getHeader("X-Csrf-Token") == null || !request.getHeader("X-Csrf-Token").equals(csrfToken))
         ) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return false;
