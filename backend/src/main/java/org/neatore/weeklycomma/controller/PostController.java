@@ -95,7 +95,7 @@ public class PostController {
 
     @PatchMapping("/{id}")
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> pinPost(@RequestParam boolean pin,
+    public ResponseEntity<Void> pinPost(@RequestParam Boolean pin,
                                         @PathVariable Long id) {
         try {
             postService.pinPost(id, pin);
