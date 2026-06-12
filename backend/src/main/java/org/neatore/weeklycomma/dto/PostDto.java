@@ -1,13 +1,14 @@
 package org.neatore.weeklycomma.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import org.neatore.weeklycomma.domain.Post;
 
 public abstract class PostDto {
     public record GetResponse(
+            @NotNull Post.PostType type,
             @NotBlank Long id,
-            @NotBlank Post.PostType type,
             @NotBlank String title,
             @NotBlank String content,
             @NotBlank String author,
@@ -17,9 +18,10 @@ public abstract class PostDto {
     ) {}
 
     public record PostRequest(
-            @NotBlank Post.PostType type,
+            @NotNull Post.PostType type,
             @NotBlank String title,
-            @NotBlank String content
+            @NotBlank String content,
+            Post.Attribution attributions
     ) {}
 
     public record DeleteRequest(

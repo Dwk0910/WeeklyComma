@@ -45,7 +45,8 @@ public class PostController {
                 postDto.title(),
                 postDto.content(),
                 Objects.requireNonNull(userService.getUserByToken(userToken)).getUserName(),
-                postDto.type()
+                postDto.type(),
+                postDto.attributions()
         ))).build();
     }
 
@@ -61,8 +62,8 @@ public class PostController {
         List<PostDto.GetResponse> response = new ArrayList<>();
         postService.getAllPosts(postType).forEach(item ->
                 response.add(new PostDto.GetResponse(
-                        item.getId(),
                         item.getPostType(),
+                        item.getId(),
                         item.getTitle(),
                         item.getContent(),
                         item.getAuthor(),
@@ -82,8 +83,8 @@ public class PostController {
         if (post == null) return ResponseEntity.notFound().build();
 
         return ResponseEntity.ok().body(new PostDto.GetResponse(
-                post.getId(),
                 post.getPostType(),
+                post.getId(),
                 post.getTitle(),
                 post.getContent(),
                 post.getAuthor(),
