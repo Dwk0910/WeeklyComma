@@ -1,6 +1,8 @@
 package org.neatore.weeklycomma.domain;
 
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,14 +32,16 @@ import java.time.LocalDateTime;
 @Getter
 public class Post {
     public enum PostType {
-        NOTICE, EVENT, RECOMMANDATION
+        NOTICE, EVENT, RECOMMENDATION
     }
 
-    public Post(String title, String author, PostType postType, String content) {
+    @Builder
+    public Post(String title, String author, PostType postType, String content, Attribution attr) {
         this.title = title;
         this.author = author;
         this.postType = postType;
         this.content = content;
+        this.attribution = attr;
     }
 
     @Id
@@ -71,6 +75,7 @@ public class Post {
 
     @Data
     @Embeddable
+    @AllArgsConstructor
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class Attribution {
         public Long bookId;
