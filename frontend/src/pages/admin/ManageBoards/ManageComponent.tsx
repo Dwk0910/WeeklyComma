@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BsPinAngle } from "react-icons/bs";
 import loading_gif from "../../../assets/loading.gif";
 
-export type PostType = "NOTICE" | "EVENT" | "RECOMMANDATION";
+export type PostType = "NOTICE" | "EVENT" | "RECOMMENDATION";
 
 export type Post = {
     id: number;
@@ -25,11 +25,11 @@ export type Post = {
 export default function ManageComponent({
     postType,
     title,
-    params
+    attributions
 }: {
     postType: PostType;
     title: string;
-    params?: object;
+    attributions?: object;
 }) {
     const [isLoading, setIsLoading] = useState<boolean>();
     const [postEditorVisible, setPostEditorVisible] = useState<boolean>(false);
@@ -41,7 +41,7 @@ export default function ManageComponent({
         return axios
             .get(BACKEND_ADDRESS + `posts`, {
                 params: {
-                    ...params,
+                    ...attributions!,
                     postType
                 }
             })
@@ -56,7 +56,7 @@ export default function ManageComponent({
                 );
                 setIsLoading(false);
             });
-    }, [postType, params]);
+    }, [postType, attributions]);
 
     useEffect(() => {
         (async () => {
@@ -93,6 +93,7 @@ export default function ManageComponent({
                     postType={postType}
                     visible={postEditorVisible}
                     refreshAction={getPosts}
+                    attributions={attributions}
                     closeAction={() => {
                         setPostEditorVisible(false);
                     }}
@@ -160,12 +161,11 @@ export default function ManageComponent({
                         className={menuBtnStyle(true, "bg-red-400", "bg-neutral-400")}
                         onClick={async () => {
                             if (confirm("정말 선택한 글들을 삭제하시겠습니까?")) {
-                                await axios.delete(BACKEND_ADDRESS + "posts", {
-                                    params: {
-                                        targets: selectedPosts.map((i) => i.id).join(",")
-                                    }
+                                selectedPosts.forEach((i) => {
+                                    axios
+                                        .delete(BACKEND_ADDRESS + `posts/${i.id}`)
+                                        .then(async () => await getPosts());
                                 });
-                                await getPosts();
                             }
                         }}
                     >

@@ -95,12 +95,14 @@ export default function Editor({
     postType,
     visible,
     refreshAction,
-    closeAction
+    closeAction,
+    attributions
 }: {
     postType: string;
     visible: boolean;
     refreshAction?: () => void;
     closeAction?: () => void;
+    attributions?: object;
 }) {
     const [title, setTitle] = useState<string>("");
     const [fontSizeState, setFontSizeState] = useState<number>(16);
@@ -166,7 +168,8 @@ export default function Editor({
             .post(BACKEND_ADDRESS + "posts", {
                 type: postType,
                 title: title,
-                content: content
+                content: content,
+                attributions: attributions!
             })
             .then(() => {
                 alert("글이 성공적으로 게시되었습니다.");
