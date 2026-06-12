@@ -16,8 +16,14 @@ public class PostService {
     private final PostRepository postRepository;
 
     @Transactional
-    public long addPost(String title, String content, String author, Post.PostType type) {
-        Post post = new Post(title, author, type, content);
+    public long addPost(String title, String content, String author, Post.PostType type, Post.Attribution attr) {
+        Post post = Post.builder()
+                .postType(type)
+                .author(author)
+                .title(title)
+                .content(content)
+                .attr(attr)
+                .build();
         postRepository.save(post);
         return post.getId();
     }
