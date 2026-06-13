@@ -30,7 +30,7 @@ public class FileSavingService {
         if (!this.saveDirectory.exists() || !this.saveDirectory.isDirectory()) {
             Path alter = Paths.get(System.getProperty("user.dir"), "data", "filedata");
             LOGGER.warn("FileSavingService : Specified directory ({}) does not exist or is not a directory. Process will make the new directory and use it. ({})", dir, alter);
-            if (!this.saveDirectory.mkdirs()) throw new RuntimeException("FileSacingService : Unable to create directory (%s)".formatted(alter));
+            if (!this.saveDirectory.mkdirs()) throw new RuntimeException("FileSavingService : Unable to create directory (%s)".formatted(alter));
         }
     }
 
