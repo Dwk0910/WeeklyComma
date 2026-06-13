@@ -78,7 +78,7 @@ public class Post {
     @AllArgsConstructor
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class Attribution {
-        public Long bookId;
+        private String bookId;
     }
 }
 
