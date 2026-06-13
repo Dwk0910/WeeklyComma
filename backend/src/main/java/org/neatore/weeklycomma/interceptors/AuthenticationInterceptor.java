@@ -9,7 +9,6 @@ import org.neatore.weeklycomma.domain.User;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.stereotype.Component;
 
 import org.springframework.web.cors.CorsUtils;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-@EnableJpaAuditing
 @RequiredArgsConstructor
 public class AuthenticationInterceptor implements HandlerInterceptor {
     private final UserService us;
