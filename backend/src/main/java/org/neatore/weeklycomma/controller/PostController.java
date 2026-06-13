@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,9 +59,9 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PostDto.GetResponse>> getPosts(@RequestParam Post.PostType postType, @RequestParam(required = false) String bookId) {
+    public ResponseEntity<List<PostDto.GetResponse>> getPosts(@RequestParam Post.PostType postType, @ModelAttribute Post.Attribution attr) {
         List<PostDto.GetResponse> response = new ArrayList<>();
-        postService.getAllPosts(postType).forEach(item ->
+        postService.getAllPosts(postType, attr).forEach(item ->
                 response.add(new PostDto.GetResponse(
                         item.getPostType(),
                         item.getId(),
@@ -69,7 +70,8 @@ public class PostController {
                         item.getAuthor(),
                         item.isPinned(),
                         item.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
-                        item.getModifiedAt().toEpochSecond(ZoneOffset.UTC)
+                        item.getModifiedAt().toEpochSecond(ZoneOffset.UTC),
+                        item.getAttribution()
                 ))
         );
 
@@ -90,7 +92,8 @@ public class PostController {
                 post.getAuthor(),
                 post.isPinned(),
                 post.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
-                post.getModifiedAt().toEpochSecond(ZoneOffset.UTC)
+                post.getModifiedAt().toEpochSecond(ZoneOffset.UTC),
+                post.getAttribution()
         ));
     }
 

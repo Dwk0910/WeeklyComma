@@ -1,5 +1,6 @@
 package org.neatore.weeklycomma.service;
 
+import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import org.neatore.weeklycomma.domain.Post;
 import org.neatore.weeklycomma.repository.PostRepository;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -42,15 +44,19 @@ public class PostService {
     }
 
     /**
-     * @deprecated use {@link #getAllPosts(Post.PostType postType)} instead.
+     * @deprecated use {@link #getAllPosts(Post.PostType postType, Post.Attribution attr)} instead.
      */
     @Deprecated
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
 
-    public List<Post> getAllPosts(Post.PostType type) {
-        return postRepository.getPostsByPostType(type);
+    // Insert attribution field for detailed search
+    public List<Post> getAllPosts(Post.PostType type, @Nullable Post.Attribution attr) {
+        final List<Post> posts = postRepository.getPostsByPostType(type);
+        if (attr != null) {
+            return posts.stream().filter(post -> Objects.equals(post.getAttribution(), attr)).toList();
+        } else return posts;
     }
 
     @Transactional

@@ -14,7 +14,8 @@ public abstract class PostDto {
             @NotBlank String author,
             @NotBlank Boolean isPinned,
             @NotBlank Long createdAt,
-            @NotBlank Long updatedAt
+            @NotBlank Long updatedAt,
+            Post.Attribution attributions
     ) {}
 
     public record PostRequest(
