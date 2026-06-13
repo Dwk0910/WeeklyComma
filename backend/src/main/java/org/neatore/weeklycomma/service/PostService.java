@@ -11,6 +11,7 @@ import org.neatore.weeklycomma.repository.PostRepository;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,11 +37,8 @@ public class PostService {
         postRepository.delete(post);
     }
 
-    public Post getPost(long id) {
-        Post post = postRepository.getPostById(id);
-
-        if (post == null) throw new IllegalArgumentException("Post id " + id + " is not found.");
-        else return post;
+    public @Nullable Post getPost(long id) {
+        return postRepository.getPostById(id);
     }
 
     /**
@@ -60,9 +58,8 @@ public class PostService {
     }
 
     @Transactional
-    public void pinPost(long id, boolean pin) {
-        Post post = getPost(id);
+    public void pinPost(long id, boolean pin) throws IllegalArgumentException {
+        Post post = Optional.ofNullable(this.getPost(id)).orElseThrow(() -> new IllegalArgumentException("Post with id " + id + " does not exist"));
         post.setPinned(pin);
-        postRepository.save(post);
     }
 }
