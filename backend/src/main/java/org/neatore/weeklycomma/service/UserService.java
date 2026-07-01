@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class UserService {
     private final UserRepository userRepository;
     private final OAuthService oauthService;
-    private final ConcurrentHashMap<String, User> loginedUsers = new ConcurrentHashMap<>();
+    private final Map<String, User> loginedUsers = new ConcurrentHashMap<>();
 
     public User getUserByEmail(String email) {
         return userRepository.getUserByEmail(email);
