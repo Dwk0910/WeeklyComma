@@ -61,7 +61,7 @@ public class PostController {
     @GetMapping
     public ResponseEntity<List<PostDto.GetResponse>> getPosts(@RequestParam Post.PostType postType, @ModelAttribute Post.Attribution attr) {
         List<PostDto.GetResponse> response = new ArrayList<>();
-        postService.getAllPosts(postType, attr).forEach(item ->
+        postService.getAllPosts(postType, attr.isEmpty() ? null : attr).forEach(item ->
                 response.add(new PostDto.GetResponse(
                         item.getPostType(),
                         item.getId(),

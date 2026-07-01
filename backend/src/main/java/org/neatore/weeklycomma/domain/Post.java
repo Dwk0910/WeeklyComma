@@ -1,5 +1,7 @@
 package org.neatore.weeklycomma.domain;
 
+import org.neatore.weeklycomma.domain.abs.BaseTimeEntity;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Embeddable;
@@ -20,17 +21,16 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.util.ReflectionUtils;
 
-import java.time.LocalDateTime;
+import java.util.Arrays;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Post {
+public class Post extends BaseTimeEntity {
     public enum PostType {
         NOTICE, EVENT, RECOMMENDATION
     }
@@ -63,13 +63,6 @@ public class Post {
     @Setter
     private String author;
 
-    @CreatedDate
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    private LocalDateTime modifiedAt;
-
     @Lob
     private String content;
 
@@ -79,6 +72,15 @@ public class Post {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class Attribution {
         private String bookId;
+
+        public boolean isEmpty() {
+            // Post클래스의 모든 필드를 가져온 뒤 ReflectionUtils를 통해 이(this) 객체의 필드 값중 하나라도 null인지 확인
+            return Arrays.stream(this.getClass().getDeclaredFields())
+                    .allMatch(field -> {
+                        ReflectionUtils.makeAccessible(field);
+                        return ReflectionUtils.getField(field, this) == null;
+                    });
+        }
     }
 }
 
