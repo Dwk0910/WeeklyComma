@@ -75,7 +75,7 @@ export default function Management() {
         axios
             .get(BACKEND_ADDRESS + "health")
             .then((e) => {
-                if (e.data == "OK_LOGIN") setAuthenticated(true);
+                if (e.data == "OK_ADMIN") setAuthenticated(true);
                 else setAuthenticated(false);
             })
             .catch((_) => setAuthenticated(false));

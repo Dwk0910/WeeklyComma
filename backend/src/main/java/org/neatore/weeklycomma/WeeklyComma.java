@@ -1,5 +1,6 @@
 package org.neatore.weeklycomma;
 
+import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.service.UserService;
 
 import jakarta.annotation.PostConstruct;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
@@ -19,9 +21,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.TimeZone;
 
 @Component
+@EnableJpaAuditing
 @SpringBootApplication
 public class WeeklyComma {
     public static final Logger LOGGER = LogManager.getLogger(WeeklyComma.class);
@@ -53,6 +57,12 @@ class Controller {
 
     @GetMapping("/health")
     public ResponseEntity<String> health(@CookieValue(name = "WCA_LOGIN", required = false) String sessionId) {
-        return (sessionId != null && us.hasToken(sessionId)) ? ResponseEntity.ok("OK_LOGIN") : ResponseEntity.ok("OK");
+        if (sessionId != null && us.hasToken(sessionId)) {
+            User user = us.getUserByToken(sessionId);
+            if (Objects.requireNonNull(user).getUserType() == User.UserType.CURATOR) return ResponseEntity.ok("OK_ADMIN");
+            else return ResponseEntity.ok("OK_LOGIN");
+        }
+
+        return ResponseEntity.ok("OK");
     }
 }

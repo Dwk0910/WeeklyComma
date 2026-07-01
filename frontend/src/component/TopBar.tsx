@@ -10,7 +10,7 @@ import { CiStar } from "react-icons/ci";
 
 import { useState } from "react";
 
-export default function TopBar({ login }: { login: boolean }) {
+export default function TopBar({ admin }: { admin: boolean }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [isMenuOpened, setMenuOpen] = useState(false);
 
@@ -113,7 +113,7 @@ export default function TopBar({ login }: { login: boolean }) {
                 <span>일반추천</span>
                 <span>즐겨찾기</span>
                 <span>To. 쉼표지기</span>
-                {login && (
+                {admin && (
                     <span className={"ml-10"} onClick={() => window.location.assign("/management")}>
                         관리
                     </span>
