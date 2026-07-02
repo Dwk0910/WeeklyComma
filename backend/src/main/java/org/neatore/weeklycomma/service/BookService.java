@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -72,14 +73,11 @@ public class BookService {
     }
 
     @Transactional
-    public void updateFrom(BookDto.RegisterRequest from) {
-        Book book = bookRepository.getBookByIsbn(from.isbn());
-        if (book != null) book.updateFrom(from);
-        else throw new IllegalArgumentException("Book with ISBN " + from.isbn() + " not found.");
-    }
-
-    @Transactional
-    public void registerBook(BookDto.RegisterRequest registerRequest) {
-        bookRepository.save(new Book(registerRequest.isbn(), registerRequest.title(), registerRequest.author(), registerRequest.publisher(), registerRequest.getPubDateAsLocalDateTime(), registerRequest.description(), registerRequest.difficulty()));
+    public void upsertBook(BookDto.RegisterRequest request) {
+        Optional.ofNullable(this.getBookByIsbn(request.isbn()))
+                .ifPresentOrElse(
+                        book -> book.updateFrom(request),
+                        () -> bookRepository.save(new Book(request.isbn(), request.title(), request.author(), request.publisher(), request.getPubDateAsLocalDateTime(), request.description(), request.difficulty()))
+                );
     }
 }

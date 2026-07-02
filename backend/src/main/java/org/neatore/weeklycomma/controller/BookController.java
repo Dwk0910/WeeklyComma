@@ -38,8 +38,7 @@ public class BookController {
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> registerBook(@Valid @ModelAttribute BookDto.RegisterRequest request) {
-        if (bookService.getBookByIsbn(request.isbn()) != null) bookService.updateFrom(request);
-        else bookService.registerBook(request);
+        bookService.upsertBook(request);
         return ResponseEntity.ok().build();
     }
 }
