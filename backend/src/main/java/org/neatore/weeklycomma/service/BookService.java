@@ -2,6 +2,7 @@ package org.neatore.weeklycomma.service;
 
 import static org.neatore.weeklycomma.WeeklyComma.LOGGER;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import org.json.JSONArray;
@@ -26,9 +27,10 @@ public class BookService {
     private final BookRepository bookRepository;
     private final APIService apiService;
 
-    public List<BookDto.BookResponse> searchBooks(String name) {
-        // TODO: DB와 연결
-        return List.of();
+    public List<BookDto.BookResponse> searchBooks(String title) {
+        List<BookDto.BookResponse> result = new ArrayList<>();
+        bookRepository.searchBooksByTitle(title).forEach(book -> result.add(new BookDto.BookResponse(book.getTitle(), book.getSubTitle(), book.getAuthor(), book.getPublisher(), book.getIsbn(), book.getPubDate().toEpochSecond(ZoneOffset.ofHours(0)), book.getCoverImg(), book.getDescription(), book.getAdult())));
+        return result;
     }
 
     public List<BookDto.BookResponse> searchBooksAPI(String name) {
@@ -52,7 +54,7 @@ public class BookService {
                             obj.getString("author"),
                             obj.getString("publisher"),
                             obj.getString("isbn"),
-                            Long.toString(LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(9))),
+                            LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(0)),
                             obj.getString("cover"),
                             obj.getString("description"),
                             obj.getBoolean("adult")
@@ -69,7 +71,15 @@ public class BookService {
         return bookRepository.getBookByIsbn(isbn);
     }
 
+    @Transactional
+    public void updateFrom(BookDto.RegisterRequest from) {
+        Book book = bookRepository.getBookByIsbn(from.isbn());
+        if (book != null) book.updateFrom(from);
+        else throw new IllegalArgumentException("Book with ISBN " + from.isbn() + " not found.");
+    }
+
+    @Transactional
     public void registerBook(BookDto.RegisterRequest registerRequest) {
-        bookRepository.save(new Book(registerRequest.isbn(), registerRequest.title(), registerRequest.author(), registerRequest.publisher(), registerRequest.pubDate(), registerRequest.description()));
+        bookRepository.save(new Book(registerRequest.isbn(), registerRequest.title(), registerRequest.author(), registerRequest.publisher(), registerRequest.getPubDateAsLocalDateTime(), registerRequest.description(), registerRequest.difficulty()));
     }
 }
