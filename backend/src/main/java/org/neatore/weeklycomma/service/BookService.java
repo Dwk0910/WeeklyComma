@@ -30,7 +30,7 @@ public class BookService {
 
     public List<BookDto.BookResponse> searchBooks(String title) {
         List<BookDto.BookResponse> result = new ArrayList<>();
-        bookRepository.searchBooksByTitle(title).forEach(book -> result.add(new BookDto.BookResponse(book.getTitle(), book.getSubTitle(), book.getAuthor(), book.getPublisher(), book.getIsbn(), book.getPubDate().toEpochSecond(ZoneOffset.ofHours(0)), book.getCoverImg(), book.getDescription(), book.getAdult())));
+        bookRepository.searchBooksByTitleContaining(title).forEach(book -> result.add(new BookDto.BookResponse(book.getTitle(), book.getSubTitle(), book.getAuthor(), book.getPublisher(), book.getIsbn(), book.getPubDate().toEpochSecond(ZoneOffset.ofHours(0)), book.getCoverImg(), book.getDescription(), book.getDifficulty(), book.getAdult())));
         return result;
     }
 
@@ -58,6 +58,7 @@ public class BookService {
                             LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(0)),
                             obj.getString("cover"),
                             obj.getString("description"),
+                            null,
                             obj.getBoolean("adult")
                     ));
             }

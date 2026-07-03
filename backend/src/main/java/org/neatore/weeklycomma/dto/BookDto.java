@@ -18,6 +18,7 @@ public class BookDto {
             Long pubDate,
             String coverImg,
             String description,
+            String difficulty,
             Boolean adult
     ) {}
 
