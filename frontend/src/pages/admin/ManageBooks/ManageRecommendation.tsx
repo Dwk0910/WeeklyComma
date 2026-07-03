@@ -17,6 +17,7 @@ export type Book = {
     isbn: string;
     pubDate: number;
     coverImg: string;
+    customCoverImg: string | null;
     adult: boolean;
     difficulty: "초급" | "중급" | "상급" | null;
     // recommendations: Recommendation[];
@@ -32,19 +33,7 @@ export default function ManageRecommendation() {
     const [searchResults, setSearchResults] = useState<Book[]>([]);
     // const [recentRecommendations, setRecentRecommendations] = useState<Recommendation[]>([]);
     const [isSearching, setIsSearching] = useState<boolean>();
-    const [selectedBook, setSelectedBook] = useState<Book | null>({
-        title: "용의자 X의 헌신",
-        subtitle: "제134회 나오키상 수상작",
-        description:
-            "히가시노 게이고 문학의 정수로 일컬어지는 &lt;용의자 X의 헌신&gt;이 새롭게 번역되어 출간됐다. 일본 문학 전문 번역가 양억관이 자신의 번역을 대폭 손질해 원작이 지닌 문학적 향기와 감동을 오롯이 되살려 냈다.",
-        isbn: "8990982707",
-        author: "김김김",
-        publisher: "테스트",
-        coverImg: "https://image.aladin.co.kr/product/11649/82/cover200/8990982707_1.jpg",
-        pubDate: 2147483647,
-        adult: false,
-        difficulty: null
-    });
+    const [selectedBook, setSelectedBook] = useState<Book | null>();
 
     useEffect(() => {
         // TODO: 페이지가 처음 로드될 때 최근 작성한 추천글 5개를 불러오는 API 호출
