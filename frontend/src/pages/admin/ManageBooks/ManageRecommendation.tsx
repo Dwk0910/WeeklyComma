@@ -30,9 +30,11 @@ export type Book = {
 //
 export default function ManageRecommendation() {
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [searchResults, setSearchResults] = useState<Book[]>([]);
+    const [searchResults_l, setSearchResults_l] = useState<Book[]>([]);
+    const [searchResults_a, setSearchResults_a] = useState<Book[]>([]);
     // const [recentRecommendations, setRecentRecommendations] = useState<Recommendation[]>([]);
     const [isSearching, setIsSearching] = useState<boolean>();
+    const [exclude, setExclude] = useState<boolean>(false);
     const [selectedBook, setSelectedBook] = useState<Book | null>();
 
     useEffect(() => {
@@ -61,10 +63,21 @@ export default function ManageRecommendation() {
         if (!searchQuery.trim()) return;
         setIsSearching(true);
         try {
-            const res = await axios.get(BACKEND_ADDRESS + "books/api", {
-                params: { query: searchQuery }
-            });
-            setSearchResults(res.data);
+            setSearchResults_l(
+                (
+                    await axios.get(BACKEND_ADDRESS + "books", {
+                        params: { query: searchQuery }
+                    })
+                ).data
+            );
+
+            setSearchResults_a(
+                (
+                    await axios.get(BACKEND_ADDRESS + "books/api", {
+                        params: { query: searchQuery }
+                    })
+                ).data
+            );
         } catch (err) {
             console.error(err);
         } finally {
@@ -72,7 +85,7 @@ export default function ManageRecommendation() {
         }
     };
 
-    const renderSearchResults = (list: Book[], highlight?: boolean) => {
+    const renderSearchResults = (list: Book[]) => {
         return list.map((item) => (
             <div
                 key={item.isbn}
@@ -88,7 +101,7 @@ export default function ManageRecommendation() {
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-900 truncate">
-                            {highlight ? highlightText(item.title, searchQuery) : item.title}
+                            {highlightText(item.title, searchQuery)}
                         </span>
                     </div>
                     <div className="flex items-center text-sm text-gray-500 mt-1">
@@ -121,7 +134,7 @@ export default function ManageRecommendation() {
                 책 검색
             </SubTitle>
             {/* 검색바 영역 */}
-            <div className="flex flex-col justify-center items-center mb-8">
+            <div className="flex flex-col justify-center items-center mb-5">
                 <div className="flex items-center gap-4 w-[80%]">
                     <div className="relative w-full md:w-120">
                         <input
@@ -150,7 +163,12 @@ export default function ManageRecommendation() {
                     {/*</button>*/}
                 </div>
                 <div className={"flex items-center ml-5 mt-2 w-[80%]"}>
-                    <input type={"checkbox"} id={"excludeCheckbox"} />
+                    <input
+                        type={"checkbox"}
+                        id={"excludeCheckbox"}
+                        checked={exclude}
+                        onChange={() => setExclude(!exclude)}
+                    />
                     <label
                         htmlFor={"excludeCheckbox"}
                         className={"ml-2 font-suite text-sm text-gray-500"}
@@ -160,8 +178,26 @@ export default function ManageRecommendation() {
                 </div>
             </div>
             <div className="ml-4 my-4 space-y-3 mr-4">
-                {searchResults.length > 0 ? (
-                    renderSearchResults(searchResults, true)
+                {searchResults_l.length > 0 || searchResults_a.length > 0 ? (
+                    <>
+                        {!exclude && (
+                            <>
+                                <div className={"w-full text-[0.9rem] font-suite pl-2 mt-3"}>
+                                    등록된 책{searchResults_l.length > 0 ? "" : "이 없습니다"}
+                                </div>
+                                {renderSearchResults(searchResults_l)}
+                            </>
+                        )}
+
+                        <div className={"w-full text-[0.9rem] font-suite pl-2 mt-3"}>
+                            등록되지 않은 책
+                        </div>
+                        {renderSearchResults(
+                            searchResults_a.filter(
+                                (item) => !searchResults_l.some((il) => il.isbn === item.isbn)
+                            )
+                        )}
+                    </>
                 ) : (
                     <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-xl">
                         <div className={"flex items-center"}>
