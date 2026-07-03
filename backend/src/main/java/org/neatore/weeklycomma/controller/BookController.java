@@ -9,8 +9,8 @@ import org.neatore.weeklycomma.dto.BookDto;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,8 +37,8 @@ public class BookController {
 
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> registerBook(@Valid @RequestBody BookDto.RegisterRequest request) {
-        bookService.registerBook(request);
+    public ResponseEntity<Void> registerBook(@Valid @ModelAttribute BookDto.RegisterRequest request) {
+        bookService.upsertBook(request);
         return ResponseEntity.ok().build();
     }
 }

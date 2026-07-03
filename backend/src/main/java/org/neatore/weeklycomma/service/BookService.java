@@ -2,6 +2,7 @@ package org.neatore.weeklycomma.service;
 
 import static org.neatore.weeklycomma.WeeklyComma.LOGGER;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import org.json.JSONArray;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,9 +28,10 @@ public class BookService {
     private final BookRepository bookRepository;
     private final APIService apiService;
 
-    public List<BookDto.BookResponse> searchBooks(String name) {
-        // TODO: DB와 연결
-        return List.of();
+    public List<BookDto.BookResponse> searchBooks(String title) {
+        List<BookDto.BookResponse> result = new ArrayList<>();
+        bookRepository.searchBooksByTitle(title).forEach(book -> result.add(new BookDto.BookResponse(book.getTitle(), book.getSubTitle(), book.getAuthor(), book.getPublisher(), book.getIsbn(), book.getPubDate().toEpochSecond(ZoneOffset.ofHours(0)), book.getCoverImg(), book.getDescription(), book.getAdult())));
+        return result;
     }
 
     public List<BookDto.BookResponse> searchBooksAPI(String name) {
@@ -52,7 +55,7 @@ public class BookService {
                             obj.getString("author"),
                             obj.getString("publisher"),
                             obj.getString("isbn"),
-                            Long.toString(LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(9))),
+                            LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(0)),
                             obj.getString("cover"),
                             obj.getString("description"),
                             obj.getBoolean("adult")
@@ -69,7 +72,12 @@ public class BookService {
         return bookRepository.getBookByIsbn(isbn);
     }
 
-    public void registerBook(BookDto.RegisterRequest registerRequest) {
-        bookRepository.save(new Book(registerRequest.isbn(), registerRequest.title(), registerRequest.author(), registerRequest.publisher(), registerRequest.pubDate(), registerRequest.description()));
+    @Transactional
+    public void upsertBook(BookDto.RegisterRequest request) {
+        Optional.ofNullable(this.getBookByIsbn(request.isbn()))
+                .ifPresentOrElse(
+                        book -> book.updateFrom(request),
+                        () -> bookRepository.save(new Book(request.isbn(), request.title(), request.author(), request.publisher(), request.getPubDateAsLocalDateTime(), request.description(), request.difficulty()))
+                );
     }
 }

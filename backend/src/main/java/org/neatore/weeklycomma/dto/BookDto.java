@@ -1,6 +1,12 @@
 package org.neatore.weeklycomma.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 public class BookDto {
     public record BookResponse(
@@ -9,7 +15,7 @@ public class BookDto {
             String author,
             String publisher,
             String isbn,
-            String pubDate,
+            Long pubDate,
             String coverImg,
             String description,
             Boolean adult
@@ -21,9 +27,15 @@ public class BookDto {
             @NotBlank String isbn,
             @NotBlank String author,
             @NotBlank String publisher,
-            @NotBlank String pubDate,
             @NotBlank String coverImg,
+            @NotNull Long pubDate,
+            MultipartFile customCoverImg,
             String description,
-            Boolean adult
-    ) {}
+            Boolean adult,
+            String difficulty
+    ) {
+        public LocalDateTime getPubDateAsLocalDateTime() {
+            return LocalDateTime.ofEpochSecond(pubDate, 0, ZoneOffset.ofHours(0));
+        }
+    }
 }

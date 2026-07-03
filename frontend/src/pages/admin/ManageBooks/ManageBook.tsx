@@ -1,10 +1,12 @@
 import React, { useState, useRef } from "react";
 import { MdCameraAlt } from "react-icons/md";
-import FontStyle from "../../../assets/fonts/fonts.tsx";
+import axios from "axios";
+
 import { type Book } from "./ManageRecommendation.tsx";
+import { BACKEND_ADDRESS } from "../../../App.tsx";
 
+import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { SubTitle } from "../lib_component/Component.tsx";
-
 import ManageComponent from "../ManageBoards/ManageComponent.tsx";
 
 export default function ManageBook({ book: initialBook }: { book: Book }) {
@@ -60,8 +62,18 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
             return;
         }
 
-        // TODO: 책 정보 서버로 업로드
-        console.log(book);
+        // Prepare for uploading
+        const formData = new FormData();
+        if (uploadFile != null) formData.append("customCoverImg", uploadFile);
+
+        // Append book datas to formData instance
+        Object.entries(book).forEach(([key, value]) => {
+            formData.append(key, String(value));
+        });
+
+        axios.post(BACKEND_ADDRESS + "books", formData).then(() => {
+            alert("정상적으로 등록되었습니다.");
+        });
     };
 
     const inputStyle =

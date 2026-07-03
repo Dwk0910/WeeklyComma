@@ -22,6 +22,7 @@ export const BACKEND_ADDRESS =
 
 export default function App() {
     const [login, setLogin] = useState<boolean>(false);
+    const [admin, setAdmin] = useState<boolean>(false);
     const [backendErr, setBackendErr] = useState<{
         error: boolean;
         info: string | null;
@@ -37,16 +38,23 @@ export default function App() {
             await axios
                 .get(BACKEND_ADDRESS + "health")
                 .then((res) => {
-                    if (res.data == "OK") setLogin(false);
-                    else if (res.data == "OK_LOGIN") setLogin(true);
-                    else {
-                        setBackendErr((_) => ({
-                            error: true,
-                            info:
-                                res.status == 200
-                                    ? `Backend server responded unexpected value: ${res.data}`
-                                    : res.toString()
-                        }));
+                    switch (res.data) {
+                        case "OK":
+                        case "OK_LOGIN":
+                            setLogin(res.data == "OK_LOGIN");
+                            break;
+                        case "OK_ADMIN":
+                            setLogin(true);
+                            setAdmin(true);
+                            break;
+                        default:
+                            setBackendErr((_) => ({
+                                error: true,
+                                info:
+                                    res.status == 200
+                                        ? `Backend server responded unexpected value: ${res.data}`
+                                        : res.toString()
+                            }));
                     }
                 })
                 .catch((err) => {
@@ -65,7 +73,7 @@ export default function App() {
                 <div className={"w-300 mx-auto z-10"}>
                     <div className={"w-300"}>
                         <PreTopBar login={login} />
-                        <TopBar login={login} />
+                        <TopBar admin={admin} />
                         <Routes>
                             <Route index element={<Main />} />
                             <Route path={"/authcallback/:oauth_type?"} element={<AuthCallback />} />
