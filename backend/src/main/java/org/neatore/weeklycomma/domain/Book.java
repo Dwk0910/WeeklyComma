@@ -18,14 +18,17 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Book {
-    public Book(String isbn, String title, String author, String publisher, LocalDateTime pubDate, String description, String difficulty) {
-        this.isbn = isbn;
-        this.title = title;
-        this.author = author;
-        this.publisher = publisher;
-        this.pubDate = pubDate;
-        this.description = description;
-        this.difficulty = difficulty;
+    public Book(BookDto.RegisterRequest book) {
+        this.isbn = book.isbn();
+        this.title = book.title();
+        this.subTitle = book.subtitle();
+        this.author = book.author();
+        this.publisher = book.publisher();
+        this.pubDate = book.getPubDateAsLocalDateTime();
+        this.coverImg = book.coverImg();
+        this.description = book.description();
+        this.difficulty = book.difficulty();
+        this.adult = book.adult();
     }
 
     @Id
@@ -39,10 +42,10 @@ public class Book {
     private String subTitle;
     private String author;
     private String publisher;
-    private String description;
-    private String coverImg;
-    private String difficulty;
     private LocalDateTime pubDate;
+    private String coverImg;
+    private String description;
+    private String difficulty;
     private Boolean adult;
 
     public void updateFrom(BookDto.RegisterRequest from) {

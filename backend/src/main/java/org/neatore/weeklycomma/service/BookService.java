@@ -77,7 +77,7 @@ public class BookService {
         Optional.ofNullable(this.getBookByIsbn(request.isbn()))
                 .ifPresentOrElse(
                         book -> book.updateFrom(request),
-                        () -> bookRepository.save(new Book(request.isbn(), request.title(), request.author(), request.publisher(), request.getPubDateAsLocalDateTime(), request.description(), request.difficulty()))
+                        () -> bookRepository.save(new Book(request))
                 );
     }
 }

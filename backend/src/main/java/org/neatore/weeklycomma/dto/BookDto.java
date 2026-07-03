@@ -22,17 +22,17 @@ public class BookDto {
     ) {}
 
     public record RegisterRequest(
+            @NotBlank String isbn,
             @NotBlank String title,
             @NotBlank String subtitle,
-            @NotBlank String isbn,
             @NotBlank String author,
             @NotBlank String publisher,
-            @NotBlank String coverImg,
             @NotNull Long pubDate,
+            @NotBlank String coverImg,
             MultipartFile customCoverImg,
             String description,
-            Boolean adult,
-            String difficulty
+            String difficulty,
+            Boolean adult
     ) {
         public LocalDateTime getPubDateAsLocalDateTime() {
             return LocalDateTime.ofEpochSecond(pubDate, 0, ZoneOffset.ofHours(0));
