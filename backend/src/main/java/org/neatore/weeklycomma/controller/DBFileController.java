@@ -26,11 +26,6 @@ import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-
-import java.util.Base64;
-
-import static org.neatore.weeklycomma.WeeklyComma.LOGGER;
 
 @RestController
 @RequestMapping("/files")
@@ -52,18 +47,18 @@ public class DBFileController {
         }
     }
 
-    @GetMapping("/base64/{id}")
-    public ResponseEntity<String> getBase64File(@PathVariable String id) {
-        try {
-            DBFileService.DBFileResponse f_ = dbFileService.load(id);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.TEXT_PLAIN)
-                    .body("data:image/" + f_.getExtension().name() + ";base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(f_.getFile().toPath())));
-        } catch (IllegalArgumentException | IOException e) {
-            LOGGER.error("", e);
-            return ResponseEntity.notFound().build();
-        }
-    }
+//    @GetMapping("/base64/{id}")
+//    public ResponseEntity<String> getBase64File(@PathVariable String id) {
+//        try {
+//            DBFileService.DBFileResponse f_ = dbFileService.load(id);
+//            return ResponseEntity.ok()
+//                    .contentType(MediaType.TEXT_PLAIN)
+//                    .body("data:image/" + f_.getExtension().name() + ";base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(f_.getFile().toPath())));
+//        } catch (IllegalArgumentException | IOException e) {
+//            LOGGER.error("", e);
+//            return ResponseEntity.notFound().build();
+//        }
+//    }
 
     @GetMapping("/secured/{id}")
     @RequiresAuthentication(User.UserType.CURATOR)
