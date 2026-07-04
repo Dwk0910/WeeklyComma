@@ -1,0 +1,62 @@
+package org.neatore.weeklycomma.controller;
+
+import lombok.RequiredArgsConstructor;
+
+import org.neatore.weeklycomma.domain.User;
+import org.neatore.weeklycomma.annotations.RequiresAuthentication;
+import org.neatore.weeklycomma.service.DBFileService;
+
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+@RestController
+@RequestMapping("/files")
+@RequiredArgsConstructor
+public class DBFileController {
+    private final DBFileService dbFileService;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Resource> getFile(@PathVariable String id) {
+        try {
+            DBFileService.DBFileResponse f_ = dbFileService.load(id);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + UriUtils.encode(f_.getName(), StandardCharsets.UTF_8) + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(f_.getFile().length())
+                    .body(new FileSystemResource(f_.getFile()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/secured/{id}")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Resource> getSecuredFile(@PathVariable String id) {
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file, @RequestParam(required = false) Boolean secured) throws IOException {
+        this.dbFileService.save(file, secured != null && secured);
+        return ResponseEntity.ok().build();
+    }
+}
