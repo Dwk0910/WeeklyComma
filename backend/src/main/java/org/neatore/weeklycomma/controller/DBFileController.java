@@ -26,6 +26,11 @@ import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+
+import java.util.Base64;
+
+import static org.neatore.weeklycomma.WeeklyComma.LOGGER;
 
 @RestController
 @RequestMapping("/files")
@@ -47,6 +52,19 @@ public class DBFileController {
         }
     }
 
+    @GetMapping("/base64/{id}")
+    public ResponseEntity<String> getBase64File(@PathVariable String id) {
+        try {
+            DBFileService.DBFileResponse f_ = dbFileService.load(id);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("data:image/" + f_.getExtension().name() + ";base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(f_.getFile().toPath())));
+        } catch (IllegalArgumentException | IOException e) {
+            LOGGER.error("", e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/secured/{id}")
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Resource> getSecuredFile(@PathVariable String id) {
@@ -55,8 +73,8 @@ public class DBFileController {
 
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file, @RequestParam(required = false) Boolean secured) throws IOException {
-        this.dbFileService.save(file, secured != null && secured);
+    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file, @RequestParam(required = false, defaultValue = "false") boolean secured) throws IOException {
+        this.dbFileService.save(file, secured);
         return ResponseEntity.ok().build();
     }
 }

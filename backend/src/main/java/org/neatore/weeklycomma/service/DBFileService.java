@@ -54,6 +54,7 @@ public class DBFileService {
     public static class DBFileResponse {
         private final File file;
         private final String name;
+        private final DBFile.FileExtension extension;
     }
 
     /**
@@ -65,7 +66,7 @@ public class DBFileService {
             .orElseThrow(() -> new IllegalArgumentException("File not found: " + fileId));
 
         Path p = this.saveDirectory.toPath().resolve(dbFile.getId() + "." + dbFile.getExtension().name().toLowerCase());
-        return new DBFileResponse(p.toFile(), dbFile.getOriginalFileName());
+        return new DBFileResponse(p.toFile(), dbFile.getOriginalFileName(), dbFile.getExtension());
     }
 
     @Transactional
