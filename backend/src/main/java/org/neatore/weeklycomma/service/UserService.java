@@ -3,47 +3,29 @@ package org.neatore.weeklycomma.service;
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.login.AuthType;
 import org.neatore.weeklycomma.dto.login.UserDto;
+import org.neatore.weeklycomma.exception.UserNotFoundException;
 import org.neatore.weeklycomma.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
-import jakarta.annotation.Nullable;
 
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final OAuthService oauthService;
-    private final Map<String, User> loginedUsers = new ConcurrentHashMap<>();
 
     public User getUserByEmail(String email) {
         return userRepository.getUserByEmail(email);
     }
 
-    public @Nullable User getUserByToken(String token) {
-        return loginedUsers.get(token);
-    }
-
-    public boolean hasToken(String token) {
-        return loginedUsers.containsKey(token);
-    }
-
-    public void removeToken(String token) {
-        loginedUsers.remove(token);
-    }
-
-    public String newLoginSession(User user) {
-        String newToken = UUID.randomUUID().toString();
-        loginedUsers.put(newToken, user);
-
-        return newToken;
+    public User getUserById(UUID userId) {
+        return userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
     }
 
     @Transactional
@@ -65,5 +47,18 @@ public class UserService {
         }
 
         if (!confilct) userRepository.save(new User(userName, email, password, User.UserType.GENERAL, authType));
+    }
+
+    @Transactional
+    public void updateUser(UUID userId, UserDto.SignupRequest request) {
+        User user = this.getUserById(userId);
+        user.setEmail(request.email());
+        user.setPassword(request.password());
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteUser(UUID userId) {
+        userRepository.deleteById(userId);
     }
 }

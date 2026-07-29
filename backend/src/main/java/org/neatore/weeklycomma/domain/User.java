@@ -15,6 +15,7 @@ import org.neatore.weeklycomma.dto.login.AuthType;
 import java.util.UUID;
 
 @Entity
+@Getter
 public class User {
     protected User() {}
 
@@ -40,19 +41,15 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Getter
     @Enumerated(value = EnumType.STRING)
     private UserType userType;
 
-    @Getter
     @Enumerated(value = EnumType.STRING)
     private AuthType authType;
 
-    @Getter
     @Setter
     private String email;
 
-    @Getter
     @Setter
     private String userName;
 
