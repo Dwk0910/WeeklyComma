@@ -13,10 +13,10 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class OAuthService {
-    @Value("${oauth_naver_cli_id}")
+    @Value("${OAUTH_NAVER_CLI_ID}")
     private String clientId;
 
-    @Value("${oauth_naver_cli_key}")
+    @Value("${OAUTH_NAVER_CLI_KEY}")
     private String clientKey;
 
     public String getEmailNaver(String authCode, String redirectUri, String state) {

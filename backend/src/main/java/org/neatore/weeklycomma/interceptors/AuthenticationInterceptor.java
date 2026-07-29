@@ -28,7 +28,7 @@ import java.util.Optional;
 public class AuthenticationInterceptor implements HandlerInterceptor {
     private final UserService us;
 
-    @Value("${csrf_token}")
+    @Value("${CSRF_TOKEN}")
     private String csrfToken;
 
     @Override

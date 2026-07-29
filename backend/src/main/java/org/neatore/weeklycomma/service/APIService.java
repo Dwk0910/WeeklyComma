@@ -21,7 +21,7 @@ import static org.neatore.weeklycomma.WeeklyComma.LOGGER;
 @Service
 public class APIService {
 
-    @Value("${aladin_api_key}")
+    @Value("${ALADIN_API_KEY}")
     private String key;
 
     private JSONObject callApi(String endpoint, Map<String, Object> urlQuery) {

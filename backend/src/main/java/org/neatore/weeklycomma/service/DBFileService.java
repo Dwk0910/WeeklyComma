@@ -33,7 +33,7 @@ import java.util.UUID;
 public class DBFileService {
     private final DBFileRepository repository;
 
-    @Value("${db_filesave_dir}")
+    @Value("${DB_FILESAVE_DIR}")
     private String dir;
 
     @Getter
