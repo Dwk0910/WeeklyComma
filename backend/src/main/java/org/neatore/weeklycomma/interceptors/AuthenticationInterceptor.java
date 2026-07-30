@@ -2,9 +2,11 @@ package org.neatore.weeklycomma.interceptors;
 
 import lombok.RequiredArgsConstructor;
 
+import org.jspecify.annotations.NonNull;
+
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
-import org.neatore.weeklycomma.service.UserService;
 import org.neatore.weeklycomma.domain.User;
+import org.neatore.weeklycomma.service.JwtService;
 
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Component;
@@ -19,14 +21,51 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
 public class AuthenticationInterceptor implements HandlerInterceptor {
-    private final UserService us;
+    private final JwtService jwtService;
 
-    private String csrfToken;
+    @Override
+    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) {
+        // OPTION requests are preflight requests, and should be allowed to pass through without authentication
+        if (CorsUtils.isPreFlightRequest(request)) return true;
+
+        if (handler instanceof HandlerMethod hm) {
+            RequiresAuthentication requiresAuthentication = AnnotatedElementUtils.findMergedAnnotation(hm.getMethod(), RequiresAuthentication.class);
+            if (requiresAuthentication != null) {
+                Runnable unAuthorized = () -> response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+                String headerCsrf = request.getHeader("X-Csrf-Token");
+                Cookie tokenCookie = WebUtils.getCookie(request, "WCA_ACCESS");
+
+                /*
+                - 다음 중 하나라도 false일 시 401 Unauthorized 반환
+                1. headerCsrf가 null인가?
+                2. tokenCookie가 null인가?
+                3. tokenCookie가 올바르지 않은가?
+                4. tokenCookie안의 CSRF Token과 header의 CSRF Token이 서로 일치하는가?
+                 */
+                if (
+                        headerCsrf == null || tokenCookie == null || !jwtService.validateToken(tokenCookie.getValue()) || !jwtService.getCsrfToken(tokenCookie.getValue()).equals(headerCsrf)
+                ) {
+                    unAuthorized.run();
+                    return false;
+                }
+
+                User.UserType[] allowedTypes = requiresAuthentication.value();
+                if (allowedTypes.length == 0) return true;
+
+                if (!(List.of(allowedTypes).contains(jwtService.getUserType(tokenCookie.getValue())))) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 
 //    @Override
 //    public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) {

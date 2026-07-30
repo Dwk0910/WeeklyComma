@@ -34,13 +34,18 @@ public class JwtService {
         this.secretKey = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
     }
 
+    public record JwtToken(String jwtToken, String csrfToken) {}
+
     public boolean validateToken(String token) {
         try {
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(this.secretKey)
                     .build()
-                    .parseSignedClaims(token);
-            return true;
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            User user = this.userService.getUserById(UUID.fromString(claims.getSubject()));
+            return user != null;
         } catch (Exception e) {
             return false;
         }
@@ -54,20 +59,32 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String createToken(User user) {
-        return this.createToken(user.getId(), user.getUserType().toString());
+    public JwtToken createToken(User user, long exp) {
+        return this.createToken(user.getId(), user.getUserType().toString(), exp);
     }
 
-    public String createToken(UUID userId, String role) {
-        final long EXP_TIME = 1000 * 60 * 60; // 1 hour
+    public JwtToken createToken(UUID userId, String role, long exp) {
+        UUID csrfToken = UUID.randomUUID();
 
-        return Jwts.builder()
-                .subject(userId.toString())
-                .claim("role", role)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + EXP_TIME))
-                .signWith(this.secretKey)
-                .compact();
+        return new JwtToken(
+                Jwts.builder()
+                        .subject(userId.toString())
+                        .claim("role", role)
+                        .claim("csrf_token", csrfToken.toString())
+                        .issuedAt(new Date())
+                        .expiration(new Date(System.currentTimeMillis() + exp))
+                        .signWith(this.secretKey)
+                        .compact(),
+                csrfToken.toString()
+        );
+    }
+
+    public String getCsrfToken(String token) {
+        return this.getPayload(token).get("csrf_token").toString();
+    }
+
+    public User.UserType getUserType(String token) {
+        return User.UserType.valueOf(this.getPayload(token).get("role").toString());
     }
 
     public @Nullable User getUser(String token) {
