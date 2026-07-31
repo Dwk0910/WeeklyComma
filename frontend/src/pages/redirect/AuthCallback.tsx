@@ -2,34 +2,29 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { BACKEND_ADDRESS } from "../../App.tsx";
 import axios from "axios";
 
-import WaitingScreen from "./WaitingScreen.tsx";
+import WaitingScreen from "./WaitingScreen";
 
 export default function AuthCallback() {
     const { oauth_type } = useParams();
-
     const [searchParams] = useSearchParams();
 
     const redirect_uri = encodeURI(window.location.origin + `/authcallback/${oauth_type}`);
     const auth_code = searchParams.get("code");
     const state = searchParams.get("state");
 
-    if (auth_code == null || oauth_type == null || oauth_type === "") window.location.assign("/");
+    if (auth_code == null || oauth_type == null || oauth_type == "") window.location.assign("/");
 
     axios
-        .post(
-            BACKEND_ADDRESS + `authsessions`,
-            {
-                authType: oauth_type,
-                auth_code,
-                state,
-                redirect_uri
-            },
-            { withCredentials: true }
-        )
+        .post(BACKEND_ADDRESS + `authsessions`, {
+            authType: oauth_type,
+            auth_code,
+            state,
+            redirect_uri
+        })
         .then((res) => {
-            if (res.status == 201) window.location.assign("/");
+            if (res.status == 200) window.location.assign("/");
             else {
-                alert("Received http status code " + res.status);
+                alert(`Received http status code ${res.status}`);
                 window.location.assign("/");
             }
         })
@@ -41,5 +36,5 @@ export default function AuthCallback() {
             window.location.assign("/");
         });
 
-    return WaitingScreen();
+    return <WaitingScreen />;
 }
