@@ -25,6 +25,7 @@ export const BACKEND_ADDRESS =
 export default function App() {
     const [login, setLogin] = useState<boolean>(false);
     const [admin, setAdmin] = useState<boolean>(false);
+    const [name, setName] = useState<string>("");
     const [backendErr, setBackendErr] = useState<{
         error: boolean;
         info: string | null;
@@ -62,14 +63,14 @@ export default function App() {
             // specify login & admin status
             if (cookies.WCA_CSRF && cookies.WCA_USER_INF) {
                 await axios
-                    .get(BACKEND_ADDRESS + "authsessions/check")
+                    .get(BACKEND_ADDRESS + "authsessions/me")
                     .then(() => {
                         setLogin(true);
-                        setAdmin(true);
+                        setName(cookies.WCA_USER_INF["userName"]);
+                        setAdmin(cookies.WCA_USER_INF["userType"] == "CURATOR");
                     })
-                    .catch(async (err) => {
-                        if (err.response.status == 403) setLogin(true);
-                        else window.location.assign("/logout");
+                    .catch(() => {
+                        window.location.assign("/logout");
                     });
             } else {
                 removeCookie("WCA_CSRF");
@@ -84,7 +85,7 @@ export default function App() {
                 <div className={"w-full absolute bg-gray-200 h-10 z-0"} />
                 <div className={"w-300 mx-auto z-10"}>
                     <div className={"w-300"}>
-                        <PreTopBar login={login} />
+                        <PreTopBar login={login} name={name} />
                         <TopBar admin={admin} />
                         <Routes>
                             <Route index element={<Main />} />

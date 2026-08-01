@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 
-export default function PreTopBar({ login }: { login: boolean }) {
+export default function PreTopBar({ login, name }: { login: boolean; name: string }) {
     return (
         <div
             className={clsx(
@@ -10,7 +10,13 @@ export default function PreTopBar({ login }: { login: boolean }) {
         >
             <div className={"flex"}>
                 <span className={"text-[.75rem] text-neutral-500 mt-2"}>
-                    {"주간쉼표에 오신 여러분들을 환영합니다"}
+                    {login ? (
+                        <>
+                            <strong>{`${name}님`}</strong> 환영합니다!
+                        </>
+                    ) : (
+                        "주간쉼표에 오신 여러분을 환영합니다!"
+                    )}
                 </span>
                 <LoginInteraction login={login} />
             </div>

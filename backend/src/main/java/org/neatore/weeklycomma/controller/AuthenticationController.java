@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ import jakarta.validation.Valid;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Objects;
 
 @RestController
 @RequiredArgsConstructor
@@ -42,15 +44,32 @@ public class AuthenticationController {
 
     private final Duration EXPIRATION_DURATION = Duration.ofDays(30);
 
-    /*
-    401 Unauthorized = 클라이언트가 로그인되어 있지 않음
-    403 Forbidden = 클라이언트가 로그인되어 있으며, 어드민이 아님
-    200 OK = 클라이언트가 로그인되어 있으며, 어드민임
-     */
-    @GetMapping("/check")
-    @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> check() {
-        return ResponseEntity.ok().build();
+    private ResponseCookie getUserCookie(User user) {
+        return ResponseCookie.from(
+                        "WCA_USER_INF",
+                        URLEncoder.encode(
+                                new JSONObject()
+                                        .put("userName", user.getUserName())
+                                        .put("userType", user.getUserType().toString())
+                                        .toString(),
+                                StandardCharsets.UTF_8
+                        )
+                )
+                .secure(true)
+                .path("/")
+                .maxAge(EXPIRATION_DURATION)
+                .sameSite("none")
+                .build();
+    }
+
+    @GetMapping("/me")
+    @RequiresAuthentication
+    public ResponseEntity<Void> me(@CookieValue("WCA_ACCESS") String accessToken) {
+        if (!jwtService.validateToken(accessToken)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        User user = Objects.requireNonNull(jwtService.getUser(accessToken));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, getUserCookie(user).toString())
+                .build();
     }
 
     @PostMapping
@@ -89,26 +108,10 @@ public class AuthenticationController {
                         .sameSite("none")
                         .build();
 
-                ResponseCookie userCookie = ResponseCookie.from(
-                        "WCA_USER_INF",
-                        URLEncoder.encode(
-                                new JSONObject()
-                                        .put("userName", user.getUserName())
-                                        .put("userType", user.getUserType().toString())
-                                        .toString(),
-                                StandardCharsets.UTF_8
-                        )
-                )
-                        .secure(true)
-                        .path("/")
-                        .maxAge(EXPIRATION_DURATION)
-                        .sameSite("none")
-                        .build();
-
                 return ResponseEntity.ok()
                         .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                         .header(HttpHeaders.SET_COOKIE, csrfCookie.toString())
-                        .header(HttpHeaders.SET_COOKIE, userCookie.toString())
+                        .header(HttpHeaders.SET_COOKIE, getUserCookie(user).toString())
                         .build();
             }
         }
