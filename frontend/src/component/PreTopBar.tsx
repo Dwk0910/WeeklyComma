@@ -1,6 +1,4 @@
-import axios from "axios";
 import { clsx } from "clsx";
-import { BACKEND_ADDRESS } from "../App.tsx";
 
 export default function PreTopBar({ login }: { login: boolean }) {
     return (
@@ -34,11 +32,7 @@ const LoginInteraction = ({ login }: { login: boolean }) => {
     return login ? (
         <div
             className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
-            onClick={() => {
-                axios.delete(BACKEND_ADDRESS + "authsessions").then((res) => {
-                    if (res.status === 200) window.location.reload();
-                });
-            }}
+            onClick={() => window.location.assign("/logout")}
         >
             로그아웃하기
         </div>

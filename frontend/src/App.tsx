@@ -15,6 +15,7 @@ import About from "./pages/About.tsx";
 
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
+import Logout from "./pages/redirect/Logout.tsx";
 
 export const BACKEND_ADDRESS =
     (import.meta.env.VITE_API_BACKEND_PROTOCOL == "ns" ? "http://" : "https://") +
@@ -57,14 +58,19 @@ export default function App() {
                         info: err.toString()
                     });
                 });
-        })();
 
-        // specify login & admin status
-        (async () => {
+            // specify login & admin status
             if (cookies.WCA_CSRF && cookies.WCA_USER_INF) {
-                setLogin(true);
-                const userInf = cookies.WCA_USER_INF;
-                if (userInf["userType"] == "CURATOR") setAdmin(true);
+                await axios
+                    .get(BACKEND_ADDRESS + "authsessions/check")
+                    .then(() => {
+                        setLogin(true);
+                        setAdmin(true);
+                    })
+                    .catch(async (err) => {
+                        if (err.response.status == 403) setLogin(true);
+                        else window.location.assign("/logout");
+                    });
             } else {
                 removeCookie("WCA_CSRF");
                 removeCookie("WCA_USER_INF");
@@ -87,6 +93,7 @@ export default function App() {
                                 path={"/signupcallback/:oauth_type?"}
                                 element={<SignUpCallback />}
                             />
+                            <Route path={"/logout"} element={<Logout />} />
                             <Route path={"/management"} element={<Management />} />
                             <Route path={"/about"} element={<About />} />
                         </Routes>
