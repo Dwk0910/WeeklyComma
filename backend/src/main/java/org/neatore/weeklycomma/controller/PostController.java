@@ -10,6 +10,7 @@ import org.neatore.weeklycomma.service.PostService;
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,7 +41,7 @@ public class PostController {
 
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> post(@RequestHeader("Authorization") String token, @Valid @RequestBody PostDto.PostRequest postDto) {
+    public ResponseEntity<Void> post(@CookieValue("WCA_ACCESS") String token, @Valid @RequestBody PostDto.PostRequest postDto) {
         return ResponseEntity.created(URI.create("/posts/" + postService.addPost(
                 postDto.title(),
                 postDto.content(),

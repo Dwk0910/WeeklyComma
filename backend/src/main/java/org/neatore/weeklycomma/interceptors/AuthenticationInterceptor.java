@@ -35,8 +35,6 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         if (handler instanceof HandlerMethod hm) {
             RequiresAuthentication requiresAuthentication = AnnotatedElementUtils.findMergedAnnotation(hm.getMethod(), RequiresAuthentication.class);
             if (requiresAuthentication != null) {
-                Runnable unAuthorized = () -> response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
                 String headerCsrf = request.getHeader("X-Csrf-Token");
                 Cookie tokenCookie = WebUtils.getCookie(request, "WCA_ACCESS");
 
@@ -50,7 +48,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
                 if (
                         headerCsrf == null || tokenCookie == null || !jwtService.validateToken(tokenCookie.getValue()) || !jwtService.getCsrfToken(tokenCookie.getValue()).equals(headerCsrf)
                 ) {
-                    unAuthorized.run();
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return false;
                 }
 

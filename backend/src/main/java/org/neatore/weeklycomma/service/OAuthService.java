@@ -19,7 +19,7 @@ public class OAuthService {
     @Value("${OAUTH_NAVER_CLI_KEY}")
     private String clientKey;
 
-    public String getEmailNaver(String authCode, String redirectUri, String state) {
+    public JSONObject getUserProfileNaver(String authCode, String redirectUri, String state) {
         // Access Token 구하기
         if (clientId == null || clientKey == null) throw new RuntimeException("OAuth Client ID/SECRET not set.");
 
@@ -44,7 +44,7 @@ public class OAuthService {
                                     .body(String.class)
                     ));
 
-            JSONObject userProfileResponse = new JSONObject(
+            return new JSONObject(
                     Objects.requireNonNull(
                             rc.post()
                                     .uri(uriBuilder -> uriBuilder
@@ -56,8 +56,6 @@ public class OAuthService {
                                     .retrieve()
                                     .body(String.class)
                     )).optJSONObject("response");
-
-            return userProfileResponse.optString("email");
         } catch (NullPointerException e) {
             return null;
         }

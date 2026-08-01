@@ -1,5 +1,7 @@
 package org.neatore.weeklycomma.service;
 
+import org.json.JSONObject;
+
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.login.AuthType;
 import org.neatore.weeklycomma.dto.login.UserDto;
@@ -24,13 +26,17 @@ public class UserService {
         return userRepository.getUserByEmail(email);
     }
 
+    public User getUserByOauthId(String email) {
+        return userRepository.getUserByOauthId(email);
+    }
+
     public User getUserById(UUID userId) {
         return userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
     }
 
     @Transactional
     public void addUser(UserDto.SignupRequest request) {
-        String userName = request.userName(), email = request.email(), password = request.password();
+        String userName = request.userName(), email = request.email(), password = request.password(), oauthId = null;
         AuthType authType = request.authType();
 
         boolean confilct = false;
@@ -41,12 +47,15 @@ public class UserService {
             }
 
             case OAUTH_NAVER -> {
-                email = oauthService.getEmailNaver(request.auth_code(), request.redirect_uri(), request.state());
-                if (userRepository.getUserByEmail(email) != null) confilct = true;
+                JSONObject userProfile = oauthService.getUserProfileNaver(request.auth_code(), request.redirect_uri(), request.state());
+                oauthId = userProfile.optString("id");
+                email = userProfile.optString("email");
+
+                if (userRepository.getUserByEmail(email) != null || userRepository.getUserByOauthId(oauthId) != null) confilct = true;
             }
         }
 
-        if (!confilct) userRepository.save(new User(userName, email, password, User.UserType.GENERAL, authType));
+        if (!confilct) userRepository.save(new User(userName, email, oauthId, password, User.UserType.GENERAL, authType));
     }
 
     @Transactional

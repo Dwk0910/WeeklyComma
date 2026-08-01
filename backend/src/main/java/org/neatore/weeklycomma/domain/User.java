@@ -1,5 +1,6 @@
 package org.neatore.weeklycomma.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -19,9 +20,10 @@ import java.util.UUID;
 public class User {
     protected User() {}
 
-    public User(String userName, String email, String password, User.UserType role, AuthType authType) {
+    public User(String userName, String email, String oauthId, String password, User.UserType role, AuthType authType) {
         this.userName = userName;
         this.email = email;
+        this.oauthId = oauthId;
         this.password = password;
         this.userType = role;
         this.authType = authType;
@@ -38,8 +40,12 @@ public class User {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @Setter
+    @Column(unique = true)
+    private String oauthId;
 
     @Enumerated(value = EnumType.STRING)
     private UserType userType;
@@ -48,6 +54,7 @@ public class User {
     private AuthType authType;
 
     @Setter
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Setter
