@@ -73,11 +73,8 @@ export default function Management() {
     // Authentication check & initial registering collapsible menu items to state values
     useEffect(() => {
         axios
-            .get(BACKEND_ADDRESS + "health")
-            .then((e) => {
-                if (e.data == "OK_ADMIN") setAuthenticated(true);
-                else setAuthenticated(false);
-            })
+            .get(BACKEND_ADDRESS + "authsessions/check")
+            .then(() => setAuthenticated(true))
             .catch((_) => setAuthenticated(false));
 
         (() => {
@@ -95,7 +92,6 @@ export default function Management() {
     if (authenticated == null) {
         return <div>관리자 인증 중입니다. 잠시만 기다려 주십시오...</div>;
     } else if (!authenticated) {
-        localStorage.removeItem("wca_token");
         window.location.replace(".");
     }
 

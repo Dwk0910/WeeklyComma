@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { Routes, Route } from "react-router-dom";
+import { useCookies } from "react-cookie";
 import { useState, useEffect } from "react";
 
 import PreTopBar from "./component/PreTopBar";
@@ -12,8 +13,8 @@ import Main from "./pages/Main.tsx";
 import Management from "./pages/admin/Management.tsx";
 import About from "./pages/About.tsx";
 
-import AuthCallback from "./pages/redirect/AuthCallback.ts";
-import SignUpCallback from "./pages/redirect/SignUpCallback.ts";
+import AuthCallback from "./pages/redirect/AuthCallback.tsx";
+import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
 
 export const BACKEND_ADDRESS =
     (import.meta.env.VITE_API_BACKEND_PROTOCOL == "ns" ? "http://" : "https://") +
@@ -31,30 +32,23 @@ export default function App() {
         info: null
     });
 
+    const [cookies, , removeCookie] = useCookies(["WCA_CSRF", "WCA_USER_INF"]);
+
     // Backend server check
     useEffect(() => {
-        // Server health check & verify cookie
+        // Server health check
         (async () => {
             await axios
                 .get(BACKEND_ADDRESS + "health")
                 .then((res) => {
-                    switch (res.data) {
-                        case "OK":
-                        case "OK_LOGIN":
-                            setLogin(res.data == "OK_LOGIN");
-                            break;
-                        case "OK_ADMIN":
-                            setLogin(true);
-                            setAdmin(true);
-                            break;
-                        default:
-                            setBackendErr((_) => ({
-                                error: true,
-                                info:
-                                    res.status == 200
-                                        ? `Backend server responded unexpected value: ${res.data}`
-                                        : res.toString()
-                            }));
+                    if (res.data != "OK") {
+                        setBackendErr((_) => ({
+                            error: true,
+                            info:
+                                res.status == 200
+                                    ? `Backend server responded unexpected value: ${res.data}`
+                                    : res.toString()
+                        }));
                     }
                 })
                 .catch((err) => {
@@ -64,7 +58,19 @@ export default function App() {
                     });
                 });
         })();
-    }, []);
+
+        // specify login & admin status
+        (async () => {
+            if (cookies.WCA_CSRF && cookies.WCA_USER_INF) {
+                setLogin(true);
+                const userInf = cookies.WCA_USER_INF;
+                if (userInf["userType"] == "CURATOR") setAdmin(true);
+            } else {
+                removeCookie("WCA_CSRF");
+                removeCookie("WCA_USER_INF");
+            }
+        })();
+    }, [cookies, removeCookie]);
 
     return !backendErr.error ? (
         <>
