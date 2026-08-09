@@ -17,6 +17,7 @@ public class BookDto {
             String isbn,
             Long pubDate,
             String coverImg,
+            String customCoverImg,
             String description,
             String difficulty,
             Boolean adult

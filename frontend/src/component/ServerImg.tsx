@@ -1,5 +1,5 @@
 import { type ComponentPropsWithoutRef, useEffect, useState } from "react";
-import { BACKEND_ADDRESS } from "../index.tsx";
+import { BACKEND_ADDRESS, api } from "../index.tsx";
 
 interface ServerImgProps extends ComponentPropsWithoutRef<"img"> {
     fileId: string;
@@ -13,7 +13,7 @@ export default function ServerImg({ fileId, alt, ...props }: ServerImgProps) {
         let urlLocal = "";
 
         const fetchImage = async () => {
-            const response = await axios.get(BACKEND_ADDRESS + `files/${fileId}`, {
+            const response = await api.get(BACKEND_ADDRESS + `files/${fileId}`, {
                 responseType: "blob"
             });
 

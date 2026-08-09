@@ -70,7 +70,22 @@ public class DBFileService {
     }
 
     @Transactional
-    public void save(MultipartFile file, boolean secured) throws IOException {
+    public void delete(String fileId) {
+        UUID id = UUID.fromString(fileId);
+        DBFile dbFile = this.repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("File not found: " + fileId));
+
+        try {
+            Files.deleteIfExists(this.saveDirectory.toPath().resolve(fileId + "." + dbFile.getExtension()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        this.repository.delete(dbFile);
+    }
+
+    @Transactional
+    public UUID save(MultipartFile file, boolean secured) {
         UUID uuid = UUID.randomUUID();
 
         File f_virtual = new File(Objects.requireNonNull(file.getOriginalFilename()));
@@ -79,15 +94,19 @@ public class DBFileService {
         DBFile.FileExtension ext;
         try {
             ext = DBFile.FileExtension.valueOf(ext_.toUpperCase());
+
+            Path p = this.saveDirectory.toPath().resolve(uuid + "." + ext_);
+            Files.createFile(p);
+            file.transferTo(p);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Unsupported file extension: " + ext_, e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
-        Path p = this.saveDirectory.toPath().resolve(uuid + "." + ext_);
-        Files.createFile(p);
-        file.transferTo(p);
 
         this.repository.save(new DBFile(uuid, secured, ext, f_virtual.getName().replace(" ", "")));
+        return uuid;
     }
 }
 

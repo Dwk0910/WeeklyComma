@@ -21,16 +21,18 @@ import java.util.List;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
 public class BookService {
     private final BookRepository bookRepository;
+    private final DBFileService dbFileService;
     private final APIService apiService;
 
     public List<BookDto.BookResponse> searchBooks(String title) {
         List<BookDto.BookResponse> result = new ArrayList<>();
-        bookRepository.searchBooksByTitleContaining(title).forEach(book -> result.add(new BookDto.BookResponse(book.getTitle(), book.getSubTitle(), book.getAuthor(), book.getPublisher(), book.getIsbn(), book.getPubDate().toEpochSecond(ZoneOffset.ofHours(0)), book.getCoverImg(), book.getDescription(), book.getDifficulty(), book.getAdult())));
+        bookRepository.searchBooksByTitleContaining(title).forEach(book -> result.add(new BookDto.BookResponse(book.getTitle(), book.getSubTitle(), book.getAuthor(), book.getPublisher(), book.getIsbn(), book.getPubDate().toEpochSecond(ZoneOffset.ofHours(0)), book.getCoverImg(), book.getCustomCoverImg(), book.getDescription(), book.getDifficulty(), book.getAdult())));
         return result;
     }
 
@@ -57,6 +59,7 @@ public class BookService {
                             obj.getString("isbn"),
                             LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(0)),
                             obj.getString("cover"),
+                            null,
                             obj.getString("description"),
                             null,
                             obj.getBoolean("adult")
@@ -75,15 +78,30 @@ public class BookService {
 
     @Transactional
     public void upsertBook(BookDto.RegisterRequest request) {
-        Optional.ofNullable(this.getBookByIsbn(request.isbn()))
+        AtomicReference<Book> book = new AtomicReference<>(this.getBookByIsbn(request.isbn()));
+        Optional.ofNullable(book.get())
                 .ifPresentOrElse(
-                        book -> book.updateFrom(request),
-                        () -> bookRepository.save(new Book(request))
+                        b -> b.updateFrom(request),
+                        () -> {
+                            book.set(new Book(request));
+                            bookRepository.save(book.get());
+                        }
                 );
+
+        if (book.get().getCustomCoverImg() != null) this.dbFileService.delete(book.get().getCustomCoverImg());
+
+        if (request.customCoverImg() != null)
+            book.get().setCustomCoverImg(
+                    this.dbFileService.save(request.customCoverImg(), false).toString()
+            );
+        else book.get().setCustomCoverImg(null);
     }
 
     @Transactional
     public void deleteBook(String isbn) {
+        Book b = this.getBookByIsbn(isbn);
+        if (b != null && b.getCustomCoverImg() != null) this.dbFileService.delete(b.getCustomCoverImg());
+
         bookRepository.deleteBookByIsbn(isbn);
     }
 }

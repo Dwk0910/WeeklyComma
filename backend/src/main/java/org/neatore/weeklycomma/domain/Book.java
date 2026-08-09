@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import lombok.Setter;
 import org.neatore.weeklycomma.dto.BookDto;
 
 import java.time.LocalDateTime;
@@ -47,6 +48,9 @@ public class Book {
     private String description;
     private String difficulty;
     private Boolean adult;
+
+    @Setter
+    private String customCoverImg;
 
     public void updateFrom(BookDto.RegisterRequest from) {
         this.title = from.title();
