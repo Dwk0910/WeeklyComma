@@ -4,7 +4,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 
 import lombok.RequiredArgsConstructor;
@@ -84,10 +83,10 @@ public class JwtService {
     }
 
     public User.UserType getUserType(String token) {
-        return User.UserType.valueOf(this.getPayload(token).get("role").toString());
+        return this.getUser(token).getUserType();
     }
 
-    public @Nullable User getUser(String token) {
+    public User getUser(String token) {
         return userService.getUserById(
             UUID.fromString(this.getPayload(token).getSubject())
         );
