@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +30,11 @@ public class BookController {
     @GetMapping
     public ResponseEntity<List<BookDto.BookResponse>> searchBooks(@RequestParam String query) {
         return ResponseEntity.ok(bookService.searchBooks(query));
+    }
+
+    @GetMapping("/{isbn}")
+    public ResponseEntity<BookDto.BookResponse> getBook(@PathVariable String isbn) {
+        return ResponseEntity.ok(bookService.getBookByIsbn(isbn).toDto());
     }
 
     @GetMapping("/api")

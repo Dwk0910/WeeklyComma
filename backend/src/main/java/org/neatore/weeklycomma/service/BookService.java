@@ -32,7 +32,7 @@ public class BookService {
 
     public List<BookDto.BookResponse> searchBooks(String title) {
         List<BookDto.BookResponse> result = new ArrayList<>();
-        bookRepository.searchBooksByTitleContaining(title).forEach(book -> result.add(new BookDto.BookResponse(book.getTitle(), book.getSubTitle(), book.getAuthor(), book.getPublisher(), book.getIsbn(), book.getPubDate().toEpochSecond(ZoneOffset.ofHours(0)), book.getCoverImg(), book.getCustomCoverImg(), book.getDescription(), book.getDifficulty(), book.getAdult())));
+        bookRepository.searchBooksByTitleContaining(title).forEach(book -> result.add(book.toDto()));
         return result;
     }
 
