@@ -224,6 +224,14 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
                     className={
                         "cursor-pointer mr-5 bg-gray-500 p-4 text-white rounded-[5px] font-suite transition-[scale] hover:scale-105 ease-in-out"
                     }
+                    // onClick={}
+                >
+                    책 정보 삭제
+                </button>
+                <button
+                    className={
+                        "cursor-pointer mr-5 bg-gray-500 p-4 text-white rounded-[5px] font-suite transition-[scale] hover:scale-105 ease-in-out"
+                    }
                     onClick={() => {
                         serverUpload();
                     }}

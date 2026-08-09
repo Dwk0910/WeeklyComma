@@ -81,4 +81,9 @@ public class BookService {
                         () -> bookRepository.save(new Book(request))
                 );
     }
+
+    @Transactional
+    public void deleteBook(String isbn) {
+        bookRepository.deleteBookByIsbn(isbn);
+    }
 }

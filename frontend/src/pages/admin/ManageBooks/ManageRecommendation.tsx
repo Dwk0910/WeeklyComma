@@ -20,6 +20,7 @@ export type Book = {
     adult: boolean;
     difficulty: "초급" | "중급" | "상급" | null;
     // recommendations: Recommendation[];
+    dbExist: boolean;
 };
 
 // interface Recommendation {
@@ -64,10 +65,12 @@ export default function ManageRecommendation() {
         try {
             setSearchResults_l(
                 (
-                    await api.get(BACKEND_ADDRESS + "books", {
-                        params: { query: searchQuery }
-                    })
-                ).data
+                    (
+                        await api.get(BACKEND_ADDRESS + "books", {
+                            params: { query: searchQuery }
+                        })
+                    ).data as Book[]
+                ).map((i) => ({ ...i, dbExist: true }))
             );
 
             setSearchResults_a(

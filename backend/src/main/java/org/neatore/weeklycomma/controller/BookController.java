@@ -8,6 +8,7 @@ import org.neatore.weeklycomma.service.BookService;
 import org.neatore.weeklycomma.dto.BookDto;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ public class BookController {
     }
 
     @GetMapping("/api")
+    @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<List<BookDto.BookResponse>> searchBooksAPI(@RequestParam String query) {
         return ResponseEntity.ok(bookService.searchBooksAPI(query));
     }
@@ -39,6 +41,13 @@ public class BookController {
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> registerBook(@Valid @ModelAttribute BookDto.RegisterRequest request) {
         bookService.upsertBook(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Void> deleteBook(@RequestParam String isbn) {
+        bookService.deleteBook(isbn);
         return ResponseEntity.ok().build();
     }
 }
