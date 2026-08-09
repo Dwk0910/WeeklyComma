@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,10 +30,7 @@ import lombok.RequiredArgsConstructor;
 
 import jakarta.validation.Valid;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Objects;
 
 @RestController
 @RequiredArgsConstructor
@@ -44,36 +42,26 @@ public class AuthenticationController {
 
     private final Duration EXPIRATION_DURATION = Duration.ofDays(30);
 
-    private ResponseCookie getUserCookie(User user) {
-        return ResponseCookie.from(
-                        "WCA_USER_INF",
-                        URLEncoder.encode(
-                                new JSONObject()
-                                        .put("userName", user.getUserName())
-                                        .put("userType", user.getUserType().toString())
-                                        .toString(),
-                                StandardCharsets.UTF_8
-                        )
-                )
-                .secure(true)
-                .path("/")
-                .maxAge(EXPIRATION_DURATION)
-                .sameSite("none")
-                .build();
+    private String getLSData(JwtService.JwtToken jwtToken) {
+        User user = this.jwtService.getUser(jwtToken.jwtToken());
+
+        JSONObject result = new JSONObject();
+        result.put("userName", user.getUserName());
+        result.put("userType", user.getUserType());
+        result.put("csrfToken", jwtToken.csrfToken());
+
+        return result.toString();
     }
 
     @GetMapping("/me")
     @RequiresAuthentication
-    public ResponseEntity<Void> me(@CookieValue("WCA_ACCESS") String accessToken) {
+    public ResponseEntity<String> me(@CookieValue("WCA_ACCESS") String accessToken, @RequestHeader("X-Csrf-Token") String csrfToken) {
         if (!jwtService.validateToken(accessToken)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        User user = Objects.requireNonNull(jwtService.getUser(accessToken));
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, getUserCookie(user).toString())
-                .build();
+        return ResponseEntity.ok(this.getLSData(new JwtService.JwtToken(accessToken, csrfToken)));
     }
 
     @PostMapping
-    public ResponseEntity<Void> login(@Valid @RequestBody AuthDto.LoginRequest request) {
+    public ResponseEntity<String> login(@Valid @RequestBody AuthDto.LoginRequest request) {
         if (request.authType() == AuthType.LOCAL) {
             User user = userService.getUserByEmail(request.email());
             if (user != null) {
@@ -97,22 +85,14 @@ public class AuthenticationController {
                         .httpOnly(true)
                         .secure(true)
                         .path("/")
-                        .maxAge(EXPIRATION_DURATION)
-                        .sameSite("none")
-                        .build();
-
-                ResponseCookie csrfCookie = ResponseCookie.from("WCA_CSRF", jwtToken.csrfToken())
-                        .secure(true)
-                        .path("/")
+                        .domain(null)
                         .maxAge(EXPIRATION_DURATION)
                         .sameSite("none")
                         .build();
 
                 return ResponseEntity.ok()
                         .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                        .header(HttpHeaders.SET_COOKIE, csrfCookie.toString())
-                        .header(HttpHeaders.SET_COOKIE, getUserCookie(user).toString())
-                        .build();
+                        .body(this.getLSData(jwtToken));
             }
         }
 
@@ -120,6 +100,7 @@ public class AuthenticationController {
     }
 
     @DeleteMapping
+    @RequiresAuthentication
     public ResponseEntity<Void> logout() {
         // 말소 쿠키 작성
         ResponseCookie ac = ResponseCookie.from("WCA_ACCESS")
