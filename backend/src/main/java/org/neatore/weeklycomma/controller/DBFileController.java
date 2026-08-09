@@ -1,6 +1,7 @@
 package org.neatore.weeklycomma.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.http.client.utils.URIBuilder;
 
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
-import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 @RestController
@@ -47,29 +49,30 @@ public class DBFileController {
         }
     }
 
-//    @GetMapping("/base64/{id}")
-//    public ResponseEntity<String> getBase64File(@PathVariable String id) {
-//        try {
-//            DBFileService.DBFileResponse f_ = dbFileService.load(id);
-//            return ResponseEntity.ok()
-//                    .contentType(MediaType.TEXT_PLAIN)
-//                    .body("data:image/" + f_.getExtension().name() + ";base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(f_.getFile().toPath())));
-//        } catch (IllegalArgumentException | IOException e) {
-//            LOGGER.error("", e);
-//            return ResponseEntity.notFound().build();
-//        }
-//    }
-
     @GetMapping("/secured/{id}")
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Resource> getSecuredFile(@PathVariable String id) {
-        return ResponseEntity.ok().build();
+        DBFileService.DBFileResponse f_ = dbFileService.load(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + UriUtils.encode(f_.getName(), StandardCharsets.UTF_8) + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(f_.getFile().length())
+                .body(new FileSystemResource(f_.getFile()));
     }
 
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file, @RequestParam(required = false, defaultValue = "false") boolean secured) throws IOException {
-        this.dbFileService.save(file, secured);
+    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file, @RequestParam(required = false, defaultValue = "false") boolean secured) throws URISyntaxException {
+        return ResponseEntity.created(
+                new URIBuilder("/files/" + dbFileService.save(file, secured))
+                        .build()
+        ).build();
+    }
+
+    @DeleteMapping("/{id}")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Void> deleteFile(@PathVariable String id) {
+        this.dbFileService.delete(id);
         return ResponseEntity.ok().build();
     }
 }
