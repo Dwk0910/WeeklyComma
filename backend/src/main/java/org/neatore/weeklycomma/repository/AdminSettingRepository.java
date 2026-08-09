@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AdminSettingRepository extends JpaRepository<AdminSetting, String> {
-
+    AdminSetting getAdminSettingByKey(String key);
 }
