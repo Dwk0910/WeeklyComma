@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 
 import { MdSearch } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
 
-import { BACKEND_ADDRESS } from "../../../App";
+import { BACKEND_ADDRESS, api } from "../../../index.tsx";
 import Component, { Title, SubTitle } from "../lib_component/Component";
 import ManageBook from "./ManageBook.tsx";
 
@@ -65,7 +64,7 @@ export default function ManageRecommendation() {
         try {
             setSearchResults_l(
                 (
-                    await axios.get(BACKEND_ADDRESS + "books", {
+                    await api.get(BACKEND_ADDRESS + "books", {
                         params: { query: searchQuery }
                     })
                 ).data
@@ -73,7 +72,7 @@ export default function ManageRecommendation() {
 
             setSearchResults_a(
                 (
-                    await axios.get(BACKEND_ADDRESS + "books/api", {
+                    await api.get(BACKEND_ADDRESS + "books/api", {
                         params: { query: searchQuery }
                     })
                 ).data

@@ -1,8 +1,7 @@
 import Component, { Title } from "../lib_component/Component";
 import Editor from "./Editor.tsx";
-import { BACKEND_ADDRESS } from "../../../App";
+import { BACKEND_ADDRESS, api } from "../../../index.tsx";
 
-import axios from "axios";
 import { clsx } from "clsx";
 import { useState, useEffect, useCallback } from "react";
 
@@ -38,7 +37,7 @@ export default function ManageComponent({
 
     const getPosts: () => Promise<void> = useCallback(async () => {
         setIsLoading(true);
-        return axios
+        return api
             .get(BACKEND_ADDRESS + `posts`, {
                 params: {
                     ...attributions!,
@@ -126,13 +125,11 @@ export default function ManageComponent({
                             selectedPosts
                                 .filter((i) => !i.isPinned)
                                 .map((i) => {
-                                    axios
-                                        .patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
-                                            params: { pin: true }
-                                        })
-                                        .then(async () => {
-                                            await getPosts();
-                                        });
+                                    api.patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
+                                        params: { pin: true }
+                                    }).then(async () => {
+                                        await getPosts();
+                                    });
                                 });
                         }}
                     >
@@ -145,13 +142,11 @@ export default function ManageComponent({
                             selectedPosts
                                 .filter((i) => i.isPinned)
                                 .map((i) => {
-                                    axios
-                                        .patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
-                                            params: { pin: false }
-                                        })
-                                        .then(async () => {
-                                            await getPosts();
-                                        });
+                                    api.patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
+                                        params: { pin: false }
+                                    }).then(async () => {
+                                        await getPosts();
+                                    });
                                 });
                         }}
                     >
@@ -162,9 +157,9 @@ export default function ManageComponent({
                         onClick={async () => {
                             if (confirm("정말 선택한 글들을 삭제하시겠습니까?")) {
                                 selectedPosts.forEach((i) => {
-                                    axios
-                                        .delete(BACKEND_ADDRESS + `posts/${i.id}`)
-                                        .then(async () => await getPosts());
+                                    api.delete(BACKEND_ADDRESS + `posts/${i.id}`).then(
+                                        async () => await getPosts()
+                                    );
                                 });
                             }
                         }}

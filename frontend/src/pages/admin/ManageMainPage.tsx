@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import axios from "axios";
+
 import { MdOutlineFileUpload, MdCheckCircle, MdCached, MdDelete } from "react-icons/md";
 
-import { BACKEND_ADDRESS } from "../../App";
+import { BACKEND_ADDRESS } from "../../index.tsx";
 import SubmitButton from "./lib_component/SubmitButton.tsx";
 import Component, { Title, SubTitle } from "./lib_component/Component";
 
@@ -67,7 +67,7 @@ export default function ManageMainPage() {
         bottomRightBanners.forEach((file) => formData.append("bottomRight", file));
 
         try {
-            await axios.post(`${BACKEND_ADDRESS}adminsettings`, formData, {
+            await api.post(`${BACKEND_ADDRESS}adminsettings`, formData, {
                 headers: {
                     "X-Client-Session-ID": localStorage.getItem("wca_token"),
                     "Content-Type": "multipart/form-data"

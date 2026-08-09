@@ -1,9 +1,8 @@
-import axios from "axios";
 import { useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 
 import WaitingScreen from "./WaitingScreen.tsx";
-import { BACKEND_ADDRESS } from "../../App.tsx";
+import { BACKEND_ADDRESS, api } from "../../index.tsx";
 
 export default function SignUpCallback() {
     const { oauth_type } = useParams();
@@ -20,7 +19,7 @@ export default function SignUpCallback() {
         if (auth_code == null || oauth_type == null || oauth_type === "")
             navigate("/", { replace: true });
 
-        void axios
+        void api
             .post(BACKEND_ADDRESS + "users", {
                 authType: oauth_type,
                 auth_code,

@@ -1,9 +1,8 @@
 import React, { useState, useRef } from "react";
 import { MdCameraAlt } from "react-icons/md";
-import axios from "axios";
 
 import { type Book } from "./ManageRecommendation.tsx";
-import { BACKEND_ADDRESS } from "../../../App.tsx";
+import { BACKEND_ADDRESS, api } from "../../../index.tsx";
 
 import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { SubTitle } from "../lib_component/Component.tsx";
@@ -71,7 +70,7 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
             formData.append(key, String(value));
         });
 
-        axios.post(BACKEND_ADDRESS + "books", formData).then(() => {
+        api.post(BACKEND_ADDRESS + "books", formData).then(() => {
             alert("정상적으로 등록되었습니다.");
         });
     };

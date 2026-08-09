@@ -1,6 +1,5 @@
 import { type ComponentPropsWithoutRef, useEffect, useState } from "react";
-import { BACKEND_ADDRESS } from "../App.tsx";
-import axios from "axios";
+import { BACKEND_ADDRESS } from "../index.tsx";
 
 interface ServerImgProps extends ComponentPropsWithoutRef<"img"> {
     fileId: string;

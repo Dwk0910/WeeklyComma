@@ -1,8 +1,7 @@
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 
-import { BACKEND_ADDRESS } from "../../../App.tsx";
-import axios from "axios";
+import { BACKEND_ADDRESS, api } from "../../../index.tsx";
 
 import { useEditor, useEditorState, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -164,27 +163,25 @@ export default function Editor({
 
     const handleSave = () => {
         const content = editor.getHTML();
-        axios
-            .post(BACKEND_ADDRESS + "posts", {
-                type: postType,
-                title: title,
-                content: content,
-                attributions: attributions!
-            })
-            .then(() => {
-                alert("글이 성공적으로 게시되었습니다.");
-                if (!refreshAction) window.location.reload();
-                else refreshAction();
+        api.post(BACKEND_ADDRESS + "posts", {
+            type: postType,
+            title: title,
+            content: content,
+            attributions: attributions!
+        }).then(() => {
+            alert("글이 성공적으로 게시되었습니다.");
+            if (!refreshAction) window.location.reload();
+            else refreshAction();
 
-                // close action
-                if (closeAction) {
-                    editor.commands.clearContent();
-                    setTitle("");
-                    setFontSizeState(16);
-                    setFontDropdownOpen(false);
-                    closeAction();
-                }
-            });
+            // close action
+            if (closeAction) {
+                editor.commands.clearContent();
+                setTitle("");
+                setFontSizeState(16);
+                setFontDropdownOpen(false);
+                closeAction();
+            }
+        });
     };
 
     return (

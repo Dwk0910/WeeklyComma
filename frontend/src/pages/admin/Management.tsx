@@ -1,10 +1,8 @@
 import * as React from "react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useCookies } from "react-cookie";
-import { BACKEND_ADDRESS } from "../../App.tsx";
+import { getLSdata } from "../../index.tsx";
 
 import { clsx } from "clsx";
-import axios from "axios";
 
 import { MdKeyboardArrowUp } from "react-icons/md";
 
@@ -71,16 +69,13 @@ export default function Management() {
     const [currentMenu, setCurrentMenu] = useState<string>();
     const [subMenuOpen, setSubMenuOpen] = useState<{ [collapsibleMenuName: string]: boolean }>({});
 
-    const [cookies] = useCookies(["WCA_USER_INF"]);
-
     // Authentication check & initial registering collapsible menu items to state values
     useEffect(() => {
-        axios
-            .get(BACKEND_ADDRESS + "authsessions/me")
-            .then(() => {
-                if (cookies.WCA_USER_INF["userType"] == "CURATOR") setAuthenticated(true);
-            })
-            .catch((_) => setAuthenticated(false));
+        (() => {
+            const lsdata = getLSdata();
+            if (lsdata && lsdata["userType"] == "CURATOR") setAuthenticated(true);
+            else setAuthenticated(false);
+        })();
 
         (() => {
             setCurrentMenu(menu[0].name);
