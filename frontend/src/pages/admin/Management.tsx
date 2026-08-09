@@ -89,11 +89,8 @@ export default function Management() {
         })();
     }, []);
 
-    if (authenticated == null) {
-        return <div>관리자 인증 중입니다. 잠시만 기다려 주십시오...</div>;
-    } else if (!authenticated) {
-        window.location.replace(".");
-    }
+    if (authenticated == null) return <div>관리자 인증 중입니다. 잠시만 기다려 주십시오...</div>;
+    else if (!authenticated) window.location.replace(".");
 
     return (
         <>
