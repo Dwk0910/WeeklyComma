@@ -1,8 +1,6 @@
-import { useEffect } from "react";
-import { useCookies } from "react-cookie";
+import { useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { BACKEND_ADDRESS } from "../../App.tsx";
-import axios from "axios";
+import { api, BACKEND_ADDRESS } from "../../index.tsx";
 
 import WaitingScreen from "./WaitingScreen";
 
@@ -10,29 +8,34 @@ export default function AuthCallback() {
     const { oauth_type } = useParams();
     const [searchParams] = useSearchParams();
 
-    const [cookies] = useCookies(["WCA_CSRF"]);
-
     const redirect_uri = encodeURI(window.location.origin + `/authcallback/${oauth_type}`);
-    const auth_code = searchParams.get("code");
-    const state = searchParams.get("state");
+    const auth_code = searchParams.get("code")!.toString();
+    const state = searchParams.get("state")!.toString();
 
-    if (auth_code == null || oauth_type == null || oauth_type == "") window.location.assign("/");
+    if (auth_code == null || !oauth_type || oauth_type == "") window.location.assign("/");
+
+    const params = useRef<{
+        oauth_type: string;
+        redirect_uri: string;
+        auth_code: string;
+        state: string;
+    }>({
+        oauth_type: oauth_type!.toString(),
+        redirect_uri,
+        auth_code,
+        state
+    });
 
     useEffect(() => {
-        axios
-            .post(BACKEND_ADDRESS + `authsessions`, {
-                authType: oauth_type,
-                auth_code,
-                state,
-                redirect_uri
-            })
+        api.post(BACKEND_ADDRESS + `authsessions`, {
+            authType: params.current.oauth_type,
+            auth_code: params.current.auth_code,
+            state: params.current.state,
+            redirect_uri: params.current.redirect_uri
+        })
             .then((res) => {
                 if (res.status == 200) {
-                    axios.interceptors.request.use((config) => {
-                        config.headers.set("X-Csrf-Token", cookies.WCA_CSRF);
-                        return config;
-                    });
-
+                    localStorage.setItem("wca_lsdata", JSON.stringify(res.data));
                     window.location.assign("/");
                 } else {
                     alert(`Received http status code ${res.status}`);
