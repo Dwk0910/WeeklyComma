@@ -5,12 +5,19 @@ import { type Book } from "./ManageRecommendation.tsx";
 import { BACKEND_ADDRESS, api } from "../../../index.tsx";
 
 import FontStyle from "../../../assets/fonts/fonts.tsx";
-import { SubTitle } from "../lib_component/Component.tsx";
+import { SubTitle, Title } from "../lib_component/Component.tsx";
 import ManageComponent from "../ManageBoards/ManageComponent.tsx";
 
-export default function ManageBook({ book: initialBook }: { book: Book }) {
-    const [book, setBook] = useState<Book>(initialBook);
-    const [previewImg, setPreviewImg] = useState<string>(initialBook.coverImg);
+export default function ManageBook({
+    book,
+    setSelectedBook,
+    refreshSearchResult
+}: {
+    book: Book;
+    setSelectedBook: React.Dispatch<React.SetStateAction<Book | null>>;
+    refreshSearchResult: () => void;
+}) {
+    const [previewImg, setPreviewImg] = useState<string>(book.coverImg);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -21,11 +28,11 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
         // 표준 Unix Timestamp인 '초(Seconds)' 단위 정수로 변환하여 저장
         if (name === "pubDate") {
             const timestampInSeconds = value ? Math.floor(new Date(value).getTime() / 1000) : 0;
-            setBook((prev) => ({ ...prev, [name]: timestampInSeconds }));
+            setSelectedBook((prev) => prev && { ...prev, [name]: timestampInSeconds });
             return;
         }
 
-        setBook((prev) => ({ ...prev, [name]: value }));
+        setSelectedBook((prev) => prev && { ...prev, [name]: value });
     };
 
     const handleImageClick = () => fileInputRef.current?.click();
@@ -46,6 +53,7 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
         "description",
         "difficulty"
     ];
+
     const serverUpload = () => {
         const lack = () => {
             return Object.keys(book).some((key) => {
@@ -72,7 +80,18 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
 
         api.post(BACKEND_ADDRESS + "books", formData).then(() => {
             alert("정상적으로 등록되었습니다.");
+            setSelectedBook((prev) => prev && { ...prev, dbExist: true });
+            refreshSearchResult();
         });
+    };
+
+    const removeBook = () => {
+        if (confirm("정말 이 책을 삭제하시겠습니까? 등록한 정보가 모두 삭제됩니다.")) {
+            api.delete(BACKEND_ADDRESS + `books?isbn=${book.isbn}`).then(() => {
+                setSelectedBook(null);
+                refreshSearchResult();
+            });
+        }
     };
 
     const inputStyle =
@@ -220,14 +239,18 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
                 </div>
             </div>
             <div className={"flex w-full justify-end mt-3"}>
-                <button
-                    className={
-                        "cursor-pointer mr-5 bg-gray-500 p-4 text-white rounded-[5px] font-suite transition-[scale] hover:scale-105 ease-in-out"
-                    }
-                    // onClick={}
-                >
-                    책 정보 삭제
-                </button>
+                {book.dbExist && (
+                    <button
+                        className={
+                            "cursor-pointer mr-5 bg-gray-500 p-4 text-white rounded-[5px] font-suite transition-[scale] hover:scale-105 ease-in-out"
+                        }
+                        onClick={() => {
+                            removeBook();
+                        }}
+                    >
+                        책 정보 삭제
+                    </button>
+                )}
                 <button
                     className={
                         "cursor-pointer mr-5 bg-gray-500 p-4 text-white rounded-[5px] font-suite transition-[scale] hover:scale-105 ease-in-out"
@@ -236,16 +259,23 @@ export default function ManageBook({ book: initialBook }: { book: Book }) {
                         serverUpload();
                     }}
                 >
-                    책 정보 저장
+                    {"책 정보 " + (book.dbExist ? "수정" : "저장")}
                 </button>
             </div>
 
             <div className="mt-2">
-                <ManageComponent
-                    postType={"RECOMMENDATION"}
-                    title={"추천글 관리"}
-                    attributions={{ bookId: book.isbn }}
-                />
+                {book.dbExist ? (
+                    <ManageComponent
+                        postType={"RECOMMENDATION"}
+                        title={"추천글 관리"}
+                        attributions={{ bookId: book.isbn }}
+                    />
+                ) : (
+                    <div className={"mb-10"}>
+                        <Title>추천글 관리</Title>
+                        <SubTitle>책을 등록해야 추천글을 작성할 수 있습니다.</SubTitle>
+                    </div>
+                )}
             </div>
         </div>
     );

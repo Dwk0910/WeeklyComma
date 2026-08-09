@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 import { MdSearch } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
@@ -237,7 +237,15 @@ export default function ManageRecommendation() {
                 </span>
             </div>
             <Title>책 추천하기</Title>
-            <ManageBook book={selectedBook} />
+            <ManageBook
+                setSelectedBook={
+                    setSelectedBook as React.Dispatch<React.SetStateAction<Book | null>>
+                }
+                book={selectedBook}
+                refreshSearchResult={async () => {
+                    await handleSearch();
+                }}
+            />
         </Component>
     );
 }
