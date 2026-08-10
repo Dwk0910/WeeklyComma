@@ -69,9 +69,9 @@ public class DBFileController {
         ).build();
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> deleteFile(@PathVariable String id) {
+    public ResponseEntity<Void> deleteFile(@RequestParam String id) {
         this.dbFileService.delete(id);
         return ResponseEntity.ok().build();
     }

@@ -21,4 +21,9 @@ public class AdminSettingService {
     public void updateAdminSetting(String key, String value) {
         adminSettingRepository.save(new AdminSetting(key, value));
     }
+
+    @Transactional
+    public void deleteAdminSetting(String key) {
+        adminSettingRepository.deleteById(key);
+    }
 }
