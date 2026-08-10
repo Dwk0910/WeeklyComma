@@ -92,7 +92,7 @@ public class BookService {
 
         if (request.customCoverImg() != null)
             book.get().setCustomCoverImg(
-                    this.dbFileService.save(request.customCoverImg(), false).toString()
+                    this.dbFileService.save(request.customCoverImg()).toString()
             );
         else book.get().setCustomCoverImg(null);
     }

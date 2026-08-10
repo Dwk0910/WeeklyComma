@@ -85,7 +85,7 @@ public class DBFileService {
     }
 
     @Transactional
-    public UUID save(MultipartFile file, boolean secured) {
+    public UUID save(MultipartFile file) {
         UUID uuid = UUID.randomUUID();
 
         File f_virtual = new File(Objects.requireNonNull(file.getOriginalFilename()));
@@ -105,7 +105,7 @@ public class DBFileService {
         }
 
 
-        this.repository.save(new DBFile(uuid, secured, ext, f_virtual.getName().replace(" ", "")));
+        this.repository.save(new DBFile(uuid, ext, f_virtual.getName().replace(" ", "")));
         return uuid;
     }
 }

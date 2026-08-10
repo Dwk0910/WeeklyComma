@@ -16,9 +16,8 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DBFile {
-    public DBFile(UUID id, Boolean isSecured, FileExtension extension, String originalFileName) {
+    public DBFile(UUID id, FileExtension extension, String originalFileName) {
         this.id = id;
-        this.isSecured = isSecured;
         this.extension = extension;
         this.originalFileName = originalFileName;
     }
@@ -31,8 +30,6 @@ public class DBFile {
     @Id
     private UUID id;
 
-    @Setter
-    private Boolean isSecured;
 
     @Setter
     public String originalFileName;

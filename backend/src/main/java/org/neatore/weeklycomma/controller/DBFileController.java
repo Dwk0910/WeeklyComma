@@ -49,22 +49,11 @@ public class DBFileController {
         }
     }
 
-    @GetMapping("/secured/{id}")
-    @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Resource> getSecuredFile(@PathVariable String id) {
-        DBFileService.DBFileResponse f_ = dbFileService.load(id);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + UriUtils.encode(f_.getName(), StandardCharsets.UTF_8) + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(f_.getFile().length())
-                .body(new FileSystemResource(f_.getFile()));
-    }
-
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file, @RequestParam(required = false, defaultValue = "false") boolean secured) throws URISyntaxException {
+    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file) throws URISyntaxException {
         return ResponseEntity.created(
-                new URIBuilder("/files/" + dbFileService.save(file, secured))
+                new URIBuilder("/files/" + dbFileService.save(file))
                         .build()
         ).build();
     }
