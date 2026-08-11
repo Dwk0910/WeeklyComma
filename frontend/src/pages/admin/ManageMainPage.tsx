@@ -5,7 +5,8 @@ import {
     MdCached,
     MdDelete,
     MdSearch,
-    MdClose
+    MdClose,
+    MdLink
 } from "react-icons/md";
 
 import { BACKEND_ADDRESS, api } from "../../index.tsx";
@@ -38,6 +39,7 @@ type BannerItem = {
     originalName?: string;
     file?: File;
     previewUrl?: string;
+    linkUrl?: string;
 };
 
 export default function ManageMainPage() {
@@ -55,7 +57,6 @@ export default function ManageMainPage() {
     const [topRightBanners, setTopRightBanners] = useState<BannerItem[]>([]);
     const [bottomRightBanners, setBottomRightBanners] = useState<BannerItem[]>([]);
 
-    // 도서 검색 팝업 상태
     const [searchModalLevel, setSearchModalLevel] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [searchResults, setSearchResults] = useState<BookResponse[]>([]);
@@ -78,28 +79,33 @@ export default function ManageMainPage() {
         }
     };
 
+    const parseBannerData = (rawString: string): BannerItem[] => {
+        if (!rawString) return [];
+        return rawString
+            .split(",")
+            .filter(Boolean)
+            .map((item) => {
+                const [id, linkUrl] = item.split("|");
+                return {
+                    id,
+                    linkUrl: linkUrl || ""
+                };
+            });
+    };
+
     useEffect(() => {
         const fetchInitialData = async () => {
             const mainPickVal = await fetchAdminSetting("mainPick");
             if (mainPickVal) setMainPick(mainPickVal);
 
             const leftVal = await fetchAdminSetting("leftBanner");
-            if (leftVal) {
-                const ids = leftVal.split(",").filter(Boolean);
-                setLeftBanners(ids.map((id) => ({ id })));
-            }
+            if (leftVal) setLeftBanners(parseBannerData(leftVal));
 
             const topVal = await fetchAdminSetting("topRightBanners");
-            if (topVal) {
-                const ids = topVal.split(",").filter(Boolean);
-                setTopRightBanners(ids.map((id) => ({ id })));
-            }
+            if (topVal) setTopRightBanners(parseBannerData(topVal));
 
             const bottomVal = await fetchAdminSetting("bottomRightBanners");
-            if (bottomVal) {
-                const ids = bottomVal.split(",").filter(Boolean);
-                setBottomRightBanners(ids.map((id) => ({ id })));
-            }
+            if (bottomVal) setBottomRightBanners(parseBannerData(bottomVal));
 
             const levels = ["high", "mid", "low"];
             for (const level of levels) {
@@ -129,7 +135,6 @@ export default function ManageMainPage() {
         void fetchInitialData();
     }, []);
 
-    // ServerImg가 Content-Disposition 헤더에서 파일명을 파싱해왔을 때 실행되는 콜백
     const handleFileNameLoaded = (
         target: "left" | "top" | "bottom",
         index: number,
@@ -137,6 +142,23 @@ export default function ManageMainPage() {
     ) => {
         const updater = (prev: BannerItem[]) =>
             prev.map((item, i) => (i === index ? { ...item, originalName: fileName } : item));
+
+        if (target === "left") setLeftBanners(updater);
+        else if (target === "top") setTopRightBanners(updater);
+        else setBottomRightBanners(updater);
+    };
+
+    // URL 입력 필터링 (구분자 | 와 , 입력 불가능)
+    const handleLinkUrlChange = (
+        target: "left" | "top" | "bottom",
+        index: number,
+        rawValue: string
+    ) => {
+        // 구분자로 사용하는 | 및 , 필터링 제거
+        const sanitizedValue = rawValue.replace(/[|,]/g, "");
+
+        const updater = (prev: BannerItem[]) =>
+            prev.map((item, i) => (i === index ? { ...item, linkUrl: sanitizedValue } : item));
 
         if (target === "left") setLeftBanners(updater);
         else if (target === "top") setTopRightBanners(updater);
@@ -206,7 +228,8 @@ export default function ManageMainPage() {
 
         const newItems: BannerItem[] = validFiles.map((file) => ({
             file,
-            previewUrl: URL.createObjectURL(file)
+            previewUrl: URL.createObjectURL(file),
+            linkUrl: ""
         }));
 
         if (target === "left") {
@@ -243,16 +266,20 @@ export default function ManageMainPage() {
     };
 
     const processBannerList = async (banners: BannerItem[]): Promise<string[]> => {
-        const resultIds: string[] = [];
+        const resultItems: string[] = [];
         for (const item of banners) {
+            let fileId = item.id;
             if (item.file) {
-                const newId = await uploadSingleFile(item.file);
-                if (newId) resultIds.push(newId);
-            } else if (item.id) {
-                resultIds.push(item.id);
+                fileId = await uploadSingleFile(item.file);
+            }
+
+            if (fileId) {
+                // 저장 전 최종 검증 (구분자 한 번 더 제거)
+                const url = (item.linkUrl || "").replace(/[|,]/g, "").trim();
+                resultItems.push(`${fileId}|${url}`);
             }
         }
-        return resultIds;
+        return resultItems;
     };
 
     const uploadSingleFile = async (file: File): Promise<string> => {
@@ -277,9 +304,9 @@ export default function ManageMainPage() {
                 await api.delete(`${BACKEND_ADDRESS}files`, { params: { id } }).catch(() => null);
             }
 
-            const finalLeftIds = await processBannerList(leftBanners);
-            const finalTopIds = await processBannerList(topRightBanners);
-            const finalBottomIds = await processBannerList(bottomRightBanners);
+            const finalLeftPayload = await processBannerList(leftBanners);
+            const finalTopPayload = await processBannerList(topRightBanners);
+            const finalBottomPayload = await processBannerList(bottomRightBanners);
 
             const levels = ["high", "mid", "low"];
             for (const level of levels) {
@@ -303,10 +330,10 @@ export default function ManageMainPage() {
                 value: mainPick
             });
 
-            if (finalLeftIds.length > 0) {
+            if (finalLeftPayload.length > 0) {
                 await api.put(`${BACKEND_ADDRESS}adminsettings`, {
                     key: "leftBanner",
-                    value: finalLeftIds.join(",")
+                    value: finalLeftPayload.join(",")
                 });
             } else {
                 await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
@@ -314,10 +341,10 @@ export default function ManageMainPage() {
                 });
             }
 
-            if (finalTopIds.length > 0) {
+            if (finalTopPayload.length > 0) {
                 await api.put(`${BACKEND_ADDRESS}adminsettings`, {
                     key: "topRightBanners",
-                    value: finalTopIds.join(",")
+                    value: finalTopPayload.join(",")
                 });
             } else {
                 await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
@@ -325,10 +352,10 @@ export default function ManageMainPage() {
                 });
             }
 
-            if (finalBottomIds.length > 0) {
+            if (finalBottomPayload.length > 0) {
                 await api.put(`${BACKEND_ADDRESS}adminsettings`, {
                     key: "bottomRightBanners",
-                    value: finalBottomIds.join(",")
+                    value: finalBottomPayload.join(",")
                 });
             } else {
                 await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
@@ -422,34 +449,48 @@ export default function ManageMainPage() {
                         {leftBanners.map((banner, i) => (
                             <div
                                 key={(banner.id || "") + i}
-                                className="flex items-center p-2 border border-gray-200 rounded bg-white group"
+                                className="p-2 border border-gray-200 rounded bg-white space-y-2"
                             >
-                                {banner.previewUrl ? (
-                                    <img
-                                        alt={banner.file?.name}
-                                        src={banner.previewUrl}
-                                        className="w-24 h-12 object-cover rounded-sm mr-3"
+                                <div className="flex items-center">
+                                    {banner.previewUrl ? (
+                                        <img
+                                            alt={banner.file?.name}
+                                            src={banner.previewUrl}
+                                            className="w-24 h-12 object-cover rounded-sm mr-3"
+                                        />
+                                    ) : (
+                                        <ServerImg
+                                            fileId={banner.id!}
+                                            alt="main-banner"
+                                            className="w-24 h-12 object-cover rounded-sm mr-3"
+                                            onLoadFileName={(name) =>
+                                                handleFileNameLoaded("left", i, name)
+                                            }
+                                        />
+                                    )}
+                                    <span className="text-xs text-gray-500 flex-1 truncate font-bold">
+                                        {banner.file
+                                            ? banner.file.name
+                                            : banner.originalName || banner.id}
+                                    </span>
+                                    <MdDelete
+                                        onClick={() => removeFile("left", i)}
+                                        className="text-gray-300 hover:text-red-500 cursor-pointer ml-2"
+                                        size={20}
                                     />
-                                ) : (
-                                    <ServerImg
-                                        fileId={banner.id!}
-                                        alt="main-banner"
-                                        className="w-24 h-12 object-cover rounded-sm mr-3"
-                                        onLoadFileName={(name) =>
-                                            handleFileNameLoaded("left", i, name)
+                                </div>
+                                <div className="flex items-center gap-1 bg-gray-50 border rounded px-2 py-1 text-xs">
+                                    <MdLink className="text-gray-400" size={16} />
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-transparent outline-none text-gray-700"
+                                        placeholder="클릭 시 이동할 URL"
+                                        value={banner.linkUrl || ""}
+                                        onChange={(e) =>
+                                            handleLinkUrlChange("left", i, e.target.value)
                                         }
                                     />
-                                )}
-                                <span className="text-xs text-gray-500 flex-1 truncate">
-                                    {banner.file
-                                        ? banner.file.name
-                                        : banner.originalName || banner.id}
-                                </span>
-                                <MdDelete
-                                    onClick={() => removeFile("left", i)}
-                                    className="text-gray-300 hover:text-red-500 cursor-pointer"
-                                    size={20}
-                                />
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -476,38 +517,52 @@ export default function ManageMainPage() {
                             <MdOutlineFileUpload size={20} className="mr-2" />
                             <span className="text-sm font-bold">상단 배너 추가</span>
                         </label>
-                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
                             {topRightBanners.map((banner, i) => (
                                 <div
                                     key={(banner.id || "") + i}
-                                    className="flex items-center p-2 border border-gray-200 rounded bg-white group"
+                                    className="p-2 border border-gray-200 rounded bg-white space-y-1.5"
                                 >
-                                    {banner.previewUrl ? (
-                                        <img
-                                            alt={banner.file?.name}
-                                            src={banner.previewUrl}
-                                            className="w-10 h-12 object-cover rounded-sm mr-2"
+                                    <div className="flex items-center">
+                                        {banner.previewUrl ? (
+                                            <img
+                                                alt={banner.file?.name}
+                                                src={banner.previewUrl}
+                                                className="w-10 h-12 object-cover rounded-sm mr-2"
+                                            />
+                                        ) : (
+                                            <ServerImg
+                                                fileId={banner.id!}
+                                                alt="top-banner"
+                                                className="w-10 h-12 object-cover rounded-sm mr-2"
+                                                onLoadFileName={(name) =>
+                                                    handleFileNameLoaded("top", i, name)
+                                                }
+                                            />
+                                        )}
+                                        <span className="text-[11px] text-gray-500 flex-1 truncate font-bold">
+                                            {banner.file
+                                                ? banner.file.name
+                                                : banner.originalName || banner.id}
+                                        </span>
+                                        <MdDelete
+                                            onClick={() => removeFile("top", i)}
+                                            className="text-gray-300 hover:text-red-500 cursor-pointer ml-1"
+                                            size={18}
                                         />
-                                    ) : (
-                                        <ServerImg
-                                            fileId={banner.id!}
-                                            alt="top-banner"
-                                            className="w-10 h-12 object-cover rounded-sm mr-2"
-                                            onLoadFileName={(name) =>
-                                                handleFileNameLoaded("top", i, name)
+                                    </div>
+                                    <div className="flex items-center gap-1 bg-gray-50 border rounded px-2 py-0.5 text-[11px]">
+                                        <MdLink className="text-gray-400" size={14} />
+                                        <input
+                                            type="text"
+                                            className="flex-1 bg-transparent outline-none text-gray-700"
+                                            placeholder="클릭 시 이동할 URL"
+                                            value={banner.linkUrl || ""}
+                                            onChange={(e) =>
+                                                handleLinkUrlChange("top", i, e.target.value)
                                             }
                                         />
-                                    )}
-                                    <span className="text-[10px] text-gray-500 flex-1 truncate">
-                                        {banner.file
-                                            ? banner.file.name
-                                            : banner.originalName || banner.id}
-                                    </span>
-                                    <MdDelete
-                                        onClick={() => removeFile("top", i)}
-                                        className="text-gray-300 hover:text-red-500 cursor-pointer"
-                                        size={18}
-                                    />
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -532,38 +587,52 @@ export default function ManageMainPage() {
                             <MdOutlineFileUpload size={20} className="mr-2" />
                             <span className="text-sm font-bold">하단 배너 추가</span>
                         </label>
-                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
                             {bottomRightBanners.map((banner, i) => (
                                 <div
                                     key={(banner.id || "") + i}
-                                    className="flex items-center p-2 border border-gray-200 rounded bg-white group"
+                                    className="p-2 border border-gray-200 rounded bg-white space-y-1.5"
                                 >
-                                    {banner.previewUrl ? (
-                                        <img
-                                            alt={banner.file?.name}
-                                            src={banner.previewUrl}
-                                            className="w-12 h-6 object-cover rounded-sm mr-2"
+                                    <div className="flex items-center">
+                                        {banner.previewUrl ? (
+                                            <img
+                                                alt={banner.file?.name}
+                                                src={banner.previewUrl}
+                                                className="w-12 h-6 object-cover rounded-sm mr-2"
+                                            />
+                                        ) : (
+                                            <ServerImg
+                                                fileId={banner.id!}
+                                                alt="bottom-banner"
+                                                className="w-12 h-6 object-cover rounded-sm mr-2"
+                                                onLoadFileName={(name) =>
+                                                    handleFileNameLoaded("bottom", i, name)
+                                                }
+                                            />
+                                        )}
+                                        <span className="text-[11px] text-gray-500 flex-1 truncate font-bold">
+                                            {banner.file
+                                                ? banner.file.name
+                                                : banner.originalName || banner.id}
+                                        </span>
+                                        <MdDelete
+                                            onClick={() => removeFile("bottom", i)}
+                                            className="text-gray-300 hover:text-red-500 cursor-pointer ml-1"
+                                            size={18}
                                         />
-                                    ) : (
-                                        <ServerImg
-                                            fileId={banner.id!}
-                                            alt="bottom-banner"
-                                            className="w-12 h-6 object-cover rounded-sm mr-2"
-                                            onLoadFileName={(name) =>
-                                                handleFileNameLoaded("bottom", i, name)
+                                    </div>
+                                    <div className="flex items-center gap-1 bg-gray-50 border rounded px-2 py-0.5 text-[11px]">
+                                        <MdLink className="text-gray-400" size={14} />
+                                        <input
+                                            type="text"
+                                            className="flex-1 bg-transparent outline-none text-gray-700"
+                                            placeholder="클릭 시 이동할 URL"
+                                            value={banner.linkUrl || ""}
+                                            onChange={(e) =>
+                                                handleLinkUrlChange("bottom", i, e.target.value)
                                             }
                                         />
-                                    )}
-                                    <span className="text-[10px] text-gray-500 flex-1 truncate">
-                                        {banner.file
-                                            ? banner.file.name
-                                            : banner.originalName || banner.id}
-                                    </span>
-                                    <MdDelete
-                                        onClick={() => removeFile("bottom", i)}
-                                        className="text-gray-300 hover:text-red-500 cursor-pointer"
-                                        size={18}
-                                    />
+                                    </div>
                                 </div>
                             ))}
                         </div>
