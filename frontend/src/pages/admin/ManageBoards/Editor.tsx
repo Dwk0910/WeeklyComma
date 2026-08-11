@@ -7,8 +7,8 @@ import { useEditor, useEditorState, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { FontFamily } from "@tiptap/extension-font-family";
-import { Color } from "@tiptap/extension-color"; // 추가
-import Highlight from "@tiptap/extension-highlight"; // 추가
+import { Color } from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
 import { FontSize } from "../../../extensions/FontSize.ts";
 import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { FONTS } from "../../../assets/fonts/FONTS.def.ts";
@@ -35,13 +35,14 @@ import {
 } from "react-icons/lu";
 
 import { type IconType } from "react-icons";
+import { type Post } from "./ManageComponent.tsx"; // Post 타입 임포트
 
 const extensions = [
     StarterKit,
     TextStyle,
     FontFamily,
-    Color, // 추가
-    Highlight.configure({ multicolor: true }), // 추가
+    Color,
+    Highlight.configure({ multicolor: true }),
     FontSize,
     Table.configure({ resizable: true }),
     TableRow,
@@ -95,13 +96,15 @@ export default function Editor({
     visible,
     refreshAction,
     closeAction,
-    attributions
+    attributions,
+    editingPost // 추가: 수정할 데이터
 }: {
     postType: string;
     visible: boolean;
     refreshAction?: () => void;
     closeAction?: () => void;
     attributions?: object;
+    editingPost?: Post | null;
 }) {
     const [title, setTitle] = useState<string>("");
     const [fontSizeState, setFontSizeState] = useState<number>(16);
@@ -116,6 +119,21 @@ export default function Editor({
             }
         }
     });
+
+    // 수정 대상(editingPost)이 변경되거나 폼이 열릴 때 데이터 로드
+    useEffect(() => {
+        (() => {
+            if (editor) {
+                if (editingPost) {
+                    setTitle(editingPost.title);
+                    editor.commands.setContent(editingPost.content);
+                } else {
+                    setTitle("");
+                    editor.commands.setContent("");
+                }
+            }
+        })();
+    }, [editingPost, editor, visible]);
 
     const editorState = useEditorState({
         editor,
@@ -161,19 +179,40 @@ export default function Editor({
         editor.chain().focus().setFontSize(`${cleanSize}px`).run();
     };
 
+    const rgbToHex: (colorStr: string) => string = (colorStr) => {
+        if (!colorStr) return "#000000";
+        if (colorStr.startsWith("#")) return colorStr;
+
+        const matches = colorStr.match(/\d+/g);
+        if (!matches || matches.length < 3) return "#000000";
+
+        const [r, g, b] = matches.map(Number);
+        const toHex = (n: number) => n.toString(16).padStart(2, "0");
+
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    };
+
     const handleSave = () => {
         const content = editor.getHTML();
-        api.post(BACKEND_ADDRESS + "posts", {
+        const payload = {
             type: postType,
             title: title,
             content: content,
             attributions: attributions!
-        }).then(() => {
-            alert("글이 성공적으로 게시되었습니다.");
+        };
+
+        // editingPost 유무에 따라 PUT(수정) 또는 POST(생성) 호출
+        const apiCall = editingPost
+            ? api.put(BACKEND_ADDRESS + `posts/${editingPost.id}`, payload)
+            : api.post(BACKEND_ADDRESS + "posts", payload);
+
+        apiCall.then(() => {
+            alert(
+                editingPost ? "글이 성공적으로 수정되었습니다." : "글이 성공적으로 게시되었습니다."
+            );
             if (!refreshAction) window.location.reload();
             else refreshAction();
 
-            // close action
             if (closeAction) {
                 editor.commands.clearContent();
                 setTitle("");
@@ -215,10 +254,10 @@ export default function Editor({
                         />
                         <button
                             onClick={handleSave}
-                            className="flex items-center gap-2 mr-4 px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                            className="flex items-center gap-2 mr-4 px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium cursor-pointer"
                         >
                             <LuSave size={18} />
-                            저장
+                            {editingPost ? "수정완료" : "저장"}
                         </button>
                     </div>
 
@@ -226,7 +265,7 @@ export default function Editor({
                         <div className="relative" ref={fontDropdownRef}>
                             <button
                                 onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
-                                className="flex items-center gap-2 text-sm px-3 py-1.5 border border-gray-300 rounded bg-white outline-none hover:border-gray-400 min-w-35 justify-between"
+                                className="flex items-center gap-2 text-sm px-3 py-1.5 border border-gray-300 rounded bg-white outline-none hover:border-gray-400 min-w-35 justify-between cursor-pointer"
                                 style={{ fontFamily: currentFont.family }}
                             >
                                 {currentFont.name}
@@ -278,7 +317,7 @@ export default function Editor({
                         <div className="flex items-center bg-white border border-gray-300 rounded overflow-hidden">
                             <button
                                 onClick={() => applyFontSize(fontSizeState - 1)}
-                                className="px-2 py-1 hover:bg-gray-200 border-r border-gray-300"
+                                className="px-2 py-1 hover:bg-gray-200 border-r border-gray-300 cursor-pointer"
                             >
                                 -
                             </button>
@@ -292,7 +331,7 @@ export default function Editor({
                             />
                             <button
                                 onClick={() => applyFontSize(fontSizeState + 1)}
-                                className="px-2 py-1 hover:bg-gray-200 border-l border-gray-300"
+                                className="px-2 py-1 hover:bg-gray-200 border-l border-gray-300 cursor-pointer"
                             >
                                 +
                             </button>
@@ -316,7 +355,7 @@ export default function Editor({
                                             .setColor((e.target as HTMLInputElement).value)
                                             .run()
                                     }
-                                    value={editorState.currentColor}
+                                    value={rgbToHex(editorState.currentColor)}
                                 />
                             </label>
 
@@ -340,7 +379,7 @@ export default function Editor({
                                             })
                                             .run()
                                     }
-                                    value={editorState.highlightColor}
+                                    value={rgbToHex(editorState.highlightColor)}
                                 />
                             </label>
                         </div>

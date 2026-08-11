@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -95,6 +96,13 @@ public class PostController {
                 post.getModifiedAt().toEpochSecond(ZoneOffset.UTC),
                 post.getAttribution()
         ));
+    }
+
+    @PutMapping("/{id}")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Void> editPost(@PathVariable Long id, @Valid @RequestBody PostDto.PostRequest postDto) {
+        this.postService.editPost(id, postDto);
+        return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/{id}")

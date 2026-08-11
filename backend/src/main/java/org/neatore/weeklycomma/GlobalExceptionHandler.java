@@ -1,6 +1,8 @@
 package org.neatore.weeklycomma;
 
 import io.jsonwebtoken.JwtException;
+
+import org.neatore.weeklycomma.exception.PostNotFoundException;
 import org.neatore.weeklycomma.exception.UserNotFoundException;
 
 import org.springframework.http.HttpStatus;
@@ -10,7 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @ExceptionHandler(UserNotFoundException.class)
+    @ExceptionHandler({ UserNotFoundException.class, PostNotFoundException.class })
     public ResponseEntity<Void> handlerUserNotFoundException() {
         return ResponseEntity.notFound().build();
     }

@@ -64,6 +64,7 @@ public class Post extends BaseTimeEntity {
     private String author;
 
     @Lob
+    @Setter
     private String content;
 
     @Data

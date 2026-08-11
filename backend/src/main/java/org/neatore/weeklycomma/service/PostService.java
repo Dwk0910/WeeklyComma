@@ -3,6 +3,8 @@ package org.neatore.weeklycomma.service;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 
+import org.neatore.weeklycomma.dto.PostDto;
+import org.neatore.weeklycomma.exception.PostNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,13 +34,23 @@ public class PostService {
     }
 
     @Transactional
+    public void editPost(Long id, PostDto.PostRequest request) {
+        Post p = this.getPost(id);
+        p.setTitle(request.title());
+        p.setContent(request.content());
+        postRepository.save(p);
+    }
+
+    @Transactional
     public void deletePost(Long id) {
         Post post = postRepository.getPostById(id);
         postRepository.delete(post);
     }
 
-    public @Nullable Post getPost(long id) {
-        return postRepository.getPostById(id);
+    public Post getPost(long id) {
+        Post p = postRepository.getPostById(id);
+        if (p == null) throw new PostNotFoundException(id);
+        return p;
     }
 
     /**
