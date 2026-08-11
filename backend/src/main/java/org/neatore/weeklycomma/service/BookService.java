@@ -97,11 +97,15 @@ public class BookService {
         else book.get().setCustomCoverImg(null);
     }
 
+    private final AdminSettingService adminSettingService;
+
     @Transactional
     public void deleteBook(String isbn) {
         Book b = this.getBookByIsbn(isbn);
         if (b != null && b.getCustomCoverImg() != null) this.dbFileService.delete(b.getCustomCoverImg());
 
+        this.adminSettingService.getAdminSettingsByValue(isbn)
+                .forEach(this.adminSettingService::deleteAdminSetting);
         bookRepository.deleteBookByIsbn(isbn);
     }
 }
