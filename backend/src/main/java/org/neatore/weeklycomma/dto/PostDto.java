@@ -24,8 +24,4 @@ public abstract class PostDto {
             @NotBlank String content,
             Post.Attribution attributions
     ) {}
-
-    public record DeleteRequest(
-            @NotBlank Long id
-    ) {}
 }
