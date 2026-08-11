@@ -14,7 +14,7 @@ import lombok.Setter;
 
 import org.neatore.weeklycomma.dto.BookDto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneOffset;
 
 @Entity
@@ -27,7 +27,7 @@ public class Book {
         this.subTitle = book.subtitle();
         this.author = book.author();
         this.publisher = book.publisher();
-        this.pubDate = book.getPubDateAsLocalDateTime();
+        this.pubDate = book.getPubDateAsInstant();
         this.coverImg = book.coverImg();
         this.description = book.description();
         this.difficulty = book.difficulty();
@@ -45,7 +45,7 @@ public class Book {
     private String subTitle;
     private String author;
     private String publisher;
-    private LocalDateTime pubDate;
+    private Instant pubDate;
     private String coverImg;
     private String description;
     private String difficulty;
@@ -59,7 +59,7 @@ public class Book {
         this.subTitle = from.subtitle();
         this.author = from.author();
         this.publisher = from.publisher();
-        this.pubDate = from.getPubDateAsLocalDateTime();
+        this.pubDate = from.getPubDateAsInstant();
         this.description = from.description();
         this.coverImg = from.coverImg();
         this.adult = from.adult();

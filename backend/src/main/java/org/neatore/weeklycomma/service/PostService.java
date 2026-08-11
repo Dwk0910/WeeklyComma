@@ -53,6 +53,10 @@ public class PostService {
         return p;
     }
 
+    public Post getLatestNotice() {
+        return postRepository.getLatestNotice().orElseThrow(() -> new PostNotFoundException(null));
+    }
+
     /**
      * @deprecated use {@link #getAllPosts(Post.PostType postType, Post.Attribution attr)} instead.
      */

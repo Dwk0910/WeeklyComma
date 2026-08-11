@@ -27,8 +27,6 @@ import jakarta.validation.Valid;
 
 import java.net.URI;
 
-import java.time.ZoneOffset;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -63,17 +61,7 @@ public class PostController {
     public ResponseEntity<List<PostDto.GetResponse>> getPosts(@RequestParam Post.PostType postType, @ModelAttribute Post.Attribution attr) {
         List<PostDto.GetResponse> response = new ArrayList<>();
         postService.getAllPosts(postType, attr.isEmpty() ? null : attr).forEach(item ->
-                response.add(new PostDto.GetResponse(
-                        item.getPostType(),
-                        item.getId(),
-                        item.getTitle(),
-                        item.getContent(),
-                        item.getAuthor(),
-                        item.isPinned(),
-                        item.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
-                        item.getModifiedAt().toEpochSecond(ZoneOffset.UTC),
-                        item.getAttribution()
-                ))
+                response.add(item.toQueryDto())
         );
 
         return ResponseEntity.ok(response);
@@ -85,17 +73,12 @@ public class PostController {
 
         if (post == null) return ResponseEntity.notFound().build();
 
-        return ResponseEntity.ok().body(new PostDto.GetResponse(
-                post.getPostType(),
-                post.getId(),
-                post.getTitle(),
-                post.getContent(),
-                post.getAuthor(),
-                post.isPinned(),
-                post.getCreatedAt().toEpochSecond(ZoneOffset.UTC),
-                post.getModifiedAt().toEpochSecond(ZoneOffset.UTC),
-                post.getAttribution()
-        ));
+        return ResponseEntity.ok().body(post.toQueryDto());
+    }
+
+    @GetMapping("/latestnotice")
+    public ResponseEntity<PostDto.GetResponse> getLatestNotice() {
+        return ResponseEntity.ok(this.postService.getLatestNotice().toQueryDto());
     }
 
     @PutMapping("/{id}")

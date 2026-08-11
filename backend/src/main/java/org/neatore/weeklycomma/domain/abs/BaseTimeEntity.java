@@ -10,7 +10,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @MappedSuperclass
@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
 public class BaseTimeEntity {
     @CreatedDate
     @Column(updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @LastModifiedDate
-    private LocalDateTime modifiedAt;
+    private Instant modifiedAt;
 }

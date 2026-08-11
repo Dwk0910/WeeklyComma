@@ -5,8 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 
 public class BookDto {
     public record BookResponse(
@@ -36,8 +35,8 @@ public class BookDto {
             String difficulty,
             Boolean adult
     ) {
-        public LocalDateTime getPubDateAsLocalDateTime() {
-            return LocalDateTime.ofEpochSecond(pubDate, 0, ZoneOffset.ofHours(0));
+        public Instant getPubDateAsInstant() {
+            return Instant.ofEpochSecond(pubDate);
         }
     }
 }

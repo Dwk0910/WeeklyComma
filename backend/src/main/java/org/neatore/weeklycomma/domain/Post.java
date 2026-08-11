@@ -21,6 +21,7 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
+import org.neatore.weeklycomma.dto.PostDto;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.util.ReflectionUtils;
 
@@ -33,6 +34,20 @@ import java.util.Arrays;
 public class Post extends BaseTimeEntity {
     public enum PostType {
         NOTICE, EVENT, RECOMMENDATION
+    }
+
+    public PostDto.GetResponse toQueryDto() {
+        return new PostDto.GetResponse(
+                this.postType,
+                this.id,
+                this.title,
+                this.content,
+                this.author,
+                this.isPinned,
+                this.getCreatedAt().getEpochSecond(),
+                this.getModifiedAt().getEpochSecond(),
+                this.attribution
+        );
     }
 
     @Builder
