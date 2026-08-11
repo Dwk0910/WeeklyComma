@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequiresAuthentication(User.UserType.CURATOR)
 @RequestMapping("/adminsettings")
 public class AdminSettingController {
     private final AdminSettingService adminSettingService;
@@ -35,12 +34,14 @@ public class AdminSettingController {
     }
 
     @PutMapping
+    @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> setAdminSetting(@Valid @RequestBody AdminSettingDto adminSetting) {
         adminSettingService.updateAdminSetting(adminSetting.key(), adminSetting.value());
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping
+    @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> deleteAdminSetting(@RequestParam String key) {
         adminSettingService.deleteAdminSetting(key);
         return ResponseEntity.ok().build();
