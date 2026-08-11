@@ -35,6 +35,7 @@ type BookResponse = {
 
 type BannerItem = {
     id?: string;
+    originalName?: string;
     file?: File;
     previewUrl?: string;
 };
@@ -49,7 +50,8 @@ export default function ManageMainPage() {
     });
 
     const [mainPick, setMainPick] = useState<string>("high");
-    const [leftBanner, setLeftBanner] = useState<BannerItem | null>(null);
+
+    const [leftBanners, setLeftBanners] = useState<BannerItem[]>([]);
     const [topRightBanners, setTopRightBanners] = useState<BannerItem[]>([]);
     const [bottomRightBanners, setBottomRightBanners] = useState<BannerItem[]>([]);
 
@@ -82,7 +84,10 @@ export default function ManageMainPage() {
             if (mainPickVal) setMainPick(mainPickVal);
 
             const leftVal = await fetchAdminSetting("leftBanner");
-            if (leftVal) setLeftBanner({ id: leftVal });
+            if (leftVal) {
+                const ids = leftVal.split(",").filter(Boolean);
+                setLeftBanners(ids.map((id) => ({ id })));
+            }
 
             const topVal = await fetchAdminSetting("topRightBanners");
             if (topVal) {
@@ -124,7 +129,20 @@ export default function ManageMainPage() {
         void fetchInitialData();
     }, []);
 
-    // 도서 검색 실행
+    // ServerImg가 Content-Disposition 헤더에서 파일명을 파싱해왔을 때 실행되는 콜백
+    const handleFileNameLoaded = (
+        target: "left" | "top" | "bottom",
+        index: number,
+        fileName: string
+    ) => {
+        const updater = (prev: BannerItem[]) =>
+            prev.map((item, i) => (i === index ? { ...item, originalName: fileName } : item));
+
+        if (target === "left") setLeftBanners(updater);
+        else if (target === "top") setTopRightBanners(updater);
+        else setBottomRightBanners(updater);
+    };
+
     const handleSearchBooks = async () => {
         if (!searchQuery.trim()) return;
         setIsSearching(true);
@@ -133,10 +151,9 @@ export default function ManageMainPage() {
                 params: { query: searchQuery }
             });
 
-            const targetLabel = LEVEL_STYLES[searchModalLevel || ""]?.label; // "초급", "중급", "상급"
+            const targetLabel = LEVEL_STYLES[searchModalLevel || ""]?.label;
 
             if (res.data && Array.isArray(res.data)) {
-                // 백엔드 검색 결과 중 해당 난이도(difficulty)와 일치하는 도서만 필터링
                 const filtered = res.data.filter((book) => book.difficulty === targetLabel);
                 setSearchResults(filtered);
             } else {
@@ -150,7 +167,6 @@ export default function ManageMainPage() {
         }
     };
 
-    // 팝업에서 특정 책 선택 시 상태 변경
     const handleSelectBook = (book: BookResponse) => {
         if (!searchModalLevel) return;
 
@@ -163,7 +179,6 @@ export default function ManageMainPage() {
             }
         }));
 
-        // 모달 초기화 및 닫기
         setSearchModalLevel(null);
         setSearchQuery("");
         setSearchResults([]);
@@ -195,12 +210,7 @@ export default function ManageMainPage() {
         }));
 
         if (target === "left") {
-            if (newItems.length > 0) {
-                if (leftBanner?.id) {
-                    setDeletedServerIds((prev) => [...prev, leftBanner.id!]);
-                }
-                setLeftBanner(newItems[0]);
-            }
+            setLeftBanners((prev) => [...prev, ...newItems]);
         } else if (target === "top") {
             setTopRightBanners((prev) => [...prev, ...newItems]);
         } else {
@@ -210,16 +220,14 @@ export default function ManageMainPage() {
         e.target.value = "";
     };
 
-    const removeLeftBanner = () => {
-        if (!leftBanner) return;
-        if (leftBanner.id) {
-            setDeletedServerIds((prev) => [...prev, leftBanner.id!]);
-        }
-        setLeftBanner(null);
-    };
-
-    const removeFile = (target: "top" | "bottom", index: number) => {
-        if (target === "top") {
+    const removeFile = (target: "left" | "top" | "bottom", index: number) => {
+        if (target === "left") {
+            const targetItem = leftBanners[index];
+            if (targetItem?.id) {
+                setDeletedServerIds((prev) => [...prev, targetItem.id!]);
+            }
+            setLeftBanners((prev) => prev.filter((_, i) => i !== index));
+        } else if (target === "top") {
             const targetItem = topRightBanners[index];
             if (targetItem?.id) {
                 setDeletedServerIds((prev) => [...prev, targetItem.id!]);
@@ -265,30 +273,14 @@ export default function ManageMainPage() {
 
     const onApply = async () => {
         try {
-            // 1. 파일 삭제
             for (const id of deletedServerIds) {
                 await api.delete(`${BACKEND_ADDRESS}files`, { params: { id } }).catch(() => null);
             }
 
-            // 2. 좌측 배너
-            let finalLeftId: string | null = null;
-            if (leftBanner) {
-                if (leftBanner.file) {
-                    finalLeftId = await uploadSingleFile(leftBanner.file);
-                    if (!finalLeftId) {
-                        alert("좌측 배너 파일 업로드에 실패했습니다.");
-                        return;
-                    }
-                } else if (leftBanner.id) {
-                    finalLeftId = leftBanner.id;
-                }
-            }
-
-            // 3. 우측 배너들
+            const finalLeftIds = await processBannerList(leftBanners);
             const finalTopIds = await processBannerList(topRightBanners);
             const finalBottomIds = await processBannerList(bottomRightBanners);
 
-            // 4. adminsettings 도서 추천 ISBN 반영 (값 유무에 맞춰 PUT / DELETE)
             const levels = ["high", "mid", "low"];
             for (const level of levels) {
                 const targetIsbn = books[level]?.isbn;
@@ -306,16 +298,15 @@ export default function ManageMainPage() {
                 }
             }
 
-            // 5. adminsettings 배너 및 메인 픽 설정 반영
             await api.put(`${BACKEND_ADDRESS}adminsettings`, {
                 key: "mainPick",
                 value: mainPick
             });
 
-            if (finalLeftId) {
+            if (finalLeftIds.length > 0) {
                 await api.put(`${BACKEND_ADDRESS}adminsettings`, {
                     key: "leftBanner",
-                    value: finalLeftId
+                    value: finalLeftIds.join(",")
                 });
             } else {
                 await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
@@ -407,7 +398,7 @@ export default function ManageMainPage() {
             {/* --- 배너 관리 섹션 --- */}
             <SubTitle>홈페이지 배너 관리</SubTitle>
             <div className="flex flex-col lg:flex-row ml-4 gap-1">
-                {/* 좌측: 메인 배너 */}
+                {/* 좌측: 메인 배너 리스트 */}
                 <div className="w-full lg:w-1/2">
                     <div className="font-suite text-gray-600 mb-3 font-bold">
                         좌측 메인 배너{" "}
@@ -415,42 +406,53 @@ export default function ManageMainPage() {
                             2100x1000 권장
                         </span>
                     </div>
-                    <label className="block relative w-full aspect-21/10 bg-gray-100 border-2 border-dashed border-gray-300 rounded-md overflow-hidden cursor-pointer hover:bg-gray-200 transition-all">
-                        {leftBanner ? (
-                            leftBanner.previewUrl ? (
-                                <img
-                                    src={leftBanner.previewUrl}
-                                    alt="main-preview"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <ServerImg
-                                    fileId={leftBanner.id!}
-                                    alt="main"
-                                    className="w-full h-full object-cover"
-                                />
-                            )
-                        ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                                <MdOutlineFileUpload size={48} />
-                                <span className="mt-2 font-suite">클릭하여 메인 배너 선택</span>
-                            </div>
-                        )}
+                    <label className="w-full py-3 bg-white border border-purple-400 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-purple-50 transition-all mb-3 text-purple-600">
                         <input
                             type="file"
+                            multiple
                             className="hidden"
                             accept=".png, .jpg, .jpeg"
                             onChange={(e) => handleFileAdd(e, "left")}
                         />
+                        <MdOutlineFileUpload size={20} className="mr-2" />
+                        <span className="text-sm font-bold">메인 배너 추가</span>
                     </label>
-                    {leftBanner && (
-                        <div
-                            className="mt-2 text-right text-xs text-red-500 cursor-pointer underline"
-                            onClick={removeLeftBanner}
-                        >
-                            이미지 제거
-                        </div>
-                    )}
+
+                    <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto pr-1">
+                        {leftBanners.map((banner, i) => (
+                            <div
+                                key={(banner.id || "") + i}
+                                className="flex items-center p-2 border border-gray-200 rounded bg-white group"
+                            >
+                                {banner.previewUrl ? (
+                                    <img
+                                        alt={banner.file?.name}
+                                        src={banner.previewUrl}
+                                        className="w-24 h-12 object-cover rounded-sm mr-3"
+                                    />
+                                ) : (
+                                    <ServerImg
+                                        fileId={banner.id!}
+                                        alt="main-banner"
+                                        className="w-24 h-12 object-cover rounded-sm mr-3"
+                                        onLoadFileName={(name) =>
+                                            handleFileNameLoaded("left", i, name)
+                                        }
+                                    />
+                                )}
+                                <span className="text-xs text-gray-500 flex-1 truncate">
+                                    {banner.file
+                                        ? banner.file.name
+                                        : banner.originalName || banner.id}
+                                </span>
+                                <MdDelete
+                                    onClick={() => removeFile("left", i)}
+                                    className="text-gray-300 hover:text-red-500 cursor-pointer"
+                                    size={20}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 {/* 우측: 상단/하단 배너 리스트 */}
@@ -491,10 +493,15 @@ export default function ManageMainPage() {
                                             fileId={banner.id!}
                                             alt="top-banner"
                                             className="w-10 h-12 object-cover rounded-sm mr-2"
+                                            onLoadFileName={(name) =>
+                                                handleFileNameLoaded("top", i, name)
+                                            }
                                         />
                                     )}
                                     <span className="text-[10px] text-gray-500 flex-1 truncate">
-                                        {banner.file ? banner.file.name : banner.id}
+                                        {banner.file
+                                            ? banner.file.name
+                                            : banner.originalName || banner.id}
                                     </span>
                                     <MdDelete
                                         onClick={() => removeFile("top", i)}
@@ -542,10 +549,15 @@ export default function ManageMainPage() {
                                             fileId={banner.id!}
                                             alt="bottom-banner"
                                             className="w-12 h-6 object-cover rounded-sm mr-2"
+                                            onLoadFileName={(name) =>
+                                                handleFileNameLoaded("bottom", i, name)
+                                            }
                                         />
                                     )}
                                     <span className="text-[10px] text-gray-500 flex-1 truncate">
-                                        {banner.file ? banner.file.name : banner.id}
+                                        {banner.file
+                                            ? banner.file.name
+                                            : banner.originalName || banner.id}
                                     </span>
                                     <MdDelete
                                         onClick={() => removeFile("bottom", i)}
