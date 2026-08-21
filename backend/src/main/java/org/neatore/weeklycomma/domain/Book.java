@@ -15,7 +15,6 @@ import lombok.Setter;
 import org.neatore.weeklycomma.dto.BookDto;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
 
 @Entity
 @Getter
@@ -67,6 +66,6 @@ public class Book {
     }
 
     public BookDto.BookResponse toDto() {
-        return new BookDto.BookResponse(title, subTitle, author, publisher, isbn, pubDate.toEpochSecond(ZoneOffset.ofHours(0)), coverImg, customCoverImg, description, difficulty, adult);
+        return new BookDto.BookResponse(title, subTitle, author, publisher, isbn, pubDate.getEpochSecond(), coverImg, customCoverImg, description, difficulty, adult);
     }
 }
