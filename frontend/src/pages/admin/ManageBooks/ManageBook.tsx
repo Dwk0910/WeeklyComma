@@ -302,7 +302,7 @@ export default function ManageBook({
             <div className="mt-2">
                 {book.dbExist ? (
                     <ManageComponent
-                        postType="RECOMMENDATION"
+                        postType="G_RECOMMENDATION"
                         title="추천글 관리"
                         attributions={{ bookId: book.isbn }}
                     />

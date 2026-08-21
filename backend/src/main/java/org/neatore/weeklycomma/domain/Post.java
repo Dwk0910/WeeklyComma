@@ -33,7 +33,7 @@ import java.util.Arrays;
 @Getter
 public class Post extends BaseTimeEntity {
     public enum PostType {
-        NOTICE, EVENT, RECOMMENDATION
+        NOTICE, EVENT, G_RECOMMENDATION, W_RECOMMENDATION
     }
 
     public PostDto.GetResponse toQueryDto() {

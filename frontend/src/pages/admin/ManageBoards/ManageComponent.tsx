@@ -10,7 +10,7 @@ import { BsPinAngle } from "react-icons/bs";
 import { LuX, LuPencil } from "react-icons/lu";
 import loading_gif from "../../../assets/loading.gif";
 
-export type PostType = "NOTICE" | "EVENT" | "RECOMMENDATION";
+export type PostType = "NOTICE" | "EVENT" | "G_RECOMMENDATION" | "W_RECOMMENDATION";
 
 export type Post = {
     id: number;
