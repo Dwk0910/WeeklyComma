@@ -75,3 +75,4 @@ frontend/.env
 backend/.env
 /backend/src/.DS_Store
 /backend/src/main/.DS_Store
+/.env
