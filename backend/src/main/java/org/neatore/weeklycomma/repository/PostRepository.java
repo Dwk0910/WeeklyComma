@@ -17,6 +17,6 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> getPostsByPostType(Post.PostType type);
     Post getPostById(long postId);
 
-    @Query("SELECT p FROM Post p WHERE p.postType == Post.PostType.NOTICE ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Post p WHERE p.postType = org.neatore.weeklycomma.domain.Post.PostType.NOTICE ORDER BY p.createdAt DESC")
     Optional<Post> getLatestNotice();
 }
