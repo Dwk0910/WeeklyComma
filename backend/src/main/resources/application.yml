@@ -1,7 +1,7 @@
 spring:
   datasource:
     driver-class-name: org.sqlite.JDBC
-    url: jdbc:sqlite:./data/weeklycomma.db?busy_timeout=5000
+    url: jdbc:sqlite:/app/data/weeklycomma.db?busy_timeout=5000
     hikari.maximum-pool-size: 1
   security.user:
     name: admin
