@@ -7,7 +7,7 @@ COPY backend/settings.gradle backend/build.gradle ./
 
 RUN chmod +x ./gradlew
 
-RUN ./gradlew dependencies --no-daemon || true
+RUN ./gradlew build -x test --no-daemon || true
 
 COPY backend/src src
 
