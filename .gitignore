@@ -32,6 +32,7 @@ backend/build/
 backend/.kotlin
 
 ### IntelliJ IDEA ###
+/.idea
 backend/.idea
 backend/*.iws
 backend/*.iml
@@ -63,9 +64,15 @@ backend/.nb-gradle/
 backend/.vscode/
 
 ### Mac OS ###
-backend/.DS_Store
-frontend/.env
-.idea
-weeklycomma.properties
+/.DS_Store
 frontend/src/.DS_Store
+frontend/src/assets/.DS_Store
+backend/.DS_Store
+
+### Environment files ###
 data
+frontend/.env
+backend/.env
+/backend/src/.DS_Store
+/backend/src/main/.DS_Store
+/.env

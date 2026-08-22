@@ -10,7 +10,7 @@ import { CiStar } from "react-icons/ci";
 
 import { useState } from "react";
 
-export default function TopBar({ login }: { login: boolean }) {
+export default function TopBar({ admin }: { admin: boolean }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [isMenuOpened, setMenuOpen] = useState(false);
 
@@ -32,6 +32,7 @@ export default function TopBar({ login }: { login: boolean }) {
                     {/*<TbTriangleFilled className={"ml-5 text-[.7rem] text-neutral-400 mt-[0.3vh]"} />*/}
                     <div className={"border-l border-l-neutral-300 h-5 mx-5"}></div>
                     <input
+                        id={"WEEKLYCOMMA_SEARCH"}
                         type={"text"}
                         placeholder={"검색어를 입력해 주세요"}
                         className={"w-120 outline-none"}
@@ -105,14 +106,14 @@ export default function TopBar({ login }: { login: boolean }) {
                `}
             </style>
             <div className={"w-full flex mx-15 font-suite text-xl menucontainer"}>
-                <span>소개</span>
+                <span onClick={() => window.location.assign("/about")}>소개</span>
                 <span>공지</span>
                 <span>이벤트</span>
                 <span>정기추천</span>
                 <span>일반추천</span>
                 <span>즐겨찾기</span>
                 <span>To. 쉼표지기</span>
-                {login && (
+                {admin && (
                     <span className={"ml-10"} onClick={() => window.location.assign("/management")}>
                         관리
                     </span>

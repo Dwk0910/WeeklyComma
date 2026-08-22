@@ -1,0 +1,20 @@
+services:
+  springboot:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - weeklycommma_network
+    environment:
+      JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET:?}
+      DB_FILESAVE_DIR: ${DB_FILESAVE_DIR:?}
+      ALADIN_API_KEY: ${ALADIN_API_KEY:?}
+      OAUTH_NAVER_CLI_ID: ${OAUTH_NAVER_CLI_ID:?}
+      OAUTH_NAVER_CLI_KEY: ${OAUTH_NAVER_CLI_KEY:?}
+    volumes:
+      - ./data:/app/data
+
+networks:
+  weeklycommma_network:
