@@ -22,7 +22,6 @@ frontend/*.ntvs*
 frontend/*.njsproj
 frontend/*.sln
 frontend/*.sw?
-frontend/package-lock.json
 
 backend/.gradle
 backend/build/
