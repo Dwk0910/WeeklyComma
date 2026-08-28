@@ -233,12 +233,22 @@ export default function Main() {
                             ))
                         )}
                     </div>
-                    <div
-                        className={
-                            "w-67 h-34 mt-6 border border-gray-300 rounded-lg bg-[#14897B] flex items-center justify-center text-white"
-                        }
-                    >
-                        광고2
+                    <div className={"w-67 h-34 mt-6 border border-gray-300 rounded-lg overflow-hidden"}>
+                        {bottomRightBanners.length === 0 ? (
+                            <div className={"w-full h-full flex items-center justify-center text-gray-400"}>
+                                광고 없음
+                            </div>
+                        ) : (
+                            bottomRightBanners.map((b, i) => (
+                                <a key={b.id || i} href={b.linkUrl || "#"} className={"block w-full h-full"}>
+                                    {b.id ? (
+                                        <ServerImg fileId={b.id!} alt={`bottom-right-${i}`} className={"w-full h-full object-cover"} />
+                                    ) : (
+                                        <div className={"w-full h-full flex items-center justify-center text-gray-400"}>이미지 없음</div>
+                                    )}
+                                </a>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
