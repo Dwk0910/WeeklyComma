@@ -51,9 +51,23 @@ public class DBFileController {
 
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> saveFile(@RequestBody MultipartFile file) throws URISyntaxException {
+    public ResponseEntity<Void> saveFile(@RequestParam(value = "prevId", required = false) String prevId, @RequestParam("file") MultipartFile file) throws URISyntaxException {
+        // Save new file first
+        String newId = dbFileService.save(file);
+
+        // If a previous file id is provided and it's different from the newly created id,
+        // attempt to delete the previous file so DB doesn't keep orphaned file records.
+        if (prevId != null && !prevId.isEmpty() && !prevId.equals(newId)) {
+            try {
+                dbFileService.delete(prevId);
+            } catch (Exception e) {
+                // Suppress so upload still succeeds; log to stderr for diagnostics
+                System.err.println("Failed to delete previous file id=" + prevId + ": " + e.getMessage());
+            }
+        }
+
         return ResponseEntity.created(
-                new URIBuilder("/files/" + dbFileService.save(file))
+                new URIBuilder("/files/" + newId)
                         .build()
         ).build();
     }

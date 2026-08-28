@@ -270,7 +270,8 @@ export default function ManageMainPage() {
         for (const item of banners) {
             let fileId = item.id;
             if (item.file) {
-                fileId = await uploadSingleFile(item.file);
+                // If there was a previously uploaded file for this banner (item.id), send it as prevId
+                fileId = await uploadSingleFile(item.file, item.id);
             }
 
             if (fileId) {
@@ -282,11 +283,17 @@ export default function ManageMainPage() {
         return resultItems;
     };
 
-    const uploadSingleFile = async (file: File): Promise<string> => {
+    const uploadSingleFile = async (file: File, prevId?: string): Promise<string> => {
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await api.post(`${BACKEND_ADDRESS}files`, formData);
+        // If prevId is provided, send it as a query param so the backend can delete the previous file
+        const config: any = {};
+        if (prevId) {
+            config.params = { prevId };
+        }
+
+        const res = await api.post(`${BACKEND_ADDRESS}files`, formData, config);
         const locationHeader = res.headers["location"] || res.headers["Location"] || "";
 
         if (locationHeader) {
@@ -378,7 +385,7 @@ export default function ManageMainPage() {
 
             {/* --- 도서 관리 섹션 --- */}
             <SubTitle description={"정기 추천 도서 관리"}>정기추천 책 관리</SubTitle>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ml-4 mb-10 mr-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ml-4 mr-5">
                 {Object.entries(books).map(([level, info]) => (
                     <div
                         key={level}
@@ -422,6 +429,11 @@ export default function ManageMainPage() {
                 ))}
             </div>
 
+            <div className={"font-suite text-[0.8rem] text-gray-500 mb-8 mt-2 ml-4"}>
+                홈화면에 뜨는 메인 추천글은 선택된 책의 고정된 추천글 중, 가장 최근의 것이
+                게시됩니다.
+            </div>
+
             {/* --- 배너 관리 섹션 --- */}
             <SubTitle>홈페이지 배너 관리</SubTitle>
             <div className="flex flex-col lg:flex-row ml-4 gap-1">
@@ -444,7 +456,6 @@ export default function ManageMainPage() {
                         <MdOutlineFileUpload size={20} className="mr-2" />
                         <span className="text-sm font-bold">메인 배너 추가</span>
                     </label>
-
                     <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto pr-1">
                         {leftBanners.map((banner, i) => (
                             <div

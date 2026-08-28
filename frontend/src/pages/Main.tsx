@@ -26,13 +26,13 @@ export default function Main() {
                         <img src={b_1} alt={"banner"} className={"w-full h-full"} />
                     </div>
                 </div>
-                <div className={"flex flex-col ml-10"}>
-                    <div className={"rounded-lg w-63 h-75 overflow-hidden"}>
+                <div className={"flex flex-col ml-6"}>
+                    <div className={"rounded-lg w-67 h-75 overflow-hidden"}>
                         {/*광고1*/}
                         <img src={ad_1} alt={"ad_1"} className={"w-full h-full"} />
                     </div>
                     <div
-                        className={"w-63 h-30 mt-10 border border-gray-300 rounded-lg bg-[#14897B]"}
+                        className={"w-67 h-34 mt-6 border border-gray-300 rounded-lg bg-[#14897B]"}
                     >
                         광고2
                     </div>
