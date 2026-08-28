@@ -35,9 +35,17 @@ export default function ManageRecommendation() {
         // TODO: 페이지가 처음 로드될 때 최근 작성한 추천글 5개를 불러오는 API 호출
     }, []);
 
+    // HTML Entity decoding utility
+    const decodeHtml = (html: string | undefined | null) => {
+        if (!html) return "";
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        return doc.documentElement.textContent || "";
+    };
+
     const highlightText = (text: string, query: string) => {
-        if (!query.trim()) return text;
-        const parts = text.split(new RegExp(`(${query})`, "gi"));
+        const decoded = decodeHtml(text);
+        if (!query.trim()) return decoded;
+        const parts = decoded.split(new RegExp(`(${query})`, "gi"));
         return (
             <span>
                 {parts.map((part, i) =>
@@ -108,9 +116,9 @@ export default function ManageRecommendation() {
                         </span>
                     </div>
                     <div className="flex items-center text-sm text-gray-500 mt-1">
-                        <span className="font-semibold text-gray-600 mr-2">{item.author}</span>
+                        <span className="font-semibold text-gray-600 mr-2">{decodeHtml(item.author)}</span>
                         <span className="mr-3">|</span>
-                        <span className="font-semibold text-gray-600 mr-3">{item.publisher}</span>
+                        <span className="font-semibold text-gray-600 mr-3">{decodeHtml(item.publisher)}</span>
                         <span className="mr-3">|</span>
                         {(() => {
                             const date = new Date(item.pubDate * 1000);
