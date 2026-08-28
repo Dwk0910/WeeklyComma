@@ -47,9 +47,15 @@ export default function Main() {
             const topVal = await fetchAdminSetting("topRightBanners");
             const bottomVal = await fetchAdminSetting("bottomRightBanners");
 
-            setMainBanners(parseBannerData(leftVal));
-            setTopRightBanners(parseBannerData(topVal));
-            setBottomRightBanners(parseBannerData(bottomVal));
+            const main = parseBannerData(leftVal);
+            const tops = parseBannerData(topVal);
+            const bots = parseBannerData(bottomVal);
+
+            setMainBanners(main);
+
+            // Randomize top/right banners: pick one per slot on each page load
+            setTopRightBanners(tops.length > 0 ? [tops[Math.floor(Math.random() * tops.length)]] : []);
+            setBottomRightBanners(bots.length > 0 ? [bots[Math.floor(Math.random() * bots.length)]] : []);
         };
 
         void fetch();
