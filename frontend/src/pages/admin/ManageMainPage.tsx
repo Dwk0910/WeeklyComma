@@ -288,7 +288,7 @@ export default function ManageMainPage() {
         formData.append("file", file);
 
         // If prevId is provided, send it as a query param so the backend can delete the previous file
-        const config: any = {};
+        const config: { params?: unknown } = {};
         if (prevId) {
             config.params = { prevId };
         }

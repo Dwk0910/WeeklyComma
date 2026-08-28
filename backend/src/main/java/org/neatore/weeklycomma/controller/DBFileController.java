@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,6 +27,7 @@ import org.springframework.web.util.UriUtils;
 
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/files")
@@ -53,7 +53,7 @@ public class DBFileController {
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> saveFile(@RequestParam(value = "prevId", required = false) String prevId, @RequestParam("file") MultipartFile file) throws URISyntaxException {
         // Save new file first
-        String newId = dbFileService.save(file);
+        UUID newId = dbFileService.save(file);
 
         // If a previous file id is provided and it's different from the newly created id,
         // attempt to delete the previous file so DB doesn't keep orphaned file records.
