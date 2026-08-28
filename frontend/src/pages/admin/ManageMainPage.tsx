@@ -42,6 +42,22 @@ type BannerItem = {
     linkUrl?: string;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
+export const fetchAdminSetting = async (key: string): Promise<string | null> => {
+    try {
+        const res = await api.get(`${BACKEND_ADDRESS}adminsettings`, {
+            params: { key }
+        });
+        if (res.data === null || res.data === undefined || res.data === "") {
+            return null;
+        }
+        return String(res.data);
+    } catch (err) {
+        console.error(`adminsetting 가져오기 실패 [key: ${key}]:`, err);
+        return null;
+    }
+};
+
 export default function ManageMainPage() {
     const [books, setBooks] = useState<
         Record<string, { title: string; author: string; isbn?: string }>
@@ -63,21 +79,6 @@ export default function ManageMainPage() {
     const [isSearching, setIsSearching] = useState<boolean>(false);
 
     const [deletedServerIds, setDeletedServerIds] = useState<string[]>([]);
-
-    const fetchAdminSetting = async (key: string): Promise<string | null> => {
-        try {
-            const res = await api.get(`${BACKEND_ADDRESS}adminsettings`, {
-                params: { key }
-            });
-            if (res.data === null || res.data === undefined || res.data === "") {
-                return null;
-            }
-            return String(res.data);
-        } catch (err) {
-            console.error(`adminsetting 가져오기 실패 [key: ${key}]:`, err);
-            return null;
-        }
-    };
 
     const parseBannerData = (rawString: string): BannerItem[] => {
         if (!rawString) return [];

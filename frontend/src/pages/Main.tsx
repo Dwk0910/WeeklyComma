@@ -54,8 +54,12 @@ export default function Main() {
             setMainBanners(main);
 
             // Randomize top/right banners: pick one per slot on each page load
-            setTopRightBanners(tops.length > 0 ? [tops[Math.floor(Math.random() * tops.length)]] : []);
-            setBottomRightBanners(bots.length > 0 ? [bots[Math.floor(Math.random() * bots.length)]] : []);
+            setTopRightBanners(
+                tops.length > 0 ? [tops[Math.floor(Math.random() * tops.length)]] : []
+            );
+            setBottomRightBanners(
+                bots.length > 0 ? [bots[Math.floor(Math.random() * bots.length)]] : []
+            );
         };
 
         void fetch();
@@ -233,18 +237,40 @@ export default function Main() {
                             ))
                         )}
                     </div>
-                    <div className={"w-67 h-34 mt-6 border border-gray-300 rounded-lg overflow-hidden"}>
+                    <div
+                        className={
+                            "w-67 h-34 mt-6 border border-gray-300 rounded-lg overflow-hidden"
+                        }
+                    >
                         {bottomRightBanners.length === 0 ? (
-                            <div className={"w-full h-full flex items-center justify-center text-gray-400"}>
+                            <div
+                                className={
+                                    "w-full h-full flex items-center justify-center text-gray-400"
+                                }
+                            >
                                 광고 없음
                             </div>
                         ) : (
                             bottomRightBanners.map((b, i) => (
-                                <a key={b.id || i} href={b.linkUrl || "#"} className={"block w-full h-full"}>
+                                <a
+                                    key={b.id || i}
+                                    href={b.linkUrl || "#"}
+                                    className={"block w-full h-full"}
+                                >
                                     {b.id ? (
-                                        <ServerImg fileId={b.id!} alt={`bottom-right-${i}`} className={"w-full h-full object-cover"} />
+                                        <ServerImg
+                                            fileId={b.id!}
+                                            alt={`bottom-right-${i}`}
+                                            className={"w-full h-full object-cover"}
+                                        />
                                     ) : (
-                                        <div className={"w-full h-full flex items-center justify-center text-gray-400"}>이미지 없음</div>
+                                        <div
+                                            className={
+                                                "w-full h-full flex items-center justify-center text-gray-400"
+                                            }
+                                        >
+                                            이미지 없음
+                                        </div>
                                     )}
                                 </a>
                             ))
