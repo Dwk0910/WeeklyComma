@@ -42,8 +42,8 @@ async function checkApiThenRender() {
             localStorage.setItem("wca_lsdata", JSON.stringify(res.data));
         })
         .catch((err) => {
-            if (err.response && err.response.status == 401) return;
             if (getLSdata()) localStorage.removeItem("wca_lsdata");
+            if (err.response && err.response.status == 401) return;
             apiErr = err;
         });
 
