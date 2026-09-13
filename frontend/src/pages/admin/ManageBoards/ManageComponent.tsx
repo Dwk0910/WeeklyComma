@@ -3,7 +3,7 @@ import Editor from "./Editor.tsx";
 import { BACKEND_ADDRESS, api } from "../../../index.tsx";
 
 import { clsx } from "clsx";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { BsPinAngle } from "react-icons/bs";
@@ -21,6 +21,18 @@ export type Post = {
     isPinned: boolean;
     type: PostType;
     content: string;
+    attributions?: {
+        bookId?: string;
+        recommendationYear?: number;
+        recommendationMonth?: number;
+        recommendationWeek?: number;
+    };
+};
+
+type CurrentWeekResponse = {
+    year: number;
+    month: number;
+    week: number;
 };
 
 export default function ManageComponent({
@@ -41,27 +53,79 @@ export default function ManageComponent({
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     // 수정 시 전달할 게시글 상태
     const [editingPost, setEditingPost] = useState<Post | null>(null);
+    const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
+    const postsRequestId = useRef(0);
+    const [selectedRecommendationPostIds, setSelectedRecommendationPostIds] = useState<
+        string[]
+    >([]);
+
+    useEffect(() => {
+        api.get<CurrentWeekResponse>(BACKEND_ADDRESS + "current-week")
+            .then((res) => setCurrentWeek(res.data))
+            .catch((err) => console.error("현재 주차 조회 실패:", err));
+
+        Promise.all(
+            ["high", "mid", "low"].map((level) =>
+                api
+                    .get(`${BACKEND_ADDRESS}adminsettings`, {
+                        params: { key: `recommend_post_${level}` }
+                    })
+                    .then((res) =>
+                        res.data === null || res.data === undefined || res.data === ""
+                            ? null
+                            : String(res.data)
+                    )
+            )
+        )
+            .then((postIds) =>
+                setSelectedRecommendationPostIds(
+                    postIds.filter((postId): postId is string => postId !== null)
+                )
+            )
+            .catch((err) => console.error("메인 추천글 지정 상태 조회 실패:", err));
+    }, []);
+
+    const isPastRecommendation = (post: Post) => {
+        const attr = post.attributions;
+        return (
+            post.type === "G_RECOMMENDATION" &&
+            !!currentWeek &&
+            attr?.recommendationYear != null &&
+            attr.recommendationMonth != null &&
+            attr.recommendationWeek != null &&
+            (attr.recommendationYear !== currentWeek.year ||
+                attr.recommendationMonth !== currentWeek.month ||
+                attr.recommendationWeek !== currentWeek.week)
+        );
+    };
 
     const getPosts: () => Promise<void> = useCallback(async () => {
+        const requestId = ++postsRequestId.current;
         setIsLoading(true);
-        return api
-            .get(BACKEND_ADDRESS + `posts`, {
+        try {
+            const res = await api.get(BACKEND_ADDRESS + `posts`, {
                 params: {
                     ...attributions!,
                     postType
                 }
-            })
-            .then((res) => {
-                const postList: Post[] = res.data;
-                setSelectedPosts([]);
-                setPosts(() =>
-                    postList.sort((a, b) => {
-                        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-                        return b.createdAt - a.createdAt;
-                    })
-                );
-                setIsLoading(false);
             });
+            if (requestId !== postsRequestId.current) return;
+
+            const postList: Post[] = res.data;
+            setSelectedPosts([]);
+            setPosts(
+                postList.sort((a, b) => {
+                    if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+                    return b.createdAt - a.createdAt;
+                })
+            );
+        } catch (err) {
+            console.error("글 목록 조회 실패:", err);
+        } finally {
+            if (requestId === postsRequestId.current) {
+                setIsLoading(false);
+            }
+        }
     }, [postType, attributions]);
 
     useEffect(() => {
@@ -93,6 +157,10 @@ export default function ManageComponent({
 
     // 수정 창으로 전환하는 핸들러
     const handleStartEdit = (post: Post) => {
+        if (isPastRecommendation(post)) {
+            alert("지난 주차 추천글은 수정할 수 없습니다.");
+            return;
+        }
         setEditingPost(post);
         setViewingPost(null); // 조회 모달 닫기
         setPostEditorVisible(true); // 에디터 열기
@@ -175,11 +243,31 @@ export default function ManageComponent({
                         className={menuBtnStyle(true, "bg-red-400", "bg-neutral-400")}
                         onClick={async () => {
                             if (confirm("정말 선택한 글들을 삭제하시겠습니까?")) {
-                                selectedPosts.forEach((i) => {
-                                    api.delete(BACKEND_ADDRESS + `posts/${i.id}`).then(
-                                        async () => await getPosts()
+                                const deletedIds = selectedPosts.map((post) => post.id);
+                                try {
+                                    await Promise.all(
+                                        deletedIds.map((postId) =>
+                                            api.delete(BACKEND_ADDRESS + `posts/${postId}`)
+                                        )
                                     );
-                                });
+                                    setPosts((prev) =>
+                                        prev.filter((post) => !deletedIds.includes(post.id))
+                                    );
+                                    if (
+                                        editingPost &&
+                                        deletedIds.includes(editingPost.id)
+                                    ) {
+                                        setEditingPost(null);
+                                        setPostEditorVisible(false);
+                                    }
+                                    setViewingPost(null);
+                                    setSelectedPosts([]);
+                                    await getPosts();
+                                } catch (err) {
+                                    console.error("글 삭제 실패:", err);
+                                    alert("글 삭제에 실패했습니다.");
+                                    await getPosts();
+                                }
                             }
                         }}
                     >
@@ -252,6 +340,17 @@ export default function ManageComponent({
                                         onClick={() => setViewingPost(item)} // 글 조회 모달 오픈
                                     >
                                         {item.title}
+                                        {selectedRecommendationPostIds.includes(String(item.id)) &&
+                                            item.attributions?.recommendationYear &&
+                                            item.attributions.recommendationMonth &&
+                                            item.attributions.recommendationWeek && (
+                                                <span className="ml-2 text-xs text-gray-400 no-underline">
+                                                    (
+                                                    {item.attributions.recommendationYear}년{" "}
+                                                    {item.attributions.recommendationMonth}월{" "}
+                                                    {item.attributions.recommendationWeek}주차)
+                                                </span>
+                                            )}
                                         {item.isPinned && (
                                             <BsPinAngle className={"text-gray-500 ml-1"} />
                                         )}
@@ -343,13 +442,19 @@ export default function ManageComponent({
 
                             {/* Footer Actions */}
                             <div className="flex justify-end gap-2 px-6 py-3 border-t border-gray-200 bg-gray-50">
-                                <button
-                                    onClick={() => handleStartEdit(viewingPost)}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors cursor-pointer font-suite"
-                                >
-                                    <LuPencil size={16} />
-                                    수정
-                                </button>
+                                {isPastRecommendation(viewingPost) ? (
+                                    <span className="px-4 py-2 text-sm text-gray-500 font-suite">
+                                        지난 주차 추천글은 수정할 수 없습니다.
+                                    </span>
+                                ) : (
+                                    <button
+                                        onClick={() => handleStartEdit(viewingPost)}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors cursor-pointer font-suite"
+                                    >
+                                        <LuPencil size={16} />
+                                        수정
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setViewingPost(null)}
                                     className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded hover:bg-gray-300 transition-colors cursor-pointer font-suite"

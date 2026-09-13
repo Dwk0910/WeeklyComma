@@ -34,6 +34,24 @@ type BookResponse = {
     adult: boolean;
 };
 
+type CurrentWeekResponse = {
+    year: number;
+    month: number;
+    week: number;
+};
+
+type RecommendationPost = {
+    id: number;
+    title: string;
+    createdAt: number;
+    attributions?: {
+        bookId?: string;
+        recommendationYear?: number;
+        recommendationMonth?: number;
+        recommendationWeek?: number;
+    };
+};
+
 type BannerItem = {
     id?: string;
     originalName?: string;
@@ -68,6 +86,13 @@ export default function ManageMainPage() {
     });
 
     const [mainPick, setMainPick] = useState<string>("high");
+    const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
+    const [recommendationPosts, setRecommendationPosts] = useState<
+        Record<string, RecommendationPost[]>
+    >({});
+    const [selectedRecommendationPostIds, setSelectedRecommendationPostIds] = useState<
+        Record<string, string>
+    >({});
 
     const [leftBanners, setLeftBanners] = useState<BannerItem[]>([]);
     const [topRightBanners, setTopRightBanners] = useState<BannerItem[]>([]);
@@ -94,8 +119,38 @@ export default function ManageMainPage() {
             });
     };
 
+    const fetchCurrentWeekPosts = async (
+        isbn: string,
+        week: CurrentWeekResponse
+    ): Promise<RecommendationPost[]> => {
+        const res = await api.get<RecommendationPost[]>(`${BACKEND_ADDRESS}posts`, {
+            params: {
+                postType: "G_RECOMMENDATION",
+                bookId: isbn
+            }
+        });
+
+        return res.data.filter(
+            (post) =>
+                post.attributions?.recommendationYear === week.year &&
+                post.attributions?.recommendationMonth === week.month &&
+                post.attributions?.recommendationWeek === week.week
+        );
+    };
+
     useEffect(() => {
         const fetchInitialData = async () => {
+            let weekData: CurrentWeekResponse | null = null;
+            try {
+                const weekRes = await api.get<CurrentWeekResponse>(
+                    `${BACKEND_ADDRESS}current-week`
+                );
+                weekData = weekRes.data;
+                setCurrentWeek(weekData);
+            } catch (err) {
+                console.error("현재 주차 조회 실패:", err);
+            }
+
             const mainPickVal = await fetchAdminSetting("mainPick");
             if (mainPickVal) setMainPick(mainPickVal);
 
@@ -117,6 +172,15 @@ export default function ManageMainPage() {
                             `${BACKEND_ADDRESS}books/${isbn}`
                         );
                         if (bookRes?.data) {
+                            const savedPostId = await fetchAdminSetting(`recommend_post_${level}`);
+                            let currentPosts: RecommendationPost[] = [];
+                            if (weekData) {
+                                currentPosts = await fetchCurrentWeekPosts(
+                                    bookRes.data.isbn,
+                                    weekData
+                                );
+                            }
+
                             setBooks((prev) => ({
                                 ...prev,
                                 [level]: {
@@ -125,9 +189,21 @@ export default function ManageMainPage() {
                                     isbn: bookRes.data.isbn
                                 }
                             }));
+                            setRecommendationPosts((prev) => ({
+                                ...prev,
+                                [level]: currentPosts
+                            }));
+                            setSelectedRecommendationPostIds((prev) => ({
+                                ...prev,
+                                [level]:
+                                    savedPostId &&
+                                    currentPosts.some((post) => String(post.id) === savedPostId)
+                                        ? savedPostId
+                                        : ""
+                            }));
                         }
                     } catch (err) {
-                        console.error(`도서 정보 조회 실패 [isbn: ${isbn}]:`, err);
+                        console.error(`도서 또는 추천글 조회 실패 [isbn: ${isbn}]:`, err);
                     }
                 }
             }
@@ -190,12 +266,13 @@ export default function ManageMainPage() {
         }
     };
 
-    const handleSelectBook = (book: BookResponse) => {
+    const handleSelectBook = async (book: BookResponse) => {
         if (!searchModalLevel) return;
 
+        const level = searchModalLevel;
         setBooks((prev) => ({
             ...prev,
-            [searchModalLevel]: {
+            [level]: {
                 title: book.title,
                 author: book.author,
                 isbn: book.isbn
@@ -205,6 +282,18 @@ export default function ManageMainPage() {
         setSearchModalLevel(null);
         setSearchQuery("");
         setSearchResults([]);
+
+        setRecommendationPosts((prev) => ({ ...prev, [level]: [] }));
+        setSelectedRecommendationPostIds((prev) => ({ ...prev, [level]: "" }));
+
+        if (currentWeek) {
+            try {
+                const posts = await fetchCurrentWeekPosts(book.isbn, currentWeek);
+                setRecommendationPosts((prev) => ({ ...prev, [level]: posts }));
+            } catch (err) {
+                console.error(`추천글 조회 실패 [isbn: ${book.isbn}]:`, err);
+            }
+        }
     };
 
     const isValidFile = (file: File) => {
@@ -331,6 +420,19 @@ export default function ManageMainPage() {
                         params: { key: keyName }
                     });
                 }
+
+                const targetPostId = targetIsbn ? selectedRecommendationPostIds[level] : undefined;
+                const postKeyName = `recommend_post_${level}`;
+                if (targetPostId) {
+                    await api.put(`${BACKEND_ADDRESS}adminsettings`, {
+                        key: postKeyName,
+                        value: targetPostId
+                    });
+                } else {
+                    await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
+                        params: { key: postKeyName }
+                    });
+                }
             }
 
             await api.put(`${BACKEND_ADDRESS}adminsettings`, {
@@ -402,6 +504,17 @@ export default function ManageMainPage() {
                             >
                                 {LEVEL_STYLES[level].label}
                             </div>
+                            <div
+                                className="absolute cursor-pointer left-18"
+                                onClick={() => setMainPick(level)}
+                            >
+                                <MdCheckCircle
+                                    size={26}
+                                    className={
+                                        mainPick === level ? "text-blue-500" : "text-gray-200"
+                                    }
+                                />
+                            </div>
                             <button
                                 onClick={() => {
                                     setSearchModalLevel(level);
@@ -415,24 +528,43 @@ export default function ManageMainPage() {
                         </div>
                         <div className="cursor-pointer" onClick={() => setMainPick(level)}>
                             <div className="font-bold text-xl text-gray-800">{info.title}</div>
-                            <div className="text-gray-500 mt-1">{info.author}</div>
+                            <div className="text-gray-500 mt-1 text-[0.8rem]">{info.author}</div>
                         </div>
-                        <div
-                            className="absolute bottom-4 right-4 cursor-pointer"
-                            onClick={() => setMainPick(level)}
-                        >
-                            <MdCheckCircle
-                                size={26}
-                                className={mainPick === level ? "text-blue-500" : "text-gray-200"}
-                            />
+                        <div className="mt-4">
+                            <label className="block text-sm font-bold text-gray-700 mb-1">
+                                이번 주차 추천글
+                            </label>
+                            <select
+                                value={selectedRecommendationPostIds[level] || ""}
+                                onChange={(event) =>
+                                    setSelectedRecommendationPostIds((prev) => ({
+                                        ...prev,
+                                        [level]: event.target.value
+                                    }))
+                                }
+                                onClick={(event) => event.stopPropagation()}
+                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+                                disabled={!recommendationPosts[level]?.length}
+                            >
+                                <option value="">
+                                    {recommendationPosts[level]?.length
+                                        ? "추천글을 선택해 주세요"
+                                        : "이번 주차 추천글 없음"}
+                                </option>
+                                {(recommendationPosts[level] || []).map((post) => (
+                                    <option key={post.id} value={post.id}>
+                                        {post.title}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                 ))}
             </div>
 
             <div className={"font-suite text-[0.8rem] text-gray-500 mb-8 mt-2 ml-4"}>
-                홈화면에 뜨는 메인 추천글은 선택된 책의 고정된 추천글 중, 가장 최근의 것이
-                게시됩니다.
+                홈화면에는 선택된 책의 현재 주차 추천글만 표시됩니다. 지난 주차 추천글은 기록으로
+                보존되며 수정할 수 없습니다.
             </div>
 
             {/* --- 배너 관리 섹션 --- */}

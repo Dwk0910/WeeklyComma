@@ -15,6 +15,9 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+
 @Component
 @EnableJpaAuditing
 @SpringBootApplication
@@ -32,4 +35,28 @@ class Controller {
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("OK");
     }
+
+    @GetMapping("/current-week")
+    public ResponseEntity<CurrentWeekResponse> currentWeek() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        int weekOfMonth = (today.getDayOfMonth() - 1) / 7 + 1;
+
+        return ResponseEntity.ok(
+                new CurrentWeekResponse(
+                        today.getYear(),
+                        today.getMonthValue(),
+                        weekOfMonth,
+                        today.getYear() + "년 " + today.getMonthValue() + "월",
+                        weekOfMonth + "주차"
+                )
+        );
+    }
+
+    record CurrentWeekResponse(
+            int year,
+            int month,
+            int week,
+            String monthLabel,
+            String weekLabel
+    ) {}
 }

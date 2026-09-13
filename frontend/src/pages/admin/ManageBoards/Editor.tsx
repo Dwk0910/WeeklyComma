@@ -206,21 +206,32 @@ export default function Editor({
             ? api.put(BACKEND_ADDRESS + `posts/${editingPost.id}`, payload)
             : api.post(BACKEND_ADDRESS + "posts", payload);
 
-        apiCall.then(() => {
-            alert(
-                editingPost ? "글이 성공적으로 수정되었습니다." : "글이 성공적으로 게시되었습니다."
-            );
-            if (!refreshAction) window.location.reload();
-            else refreshAction();
+        apiCall
+            .then(() => {
+                alert(
+                    editingPost
+                        ? "글이 성공적으로 수정되었습니다."
+                        : "글이 성공적으로 게시되었습니다."
+                );
+                if (!refreshAction) window.location.reload();
+                else refreshAction();
 
-            if (closeAction) {
-                editor.commands.clearContent();
-                setTitle("");
-                setFontSizeState(16);
-                setFontDropdownOpen(false);
-                closeAction();
-            }
-        });
+                if (closeAction) {
+                    editor.commands.clearContent();
+                    setTitle("");
+                    setFontSizeState(16);
+                    setFontDropdownOpen(false);
+                    closeAction();
+                }
+            })
+            .catch((err) => {
+                console.error("글 저장 실패:", err);
+                alert(
+                    err.response?.status === 409
+                        ? "지난 주차 추천글은 수정할 수 없습니다."
+                        : "글 저장에 실패했습니다."
+                );
+            });
     };
 
     return (
