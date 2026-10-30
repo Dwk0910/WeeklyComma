@@ -13,7 +13,7 @@ import Management from "./pages/admin/Management.tsx";
 import About from "./pages/About.tsx";
 import BoardList from "./pages/boards/BoardList.tsx";
 import BoardDetail from "./pages/boards/BoardDetail.tsx";
-import { NOTICE_BOARD } from "./pages/boards/boardConfig.ts";
+import { NOTICE_BOARD, EVENT_BOARD } from "./pages/boards/boardConfig.ts";
 import NotFound from "./pages/NotFound.tsx";
 
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
@@ -63,6 +63,14 @@ export default function App() {
                             <Route
                                 path="/notices/:id"
                                 element={<BoardDetail board={NOTICE_BOARD} />}
+                            />
+                            <Route
+                                path="/events"
+                                element={<BoardList key="events" board={EVENT_BOARD} />}
+                            />
+                            <Route
+                                path="/events/:id"
+                                element={<BoardDetail board={EVENT_BOARD} />}
                             />
                             <Route path={"/404"} element={<NotFound />} />
                             <Route path="*" element={<Navigate to="/404" replace />} />

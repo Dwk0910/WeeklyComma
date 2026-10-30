@@ -119,7 +119,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
                 <NavLink to="/notices" className={menuLinkClassName}>
                     공지
                 </NavLink>
-                <span>이벤트</span>
+                <NavLink to="/events" className={menuLinkClassName}>
+                    이벤트
+                </NavLink>
                 <span>정기추천</span>
                 <span>일반추천</span>
                 <span>즐겨찾기</span>
