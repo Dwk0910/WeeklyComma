@@ -11,6 +11,7 @@ import java.util.List;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
     Book getBookByIsbn(String isbn);
+    List<Book> findByIsbnIn(List<String> isbns);
     List<Book> searchBooksByTitleContaining(String title);
     void deleteBookByIsbn(String isbn);
 

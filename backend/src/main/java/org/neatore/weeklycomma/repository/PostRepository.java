@@ -14,6 +14,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> searchByContent(String content);
 
     List<Post> getPostsByPostType(Post.PostType type);
+    List<Post> findByPostTypeInOrderByCreatedAtDescIdDesc(List<Post.PostType> types);
     Post getPostById(long postId);
 
     Optional<Post> findFirstByPostTypeOrderByCreatedAtDescIdDesc(Post.PostType type);

@@ -9,8 +9,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.UUID;
+import java.util.List;
 
 public interface BookStarRepository extends JpaRepository<BookStar, BookStar.Id> {
+    interface CountByIsbn {
+        String getIsbn();
+        long getStarCount();
+    }
+
+    @Query("SELECT s.book.isbn AS isbn, COUNT(s) AS starCount FROM BookStar s WHERE s.book.isbn IN :isbns GROUP BY s.book.isbn")
+    List<CountByIsbn> countForIsbns(@Param("isbns") List<String> isbns);
     long countByBook(Book book);
     boolean existsByUserAndBook(User user, Book book);
 
