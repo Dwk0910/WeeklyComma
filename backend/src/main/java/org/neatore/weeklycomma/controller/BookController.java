@@ -8,6 +8,7 @@ import org.neatore.weeklycomma.service.BookService;
 import org.neatore.weeklycomma.service.BookStarService;
 import org.neatore.weeklycomma.service.JwtService;
 import org.neatore.weeklycomma.dto.BookStarDto;
+import org.neatore.weeklycomma.dto.PopularBookDto;
 import org.neatore.weeklycomma.dto.BookDto;
 
 import org.springframework.http.ResponseEntity;
@@ -33,6 +34,11 @@ public class BookController {
     private final BookService bookService;
     private final BookStarService bookStarService;
     private final JwtService jwtService;
+
+    @GetMapping("/popular")
+    public ResponseEntity<List<PopularBookDto>> getPopularRecommendations(@RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(bookStarService.getPopularRecommendations(limit));
+    }
 
     @GetMapping("/{isbn}/star")
     public ResponseEntity<BookStarDto> getStarStatus(@PathVariable String isbn,

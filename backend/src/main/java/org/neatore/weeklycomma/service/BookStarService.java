@@ -4,19 +4,23 @@ import lombok.RequiredArgsConstructor;
 import org.neatore.weeklycomma.domain.Book;
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.BookStarDto;
+import org.neatore.weeklycomma.dto.PopularBookDto;
 import org.neatore.weeklycomma.repository.BookRepository;
 import org.neatore.weeklycomma.repository.BookStarRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class BookStarService {
     private final BookRepository bookRepository;
     private final BookStarRepository bookStarRepository;
+    private final RecommendationExpirationService recommendationExpirationService;
 
     @Transactional(readOnly = true)
     public BookStarDto getStatus(String isbn, User user) {
@@ -37,6 +41,15 @@ public class BookStarService {
         Book book = requireBook(isbn);
         bookStarRepository.removeStar(user, book);
         return status(book, user);
+    }
+
+    @Transactional
+    public List<PopularBookDto> getPopularRecommendations(int limit) {
+        if (limit < 1 || limit > 50) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "조회 개수는 1~50개여야 합니다.");
+        }
+        recommendationExpirationService.expireRecommendations();
+        return bookRepository.findPopularRecommendations(PageRequest.of(0, limit));
     }
 
     private BookStarDto status(Book book, User user) {

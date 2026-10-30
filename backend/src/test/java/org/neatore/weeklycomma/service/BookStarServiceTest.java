@@ -6,8 +6,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.neatore.weeklycomma.domain.Book;
+import org.neatore.weeklycomma.domain.Post;
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.BookDto;
+import org.neatore.weeklycomma.dto.RecommendationSettingsDto;
 import org.neatore.weeklycomma.dto.login.AuthType;
 import org.neatore.weeklycomma.repository.BookRepository;
 import org.neatore.weeklycomma.repository.BookStarRepository;
@@ -37,6 +39,7 @@ class BookStarServiceTest {
     private BookStarService stars;
     private BookRepository books;
     private UserRepository users;
+    private RecommendationHistoryService history;
     private MutableClock clock;
 
     @BeforeEach
@@ -55,6 +58,7 @@ class BookStarServiceTest {
         stars = context.getBean(BookStarService.class);
         books = context.getBean(BookRepository.class);
         users = context.getBean(UserRepository.class);
+        history = context.getBean(RecommendationHistoryService.class);
     }
 
     @AfterEach
@@ -92,24 +96,88 @@ class BookStarServiceTest {
         assertTrue(stars.getStatus("book-a", second).starred());
     }
 
+    @Test
+    void onlyArchivedRecommendationsWithStrictlyMoreThanTenStarsQualify() {
+        List<User> voters = voters(12);
+        for (String isbn : List.of("ten", "eleven", "twelve", "never-selected")) book(isbn);
+        archive("ten", 1);
+        archive("eleven", 2);
+        archive("twelve", 3);
+        vote("ten", voters.subList(0, 10));
+        vote("eleven", voters.subList(0, 11));
+        vote("twelve", voters);
+        vote("never-selected", voters);
 
+        var ranked = stars.getPopularRecommendations(6);
+        assertEquals(List.of("twelve", "eleven"), ranked.stream().map(b -> b.isbn()).toList());
+        assertEquals(List.of(12L, 11L), ranked.stream().map(b -> b.starCount()).toList());
+        stars.removeStar("eleven", voters.get(0));
+        assertEquals(List.of("twelve"), stars.getPopularRecommendations(6).stream().map(b -> b.isbn()).toList());
+    }
 
+    @Test
+    void rankingIsLimitedToSixAndUsesIsbnToBreakTies() {
+        List<User> voters = voters(17);
+        for (int i = 0; i < 8; i++) {
+            String isbn = "rank-" + i;
+            book(isbn);
+            archive(isbn, i + 1);
+            vote(isbn, voters.subList(0, 11 + i % 7));
+        }
+        var ranked = stars.getPopularRecommendations(6);
+        assertEquals(6, ranked.size());
+        assertEquals(List.of("rank-6", "rank-5", "rank-4", "rank-3", "rank-2", "rank-1"),
+                ranked.stream().map(b -> b.isbn()).toList());
+        book("rank-0-tie");
+        archive("rank-0-tie", 99);
+        vote("rank-0-tie", voters.subList(0, 11));
+        var all = stars.getPopularRecommendations(50);
+        assertEquals(List.of("rank-0", "rank-0-tie", "rank-7"),
+                all.stream().filter(b -> b.starCount() == 11).map(b -> b.isbn()).toList());
+    }
 
+    @Test
+    void repeatSelectionHistoryDoesNotDuplicateBooksOrMultiplyStarCountsAndIncludesCoverFileId() {
+        Book book = book("book-a");
+        book.setCustomCoverImg("stored-cover-file-id");
+        books.save(book);
+        archive("book-a", 1);
+        archive("book-a", 2);
+        vote("book-a", voters(11));
+        var ranked = stars.getPopularRecommendations(6);
+        assertEquals(1, ranked.size());
+        assertEquals(11, ranked.get(0).starCount());
+        assertEquals("stored-cover-file-id", ranked.get(0).customCoverImg());
+    }
+
+    @Test
+    void currentWeekOnlyBecomesPastRecommendationAfterPeriodRollover() {
+        book("book-a");
+        var posts = context.getBean(PostService.class);
+        long postId = posts.addPost("Recommendation", "Content", "Curator",
+                Post.PostType.G_RECOMMENDATION, new Post.Attribution("book-a"));
+        context.getBean(AdminSettingService.class).replaceRecommendations(new RecommendationSettingsDto(
+                List.of(new RecommendationSettingsDto.Selection("high", "book-a", postId)), "high"));
+        vote("book-a", voters(11));
+        assertTrue(stars.getPopularRecommendations(6).isEmpty());
+        clock.setDate("2026-10-15");
+        assertEquals("book-a", stars.getPopularRecommendations(6).get(0).isbn());
+    }
 
     @Test
     void deletingBookOrUserRemovesAssociatedStars() {
         book("book-a");
         book("book-b");
         List<User> voters = voters(11);
+        archive("book-a", 1);
+        archive("book-b", 2);
         vote("book-a", voters);
         vote("book-b", voters);
         context.getBean(BookService.class).deleteBook("book-a");
-        assertNull(books.getBookByIsbn("book-a"));
-        assertEquals(11, context.getBean(BookStarRepository.class).count());
-        assertEquals(11, stars.getStatus("book-b", null).starCount());
+        assertEquals(List.of("book-b"), stars.getPopularRecommendations(6).stream().map(b -> b.isbn()).toList());
         context.getBean(UserService.class).deleteUser(voters.get(0).getId());
         assertEquals(10, stars.getStatus("book-b", null).starCount());
-        assertEquals(10, context.getBean(BookStarRepository.class).count());
+        assertTrue(stars.getPopularRecommendations(6).isEmpty());
     }
 
     @Test
@@ -128,6 +196,11 @@ class BookStarServiceTest {
         } finally { executor.shutdownNow(); }
     }
 
+    @Test
+    void popularListRejectsInvalidLimits() {
+        assertThrows(ResponseStatusException.class, () -> stars.getPopularRecommendations(0));
+        assertThrows(ResponseStatusException.class, () -> stars.getPopularRecommendations(51));
+    }
 
     private Book book(String isbn) {
         return books.save(new Book(new BookDto.RegisterRequest(isbn, "Title " + isbn, "Subtitle", "Author", "Publisher",
@@ -146,6 +219,7 @@ class BookStarServiceTest {
     }
 
     private void vote(String isbn, List<User> voters) { voters.forEach(user -> stars.addStar(isbn, user)); }
+    private void archive(String isbn, long postId) { history.archive(2026, 9, 5, "상급", isbn, postId); }
 
     private static class MutableClock extends Clock {
         private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
@@ -158,8 +232,8 @@ class BookStarServiceTest {
 
     @Configuration
     static class StarConfiguration {
-        @Bean BookStarService starService(BookRepository books, BookStarRepository stars) {
-            return new BookStarService(books, stars);
+        @Bean BookStarService starService(BookRepository books, BookStarRepository stars, RecommendationExpirationService expiration) {
+            return new BookStarService(books, stars, expiration);
         }
         @Bean BookService bookService(BookRepository books, BookStarRepository stars, AdminSettingService settings) {
             return new BookService(books, null, null, stars, settings);

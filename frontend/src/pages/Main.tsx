@@ -1,5 +1,4 @@
 import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
-import { CiStar } from "react-icons/ci";
 import { MdPause, MdPlayArrow, MdArrowForwardIos, MdArrowBackIosNew } from "react-icons/md";
 import { useCallback, useEffect, useState, useRef } from "react";
 
@@ -46,6 +45,10 @@ type BookResponse = {
     adult: boolean;
 };
 
+type PopularBook = Pick<BookResponse, "isbn" | "title" | "coverImg" | "customCoverImg"> & {
+    starCount: number;
+};
+
 const RECOMMENDATION_LEVELS = [
     { key: "low", label: "초급" },
     { key: "mid", label: "중급" },
@@ -65,11 +68,39 @@ export default function Main() {
     const [recommendationPost, setRecommendationPost] = useState<RecommendationPost | null>(null);
     const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
 
+    const [popularBooks, setPopularBooks] = useState<PopularBook[]>([]);
+    const [isPopularLoading, setIsPopularLoading] = useState(true);
+    const [popularError, setPopularError] = useState(false);
+    const popularRequest = useRef(0);
     const [bookStars, setBookStars] = useState<Record<string, BookStarStatus>>({});
     const [pendingStars, setPendingStars] = useState<Record<string, boolean>>({});
     const [starErrors, setStarErrors] = useState<Record<string, string>>({});
     const starVersions = useRef<Record<string, number>>({});
     const starRequests = useRef(new Set<string>());
+
+    const loadPopularBooks = useCallback(() => {
+        const request = ++popularRequest.current;
+        return api
+            .get<PopularBook[]>("books/popular", { params: { limit: 6 } })
+            .then((response) => {
+                if (request !== popularRequest.current) return;
+                setPopularBooks(response.data);
+                setPopularError(false);
+            })
+            .catch(() => {
+                if (request === popularRequest.current) setPopularError(true);
+            })
+            .finally(() => {
+                if (request === popularRequest.current) setIsPopularLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
+        void loadPopularBooks();
+        return () => {
+            popularRequest.current = -1;
+        };
+    }, [loadPopularBooks]);
 
     const loadStarStatus = useCallback((isbn: string, signal?: AbortSignal) => {
         const version = starVersions.current[isbn] || 0;
@@ -90,7 +121,14 @@ export default function Main() {
             });
     }, []);
 
-    const visibleStarIsbns = recommendationBook?.isbn || "";
+    const visibleStarIsbns = [
+        ...new Set([
+            ...popularBooks.map((book) => book.isbn),
+            ...(recommendationBook ? [recommendationBook.isbn] : [])
+        ])
+    ]
+        .sort()
+        .join("|");
 
     useEffect(() => {
         const controller = new AbortController();
@@ -119,6 +157,15 @@ export default function Main() {
                 ? await api.delete<BookStarStatus>(path)
                 : await api.put<BookStarStatus>(path);
             setBookStars((previous) => ({ ...previous, [isbn]: response.data }));
+            setPopularBooks((previous) =>
+                previous
+                    .map((book) =>
+                        book.isbn === isbn ? { ...book, starCount: response.data.starCount } : book
+                    )
+                    .filter((book) => book.starCount > 10)
+                    .sort((a, b) => b.starCount - a.starCount || a.isbn.localeCompare(b.isbn))
+            );
+            void loadPopularBooks();
         } catch (error) {
             const message =
                 isAxiosError(error) && error.response?.status === 401
@@ -604,83 +651,83 @@ export default function Main() {
                 </div>
             )}
 
-            <div className={"flex flex-col mt-8"}>
-                <span className={"font-suite text-3xl"}>과거 인기 추천 책 모아보기</span>
+            <section
+                className={"flex flex-col mt-8"}
+                aria-labelledby="popular-recommendations-heading"
+            >
+                <h2 id="popular-recommendations-heading" className={"font-suite text-3xl"}>
+                    과거 인기 추천 책 모아보기
+                </h2>
+                {popularError && (
+                    <div role="alert" className="font-suite text-sm text-red-600 mt-4">
+                        인기 추천 도서를 불러오지 못했습니다.
+                        <button
+                            type="button"
+                            onClick={() => void loadPopularBooks()}
+                            className="ml-2 underline"
+                        >
+                            다시 시도
+                        </button>
+                    </div>
+                )}
                 <div className={"flex justify-center w-full mt-5"}>
-                    <div className={"flex flex-col"}>
-                        <div className={"w-40 shrink-0 h-60 border border-black"}></div>
-                        <div className={"flex justify-start mt-1"}>
-                            <span className={"text-[1.1rem] -ml-0.5"}>
-                                <CiStar />
-                            </span>
-                            <span className={"font-suite ml-1 text-[0.8rem]"}>12,512</span>
-                        </div>
-                        <div className={"font-suite text-[1.3rem] w-40 wrap-break-word leading-6"}>
-                            UNWIND
-                        </div>
-                    </div>
-                    <div className={"flex flex-col ml-8"}>
-                        <div className={"w-40 shrink-0 h-60 border border-black"}></div>
-                        <div className={"flex justify-start mt-1"}>
-                            <span className={"text-[1.1rem] -ml-0.5"}>
-                                <CiStar />
-                            </span>
-                            <span className={"font-suite ml-1 text-[0.8rem]"}>10,501</span>
-                        </div>
-                        <div className={"font-suite text-[1.3rem] w-40 wrap-break-word leading-6"}>
-                            죽이고 싶은 아이 1
-                        </div>
-                    </div>
-                    <div className={"flex flex-col ml-8"}>
-                        <div className={"w-40 shrink-0 h-60 border border-black"}></div>
-                        <div className={"flex justify-start mt-1"}>
-                            <span className={"text-[1.1rem] -ml-0.5"}>
-                                <CiStar />
-                            </span>
-                            <span className={"font-suite ml-1 text-[0.8rem]"}>8,210</span>
-                        </div>
-                        <div className={"font-suite text-[1.3rem] w-40 wrap-break-word leading-6"}>
-                            스마트폰을 떨어 뜨렸을 뿐인데
-                        </div>
-                    </div>
-                    <div className={"flex flex-col ml-8"}>
-                        <div className={"w-40 shrink-0 h-60 border border-black"}></div>
-                        <div className={"flex justify-start mt-1"}>
-                            <span className={"text-[1.1rem] -ml-0.5"}>
-                                <CiStar />
-                            </span>
-                            <span className={"font-suite ml-1 text-[0.8rem]"}>5,972</span>
-                        </div>
-                        <div className={"font-suite text-[1.3rem] w-40 wrap-break-word leading-6"}>
-                            열다섯에 곰이라니
-                        </div>
-                    </div>
-                    <div className={"flex flex-col ml-8"}>
-                        <div className={"w-40 shrink-0 h-60 border border-black"}></div>
-                        <div className={"flex justify-start mt-1"}>
-                            <span className={"text-[1.1rem] -ml-0.5"}>
-                                <CiStar />
-                            </span>
-                            <span className={"font-suite ml-1 text-[0.8rem]"}>3,250</span>
-                        </div>
-                        <div className={"font-suite text-[1.3rem] w-40 wrap-break-word leading-6"}>
-                            돌이킬 수 없는 약속
-                        </div>
-                    </div>
-                    <div className={"flex flex-col ml-8"}>
-                        <div className={"w-40 shrink-0 h-60 border border-black"}></div>
-                        <div className={"flex justify-start mt-1"}>
-                            <span className={"text-[1.1rem] -ml-0.5"}>
-                                <CiStar />
-                            </span>
-                            <span className={"font-suite ml-1 text-[0.8rem]"}>1,125</span>
-                        </div>
-                        <div className={"font-suite text-[1.3rem] w-40 wrap-break-word leading-6"}>
-                            시한부
-                        </div>
-                    </div>
+                    {isPopularLoading ? (
+                        <p role="status" className="font-suite text-gray-400 py-12">
+                            인기 추천 도서를 불러오는 중입니다.
+                        </p>
+                    ) : popularBooks.length === 0 ? (
+                        !popularError && (
+                            <p className="font-suite text-gray-400 py-12">
+                                아직 Star가 10개를 초과한 과거 추천 도서가 없습니다.
+                            </p>
+                        )
+                    ) : (
+                        popularBooks.map((book, index) => (
+                            <div
+                                key={book.isbn}
+                                className={clsx("flex flex-col", index > 0 && "ml-8")}
+                            >
+                                <div
+                                    className={
+                                        "w-40 shrink-0 h-60 border border-black overflow-hidden"
+                                    }
+                                >
+                                    {book.customCoverImg ? (
+                                        <ServerImg
+                                            fileId={book.customCoverImg}
+                                            alt={decodeHtml(book.title)}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <img
+                                            src={book.coverImg}
+                                            alt={decodeHtml(book.title)}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    )}
+                                </div>
+                                <BookStarButton
+                                    className="mt-1"
+                                    title={decodeHtml(book.title)}
+                                    status={bookStars[book.isbn]}
+                                    fallbackCount={book.starCount}
+                                    pending={!!pendingStars[book.isbn]}
+                                    error={starErrors[book.isbn]}
+                                    onToggle={() => void toggleStar(book.isbn)}
+                                    onRetry={() => void loadStarStatus(book.isbn)}
+                                />
+                                <div
+                                    className={
+                                        "font-suite text-[1.3rem] w-40 wrap-break-word leading-6"
+                                    }
+                                >
+                                    {decodeHtml(book.title)}
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
-            </div>
+            </section>
         </div>
     );
 }
