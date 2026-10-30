@@ -58,8 +58,7 @@ const decodeHtml = (value: string | null | undefined) => {
 export default function Main() {
     const [noticeTitle, setNoticeTitle] = useState<string | null>(null);
     const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
-    const [selectedRecommendationLevel, setSelectedRecommendationLevel] =
-        useState<string>("high");
+    const [selectedRecommendationLevel, setSelectedRecommendationLevel] = useState<string>("high");
     const [recommendationBook, setRecommendationBook] = useState<BookResponse | null>(null);
     const [recommendationPost, setRecommendationPost] = useState<RecommendationPost | null>(null);
     const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
@@ -378,7 +377,7 @@ export default function Main() {
             {/* Recommendation / book detail section (restored) */}
             <div className={"flex flex-col mt-15"}>
                 <div className={"flex items-end text-2xl"}>
-                    <span className={"font-suite w-31"}>
+                    <span className={"font-suite w-35"}>
                         {currentWeek?.monthLabel || "기간 정보 없음"}
                     </span>
                     <span className={"font-suite w-62 text-3xl"}>
@@ -493,7 +492,11 @@ export default function Main() {
                                     <span className={"ml-2 font-seoulnamsan"}>쉼표지기의 추천</span>
                                 </span>
                                 {recommendationPost && (
-                                    <div className={"mt-1 flex items-center gap-2 font-suite text-xs text-gray-500"}>
+                                    <div
+                                        className={
+                                            "mt-1 flex items-center gap-2 font-suite text-xs text-gray-500"
+                                        }
+                                    >
                                         <span className={"font-bold text-gray-700"}>
                                             {decodeHtml(recommendationPost.title)}
                                         </span>
