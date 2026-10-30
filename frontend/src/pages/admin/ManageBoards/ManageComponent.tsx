@@ -10,21 +10,9 @@ import { BsPinAngle } from "react-icons/bs";
 import { LuX, LuPencil } from "react-icons/lu";
 import loading_gif from "../../../assets/loading.gif";
 
-export type PostType = "NOTICE" | "EVENT" | "G_RECOMMENDATION" | "W_RECOMMENDATION";
+import { type Post, type PostType } from "../../../types/post.ts";
 
-export type Post = {
-    id: number;
-    title: string;
-    author: string;
-    createdAt: number;
-    updatedAt: number;
-    isPinned: boolean;
-    type: PostType;
-    content: string;
-    attributions?: {
-        bookId?: string;
-    };
-};
+export type { Post, PostType } from "../../../types/post.ts";
 
 export default function ManageComponent({
     postType,

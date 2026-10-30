@@ -59,7 +59,8 @@ public class PostService {
     }
 
     public Post getLatestNotice() {
-        return postRepository.getLatestNotice().orElseThrow(() -> new PostNotFoundException(null));
+        return postRepository.findFirstByPostTypeOrderByCreatedAtDescIdDesc(Post.PostType.NOTICE)
+                .orElseThrow(() -> new PostNotFoundException(null));
     }
 
     /**

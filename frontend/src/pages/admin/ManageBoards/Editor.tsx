@@ -4,15 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { BACKEND_ADDRESS, api } from "../../../index.tsx";
 
 import { useEditor, useEditorState, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { TextStyle } from "@tiptap/extension-text-style";
-import { FontFamily } from "@tiptap/extension-font-family";
-import { Color } from "@tiptap/extension-color";
-import Highlight from "@tiptap/extension-highlight";
-import { FontSize } from "../../../extensions/FontSize.ts";
+import { createPostExtensions } from "../../../extensions/postExtensions.ts";
 import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { FONTS } from "../../../assets/fonts/FONTS.def.ts";
-import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { AnimatePresence, motion } from "framer-motion";
 import { clsx } from "clsx";
 
@@ -37,18 +31,7 @@ import {
 import { type IconType } from "react-icons";
 import { type Post } from "./ManageComponent.tsx"; // Post 타입 임포트
 
-const extensions = [
-    StarterKit,
-    TextStyle,
-    FontFamily,
-    Color,
-    Highlight.configure({ multicolor: true }),
-    FontSize,
-    Table.configure({ resizable: true }),
-    TableRow,
-    TableCell,
-    TableHeader
-];
+const extensions = createPostExtensions(true);
 
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, callback: () => void) {
     useEffect(() => {

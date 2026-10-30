@@ -11,6 +11,9 @@ import Footer from "./component/Footer.tsx";
 import Main from "./pages/Main.tsx";
 import Management from "./pages/admin/Management.tsx";
 import About from "./pages/About.tsx";
+import BoardList from "./pages/boards/BoardList.tsx";
+import BoardDetail from "./pages/boards/BoardDetail.tsx";
+import { NOTICE_BOARD } from "./pages/boards/boardConfig.ts";
 
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
@@ -52,6 +55,14 @@ export default function App() {
                             <Route path={"/logout"} element={<Logout />} />
                             <Route path={"/management"} element={<Management />} />
                             <Route path={"/about"} element={<About />} />
+                            <Route
+                                path="/notices"
+                                element={<BoardList key="notices" board={NOTICE_BOARD} />}
+                            />
+                            <Route
+                                path="/notices/:id"
+                                element={<BoardDetail board={NOTICE_BOARD} />}
+                            />
                         </Routes>
                     </div>
                     <div className={"w-full border-t border-gray-400"} />

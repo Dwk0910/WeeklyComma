@@ -9,6 +9,8 @@ import ServerImg from "../component/ServerImg.tsx";
 import { fetchAdminSetting } from "./admin/ManageMainPage.tsx";
 
 import clsx from "clsx";
+import { Link } from "react-router-dom";
+import { type Post } from "../types/post.ts";
 
 type BannerItem = { id?: string; linkUrl?: string };
 
@@ -61,7 +63,7 @@ const decodeHtml = (value: string | null | undefined) => {
 };
 
 export default function Main() {
-    const [noticeTitle, setNoticeTitle] = useState<string | null>(null);
+    const [latestNotice, setLatestNotice] = useState<Pick<Post, "id" | "title"> | null>(null);
     const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
     const [selectedRecommendationLevel, setSelectedRecommendationLevel] = useState<string>("high");
     const [recommendationBook, setRecommendationBook] = useState<BookResponse | null>(null);
@@ -230,8 +232,8 @@ export default function Main() {
         const fetch = async () => {
             // latest notice via PostController
             try {
-                const res = await api.get(`${BACKEND_ADDRESS}posts/latestnotice`);
-                if (res?.data?.title) setNoticeTitle(res.data.title);
+                const res = await api.get<Post>(`${BACKEND_ADDRESS}posts/latestnotice`);
+                if (res.data?.title) setLatestNotice(res.data);
             } catch (err) {
                 console.error("공지 조회 실패:", err);
             }
@@ -310,14 +312,18 @@ export default function Main() {
                         >
                             공지
                         </span>
-                        <span
-                            className={clsx(
-                                "font-suite ml-3 font-bold text-[1.1rem]",
-                                noticeTitle ? "cursor-pointer" : "cursor-default"
-                            )}
-                        >
-                            {noticeTitle || "공지사항이 없습니다."}
-                        </span>
+                        {latestNotice ? (
+                            <Link
+                                to={`/notices/${latestNotice.id}`}
+                                className="ml-3 font-suite text-[1.1rem] font-bold underline-offset-4 hover:underline"
+                            >
+                                {latestNotice.title}
+                            </Link>
+                        ) : (
+                            <span className="ml-3 font-suite text-[1.1rem] font-bold">
+                                공지사항이 없습니다.
+                            </span>
+                        )}
                     </div>
 
                     <div className={"w-215 h-100 rounded-lg mt-5 overflow-hidden"}>

@@ -9,6 +9,10 @@ import { HiMagnifyingGlass } from "react-icons/hi2";
 import { CiStar } from "react-icons/ci";
 
 import { useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+
+const menuLinkClassName = ({ isActive }: { isActive: boolean }) =>
+    isActive ? "underline underline-offset-8" : "";
 
 export default function TopBar({ admin }: { admin: boolean }) {
     const [searchQuery, setSearchQuery] = useState("");
@@ -21,7 +25,7 @@ export default function TopBar({ admin }: { admin: boolean }) {
                     src={title}
                     alt={"logo"}
                     className={"w-75 cursor-pointer"}
-                    onClick={() => window.location.assign(".")}
+                    onClick={() => window.location.assign("/")}
                 />
                 <div
                     className={
@@ -53,9 +57,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
                     </div>
                 </div>
                 <div className={"flex items-center w-70 pl-10"}>
-                    <span className={"text-5xl cursor-pointer"}>
-                        <img src={megaphone} alt={"공지"} className={"w-8"} />
-                    </span>
+                    <Link to="/notices" aria-label="공지 목록 보기" className="text-5xl">
+                        <img src={megaphone} alt="" className="w-8" />
+                    </Link>
                     <span className={"text-4xl ml-3 cursor-pointer w-8"}>
                         <CiStar />
                     </span>
@@ -94,20 +98,25 @@ export default function TopBar({ admin }: { admin: boolean }) {
             </div>
             <style>
                 {`
-                .menucontainer > span {
+                .menucontainer > span, .menucontainer > a {
                     margin-left: 2.5rem;
                     transition: color .06s ease-in-out;
                     cursor: pointer;
                 }
                 
-                .menucontainer > span:hover {
+                .menucontainer > span:hover, .menucontainer > a:hover {
                     color: #4b5563;
                 }
                `}
             </style>
-            <div className={"w-full flex mx-15 font-suite text-xl menucontainer"}>
+            <nav
+                aria-label="주 메뉴"
+                className={"w-full flex mx-15 font-suite text-xl menucontainer"}
+            >
                 <span onClick={() => window.location.assign("/about")}>소개</span>
-                <span>공지</span>
+                <NavLink to="/notices" className={menuLinkClassName}>
+                    공지
+                </NavLink>
                 <span>이벤트</span>
                 <span>정기추천</span>
                 <span>일반추천</span>
@@ -118,7 +127,7 @@ export default function TopBar({ admin }: { admin: boolean }) {
                         관리
                     </span>
                 )}
-            </div>
+            </nav>
         </>
     );
 }
