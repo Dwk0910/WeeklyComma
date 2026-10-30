@@ -15,6 +15,8 @@ import BoardList from "./pages/boards/BoardList.tsx";
 import BoardDetail from "./pages/boards/BoardDetail.tsx";
 import { NOTICE_BOARD, EVENT_BOARD } from "./pages/boards/boardConfig.ts";
 import NotFound from "./pages/NotFound.tsx";
+import RecommendationList from "./pages/recommendations/RecommendationList.tsx";
+import RecommendationDetail from "./pages/recommendations/RecommendationDetail.tsx";
 
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
@@ -71,6 +73,19 @@ export default function App() {
                             <Route
                                 path="/events/:id"
                                 element={<BoardDetail board={EVENT_BOARD} />}
+                            />
+                            <Route
+                                path="/recommendations"
+                                element={<RecommendationList key="general" />}
+                            />
+                            <Route path="/recommendations/:id" element={<RecommendationDetail />} />
+                            <Route
+                                path="/weekly-recommendations"
+                                element={<RecommendationList key="weekly" weekly />}
+                            />
+                            <Route
+                                path="/weekly-recommendations/:id"
+                                element={<RecommendationDetail weekly />}
                             />
                             <Route path={"/404"} element={<NotFound />} />
                             <Route path="*" element={<Navigate to="/404" replace />} />

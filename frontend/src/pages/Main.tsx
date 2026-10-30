@@ -615,9 +615,14 @@ export default function Main() {
                                             "linear-gradient(0deg,rgba(255, 255, 255, 1) 0%, rgba(0, 61, 37, 0) 100%)"
                                     }}
                                 >
-                                    <span className={"mb-2 text-neutral-400 font-bold font-suite"}>
-                                        전체 글 보기
-                                    </span>
+                                    {recommendationPost && (
+                                        <Link
+                                            to={`/weekly-recommendations/${recommendationPost.id}`}
+                                            className="mb-2 text-neutral-500 font-bold font-suite hover:underline underline-offset-4"
+                                        >
+                                            전체 글 보기
+                                        </Link>
+                                    )}
                                 </div>
                                 <span className={"font-bold flex items-center text-green-600"}>
                                     <IoChatbubbleEllipsesOutline className={"mb-0.5"} />

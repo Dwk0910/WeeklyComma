@@ -122,8 +122,12 @@ export default function TopBar({ admin }: { admin: boolean }) {
                 <NavLink to="/events" className={menuLinkClassName}>
                     이벤트
                 </NavLink>
-                <span>정기추천</span>
-                <span>일반추천</span>
+                <NavLink to="/weekly-recommendations" className={menuLinkClassName}>
+                    정기추천
+                </NavLink>
+                <NavLink to="/recommendations" className={menuLinkClassName}>
+                    일반추천
+                </NavLink>
                 <span>즐겨찾기</span>
                 <span>To. 쉼표지기</span>
                 {admin && (
