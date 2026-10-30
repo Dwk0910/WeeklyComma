@@ -23,3 +23,8 @@
 추천 설정은 `PUT /adminsettings/recommendations`로 모든 코스의 도서·추천글과 대표 코스를 한 번에 저장합니다. 예: `{"selections":[{"course":"high","isbn":"선정 ISBN","postId":101}],"mainPick":"high"}`. 빈 `selections`와 `mainPick: null`로 전체 선정을 해제할 수 있습니다. 개별 추천 키의 PUT/DELETE는 허용하지 않으며, 서버에서 도서 존재 여부, 코스 난이도, 추천글 유형과 연결 ISBN을 검증합니다. 선정된 도서나 추천글이 삭제되면 연결된 선정 쌍도 함께 해제됩니다.
 
 관리자는 `GET /recommendation-history?limit=12`로 현재 선정과 지난 이력을 최신순으로 조회할 수 있습니다. `isbn` 또는 `course=low|mid|high`로 필터링할 수 있으며, 최대 50개까지 조회합니다. 교체 팝업은 도서와 추천글을 함께 선택하며 최근 선정 목록을 제공합니다. 추천 책 관리에서는 최근 선정 도서를 열 수 있고, 개별 도서 화면에서는 해당 책의 선정 이력을 확인할 수 있습니다.
+
+### Star
+로그인한 사용자는 `PUT /books/{isbn}/star`로 책에 Star를 등록하고 `DELETE /books/{isbn}/star`로 취소할 수 있습니다. 사용자·도서 조합을 기본 키로 저장하므로 반복 요청이나 동시 요청도 한 표로 집계합니다. 쓰기 요청에는 기존 로그인 쿠키와 CSRF 헤더가 필요하며, `GET /books/{isbn}/star`는 비로그인 상태에서도 집계 수를 조회할 수 있습니다. 로그인 쿠키가 유효하면 본인의 등록 여부도 반환합니다.
+
+이주의 책의 Star 버튼으로 등록·취소할 수 있습니다. 도서 또는 사용자를 삭제하면 해당 Star도 정리합니다.

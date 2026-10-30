@@ -3,7 +3,9 @@ import { CiStar } from "react-icons/ci";
 import { MdPause, MdPlayArrow, MdArrowForwardIos, MdArrowBackIosNew } from "react-icons/md";
 import { useCallback, useEffect, useState, useRef } from "react";
 
-import { BACKEND_ADDRESS, api } from "../index.tsx";
+import { BACKEND_ADDRESS, api, getLSdata } from "../index.tsx";
+import { isAxiosError } from "axios";
+import BookStarButton, { type BookStarStatus } from "../component/BookStarButton.tsx";
 import ServerImg from "../component/ServerImg.tsx";
 import { fetchAdminSetting } from "./admin/ManageMainPage.tsx";
 
@@ -62,6 +64,72 @@ export default function Main() {
     const [recommendationBook, setRecommendationBook] = useState<BookResponse | null>(null);
     const [recommendationPost, setRecommendationPost] = useState<RecommendationPost | null>(null);
     const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
+
+    const [bookStars, setBookStars] = useState<Record<string, BookStarStatus>>({});
+    const [pendingStars, setPendingStars] = useState<Record<string, boolean>>({});
+    const [starErrors, setStarErrors] = useState<Record<string, string>>({});
+    const starVersions = useRef<Record<string, number>>({});
+    const starRequests = useRef(new Set<string>());
+
+    const loadStarStatus = useCallback((isbn: string, signal?: AbortSignal) => {
+        const version = starVersions.current[isbn] || 0;
+        return api
+            .get<BookStarStatus>(`books/${encodeURIComponent(isbn)}/star`, { signal })
+            .then((response) => {
+                if (signal?.aborted || version !== (starVersions.current[isbn] || 0)) return;
+                setBookStars((previous) => ({ ...previous, [isbn]: response.data }));
+                setStarErrors((previous) => ({ ...previous, [isbn]: "" }));
+            })
+            .catch(() => {
+                if (!signal?.aborted && version === (starVersions.current[isbn] || 0)) {
+                    setStarErrors((previous) => ({
+                        ...previous,
+                        [isbn]: "Star 정보를 불러오지 못했습니다."
+                    }));
+                }
+            });
+    }, []);
+
+    const visibleStarIsbns = recommendationBook?.isbn || "";
+
+    useEffect(() => {
+        const controller = new AbortController();
+        for (const isbn of visibleStarIsbns.split("|").filter(Boolean))
+            void loadStarStatus(isbn, controller.signal);
+        return () => controller.abort();
+    }, [visibleStarIsbns, loadStarStatus]);
+
+    const toggleStar = async (isbn: string) => {
+        if (!getLSdata()) {
+            setStarErrors((previous) => ({
+                ...previous,
+                [isbn]: "Star를 등록하려면 상단에서 로그인해 주세요."
+            }));
+            return;
+        }
+        const status = bookStars[isbn];
+        if (!status || starRequests.current.has(isbn)) return;
+        starRequests.current.add(isbn);
+        starVersions.current[isbn] = (starVersions.current[isbn] || 0) + 1;
+        setPendingStars((previous) => ({ ...previous, [isbn]: true }));
+        setStarErrors((previous) => ({ ...previous, [isbn]: "" }));
+        try {
+            const path = `books/${encodeURIComponent(isbn)}/star`;
+            const response = status.starred
+                ? await api.delete<BookStarStatus>(path)
+                : await api.put<BookStarStatus>(path);
+            setBookStars((previous) => ({ ...previous, [isbn]: response.data }));
+        } catch (error) {
+            const message =
+                isAxiosError(error) && error.response?.status === 401
+                    ? "로그인이 만료되었습니다. 다시 로그인해 주세요."
+                    : "Star를 저장하지 못했습니다. 다시 눌러 주세요.";
+            setStarErrors((previous) => ({ ...previous, [isbn]: message }));
+        } finally {
+            starRequests.current.delete(isbn);
+            setPendingStars((previous) => ({ ...previous, [isbn]: false }));
+        }
+    };
 
     const [mainBanners, setMainBanners] = useState<BannerItem[]>([]); // 좌측 메인 배너(슬라이드)
     const [topRightBanners, setTopRightBanners] = useState<BannerItem[]>([]);
@@ -425,20 +493,31 @@ export default function Main() {
                 </div>
             ) : (
                 <div className={"flex mt-5"}>
-                    <div className={"w-60 h-90 border border-gray-500 overflow-hidden"}>
-                        {recommendationBook.customCoverImg ? (
-                            <ServerImg
-                                fileId={recommendationBook.customCoverImg}
-                                alt={recommendationBook.title}
-                                className={"w-full h-full object-cover"}
-                            />
-                        ) : (
-                            <img
-                                src={recommendationBook.coverImg}
-                                alt={recommendationBook.title}
-                                className={"w-full h-full object-cover"}
-                            />
-                        )}
+                    <div className="flex flex-col">
+                        <div className={"w-60 h-90 border border-gray-500 overflow-hidden"}>
+                            {recommendationBook.customCoverImg ? (
+                                <ServerImg
+                                    fileId={recommendationBook.customCoverImg}
+                                    alt={recommendationBook.title}
+                                    className={"w-full h-full object-cover"}
+                                />
+                            ) : (
+                                <img
+                                    src={recommendationBook.coverImg}
+                                    alt={recommendationBook.title}
+                                    className={"w-full h-full object-cover"}
+                                />
+                            )}
+                        </div>
+                        <BookStarButton
+                            className="mt-2"
+                            title={decodeHtml(recommendationBook.title)}
+                            status={bookStars[recommendationBook.isbn]}
+                            pending={!!pendingStars[recommendationBook.isbn]}
+                            error={starErrors[recommendationBook.isbn]}
+                            onToggle={() => void toggleStar(recommendationBook.isbn)}
+                            onRetry={() => void loadStarStatus(recommendationBook.isbn)}
+                        />
                     </div>
                     <div className={"flex flex-col ml-5"}>
                         <div

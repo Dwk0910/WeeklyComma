@@ -7,6 +7,7 @@ import org.neatore.weeklycomma.dto.login.AuthType;
 import org.neatore.weeklycomma.dto.login.UserDto;
 import org.neatore.weeklycomma.exception.UserNotFoundException;
 import org.neatore.weeklycomma.repository.UserRepository;
+import org.neatore.weeklycomma.repository.BookStarRepository;
 
 import jakarta.transaction.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class UserService {
     private final UserRepository userRepository;
     private final OAuthService oauthService;
+    private final BookStarRepository bookStarRepository;
 
     public User getUserByEmail(String email) {
         return userRepository.getUserByEmail(email);
@@ -68,6 +70,7 @@ public class UserService {
 
     @Transactional
     public void deleteUser(UUID userId) {
+        bookStarRepository.deleteForUser(userId);
         userRepository.deleteById(userId);
     }
 }
