@@ -8,6 +8,7 @@ import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { SubTitle, Title } from "../lib_component/Component.tsx";
 import ManageComponent from "../ManageBoards/ManageComponent.tsx";
 import ServerImg from "../../../component/ServerImg.tsx";
+import RecentRecommendations from "../recommendations/RecentRecommendations.tsx";
 
 // HTML Entity 해시 및 태그 제거용 유틸 함수 (렌더링 최적화)
 const decodeHtml = (html: string | undefined | null) => {
@@ -299,6 +300,9 @@ export default function ManageBook({
                 </button>
             </div>
 
+            <div className="my-6 mr-4 max-h-72 overflow-y-auto rounded-lg border border-gray-200 p-4">
+                <RecentRecommendations isbn={book.isbn} title="이 책의 최근 추천 이력" />
+            </div>
             <div className="mt-2">
                 {book.dbExist ? (
                     <ManageComponent

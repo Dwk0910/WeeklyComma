@@ -7,6 +7,12 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.neatore.weeklycomma.domain.AdminSetting;
+import org.neatore.weeklycomma.domain.Book;
+import org.neatore.weeklycomma.dto.BookDto;
+import org.neatore.weeklycomma.dto.RecommendationSettingsDto;
+import org.neatore.weeklycomma.repository.BookRepository;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.List;
 import org.neatore.weeklycomma.domain.Post;
 import org.neatore.weeklycomma.domain.RecommendationHistory;
 import org.neatore.weeklycomma.dto.PostDto;
@@ -48,6 +54,8 @@ class RecommendationExpirationServiceTest {
     private RecommendationHistoryRepository histories;
     private PostService posts;
     private JdbcTemplate jdbc;
+    private BookRepository bookRepository;
+    private RecommendationQueryService queries;
 
     @BeforeEach
     void setUp() {
@@ -66,6 +74,8 @@ class RecommendationExpirationServiceTest {
         histories = context.getBean(RecommendationHistoryRepository.class);
         posts = context.getBean(PostService.class);
         jdbc = new JdbcTemplate(dataSource);
+        bookRepository = context.getBean(BookRepository.class);
+        queries = context.getBean(RecommendationQueryService.class);
     }
 
     @AfterEach
@@ -101,9 +111,9 @@ class RecommendationExpirationServiceTest {
         select("high", "book-a", "101");
         select("mid", "book-b", "205");
         select("low", "book-c", null);
-        settings.updateAdminSetting("mainPick", "mid");
+        settingRepository.save(new AdminSetting("mainPick", "mid"));
         settings.updateAdminSetting("leftBanner", "banner-id");
-        settings.updateAdminSetting("recommend_post_unused", "999");
+        settingRepository.save(new AdminSetting("recommend_post_unused", "999"));
         posts.addPost("Unselected", "Content", "Curator", Post.PostType.G_RECOMMENDATION,
                 new Post.Attribution("book-d"));
         clock.setDate("2026-10-15");
@@ -234,9 +244,155 @@ class RecommendationExpirationServiceTest {
                 new Post.Attribution("book-b")).size());
     }
 
+    @Test
+    void pairSelectionRequiresARecommendationPostAndCannotBeBypassedWithIndividualKeys() {
+        long postId = createBookAndPost("book-a", "상급");
+        var missingPost = new RecommendationSettingsDto(List.of(
+                new RecommendationSettingsDto.Selection("high", "book-a", null)), "high");
+        assertThrows(ResponseStatusException.class, () -> settings.replaceRecommendations(missingPost));
+        assertThrows(ResponseStatusException.class, () -> settings.updateAdminSetting("recommend_isbn_high", "book-a"));
+        assertThrows(ResponseStatusException.class, () -> settings.updateAdminSetting("recommend_post_high", Long.toString(postId)));
+        assertThrows(ResponseStatusException.class, () -> settings.deleteAdminSetting("recommend_post_high"));
+        assertThrows(ResponseStatusException.class, () -> settings.updateAdminSetting("mainPick", "high"));
+        assertThrows(ResponseStatusException.class, () -> settings.updateAdminSetting(RecommendationExpirationService.WEEK_START_KEY, "2000-01-01"));
+        assertNull(value("recommend_isbn_high"));
+    }
+
+    @Test
+    void pairSelectionRejectsMismatchedMissingAndNonRecommendationPosts() {
+        long correctPost = createBookAndPost("book-a", "상급");
+        long otherPost = createBookAndPost("book-b", "상급");
+        long notice = posts.addPost("Notice", "Content", "Curator", Post.PostType.NOTICE, new Post.Attribution("book-a"));
+        for (long invalidPost : List.of(otherPost, notice, 999999L)) {
+            assertThrows(ResponseStatusException.class,
+                    () -> settings.replaceRecommendations(selection("high", "book-a", invalidPost)));
+        }
+        assertThrows(ResponseStatusException.class,
+                () -> settings.replaceRecommendations(selection("low", "book-a", correctPost)));
+        assertThrows(ResponseStatusException.class,
+                () -> settings.replaceRecommendations(selection("high", "missing-book", correctPost)));
+        assertNull(value("recommend_isbn_high"));
+    }
+
+    @Test
+    void validPairsAreSavedTogetherAndInvalidReplacementPreservesAllExistingSettings() {
+        long postA = createBookAndPost("book-a", "상급");
+        long postB = createBookAndPost("book-b", "초급");
+        settings.replaceRecommendations(selection("high", "book-a", postA));
+        var invalid = new RecommendationSettingsDto(List.of(
+                new RecommendationSettingsDto.Selection("low", "book-b", postB),
+                new RecommendationSettingsDto.Selection("high", "book-a", postB)), "low");
+        assertThrows(ResponseStatusException.class, () -> settings.replaceRecommendations(invalid));
+        assertEquals("book-a", value("recommend_isbn_high"));
+        assertEquals(Long.toString(postA), value("recommend_post_high"));
+        assertNull(value("recommend_isbn_low"));
+        assertEquals("high", value("mainPick"));
+
+        settings.replaceRecommendations(selection("low", "book-b", postB));
+        assertNull(value("recommend_isbn_high"));
+        assertNull(value("recommend_post_high"));
+        assertEquals("book-b", value("recommend_isbn_low"));
+        assertEquals(Long.toString(postB), value("recommend_post_low"));
+    }
+
+    @Test
+    void selectionRejectsDuplicateCoursesAndInvalidMainPickAndSupportsClearingAll() {
+        long postId = createBookAndPost("book-a", "상급");
+        var pair = new RecommendationSettingsDto.Selection("high", "book-a", postId);
+        assertThrows(ResponseStatusException.class,
+                () -> settings.replaceRecommendations(new RecommendationSettingsDto(List.of(pair, pair), "high")));
+        assertThrows(ResponseStatusException.class,
+                () -> settings.replaceRecommendations(new RecommendationSettingsDto(List.of(pair), "low")));
+        settings.replaceRecommendations(selection("high", "book-a", postId));
+        settings.replaceRecommendations(new RecommendationSettingsDto(List.of(), null));
+        assertNull(value("recommend_isbn_high"));
+        assertNull(value("recommend_post_high"));
+        assertNull(value("mainPick"));
+    }
+
+    @Test
+    void atomicPairReplacementAfterBoundaryArchivesOldPairBeforeSavingNewPair() {
+        long oldPost = createBookAndPost("book-a", "상급");
+        long newPost = createBookAndPost("book-b", "상급");
+        settings.replaceRecommendations(selection("high", "book-a", oldPost));
+        clock.setDate("2026-10-15");
+        settings.replaceRecommendations(selection("high", "book-b", newPost));
+        assertEquals(1, histories.count());
+        assertEquals("book-a", histories.findAll().get(0).getIsbn());
+        assertEquals("book-b", value("recommend_isbn_high"));
+        assertEquals(Long.toString(newPost), value("recommend_post_high"));
+    }
+
+    @Test
+    void deletingASelectedPostClearsBothSelectionKeysAndMainPick() {
+        long postId = createBookAndPost("book-a", "상급");
+        settings.replaceRecommendations(selection("high", "book-a", postId));
+        posts.deletePost(postId);
+        assertNull(value("recommend_isbn_high"));
+        assertNull(value("recommend_post_high"));
+        assertNull(value("mainPick"));
+    }
+
+    @Test
+    void deletingMainSelectionKeepsAnotherSelectedCourseAsMainPick() {
+        long highPost = createBookAndPost("book-a", "상급");
+        long lowPost = createBookAndPost("book-b", "초급");
+        settings.replaceRecommendations(new RecommendationSettingsDto(List.of(
+                new RecommendationSettingsDto.Selection("high", "book-a", highPost),
+                new RecommendationSettingsDto.Selection("low", "book-b", lowPost)), "high"));
+        posts.deletePost(highPost);
+        assertEquals("low", value("mainPick"));
+        assertEquals("book-b", value("recommend_isbn_low"));
+        assertEquals(Long.toString(lowPost), value("recommend_post_low"));
+    }
+
+    @Test
+    void recentRecommendationsIncludeCurrentAndArchivedSelectionsNewestFirstAndFilterByBookOrCourse() {
+        long postA = createBookAndPost("book-a", "상급");
+        long postB = createBookAndPost("book-b", "초급");
+        settings.replaceRecommendations(selection("high", "book-a", postA));
+        clock.setDate("2026-10-15");
+        settings.replaceRecommendations(selection("low", "book-b", postB));
+        var recent = queries.getRecent(null, null, 12);
+        assertEquals(2, recent.size());
+        assertTrue(recent.get(0).current());
+        assertEquals("book-b", recent.get(0).book().isbn());
+        assertEquals("Post book-b", recent.get(0).recommendationPostTitle());
+        assertFalse(recent.get(1).current());
+        assertEquals(2, recent.get(1).recommendationWeek());
+        assertEquals("book-a", queries.getRecent(null, "high", 12).get(0).isbn());
+        assertEquals(1, queries.getRecent("book-b", null, 12).size());
+        assertEquals(1, queries.getRecent(null, null, 1).size());
+        assertThrows(ResponseStatusException.class, () -> queries.getRecent(null, null, 0));
+        assertThrows(ResponseStatusException.class, () -> queries.getRecent(null, "unknown", 12));
+    }
+
+    @Test
+    void recentHistorySurvivesDeletedBooksAndPosts() {
+        context.getBean(RecommendationHistoryService.class).archive(2026, 9, 5, "상급", "deleted-book", 999L);
+        var recent = queries.getRecent("deleted-book", null, 12);
+        assertEquals(1, recent.size());
+        assertNull(recent.get(0).book());
+        assertNull(recent.get(0).recommendationPostTitle());
+        assertEquals("deleted-book", recent.get(0).isbn());
+    }
+
+    private long createBookAndPost(String isbn, String difficulty) {
+        bookRepository.save(new Book(new BookDto.RegisterRequest(isbn, "Book " + isbn, "Subtitle", "Author", "Publisher",
+                Instant.now().getEpochSecond(), "https://example.test/cover.jpg", null, "Description", difficulty, false)));
+        return posts.addPost("Post " + isbn, "Content " + isbn, "Curator", Post.PostType.G_RECOMMENDATION,
+                new Post.Attribution(isbn));
+    }
+
+    private RecommendationSettingsDto selection(String course, String isbn, long postId) {
+        return new RecommendationSettingsDto(List.of(new RecommendationSettingsDto.Selection(course, isbn, postId)), course);
+    }
+
     private void select(String course, String isbn, String postId) {
-        settings.updateAdminSetting("recommend_isbn_" + course, isbn);
-        if (postId != null) settings.updateAdminSetting("recommend_post_" + course, postId);
+        // Raw fixtures also exercise compatibility with incomplete pre-validation selections.
+        expiration.expireRecommendations();
+        settingRepository.save(new AdminSetting("recommend_isbn_" + course, isbn));
+        if (postId != null) settingRepository.save(new AdminSetting("recommend_post_" + course, postId));
     }
 
     private String value(String key) {
@@ -303,13 +459,19 @@ class RecommendationExpirationServiceTest {
 
         @Bean
         AdminSettingService settingService(AdminSettingRepository repository,
-                RecommendationExpirationService expirationService) {
-            return new AdminSettingService(repository, expirationService);
+                RecommendationExpirationService expirationService, BookRepository books, PostRepository posts) {
+            return new AdminSettingService(repository, expirationService, books, posts);
         }
 
         @Bean
-        PostService postService(PostRepository repository) {
-            return new PostService(repository);
+        PostService postService(PostRepository repository, AdminSettingService settings) {
+            return new PostService(repository, settings);
+        }
+
+        @Bean
+        RecommendationQueryService queryService(AdminSettingService settings,
+                RecommendationHistoryRepository history, BookRepository books, PostRepository posts) {
+            return new RecommendationQueryService(settings, history, books, posts);
         }
     }
 }

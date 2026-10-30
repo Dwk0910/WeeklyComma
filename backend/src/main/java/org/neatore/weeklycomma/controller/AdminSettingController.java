@@ -3,6 +3,7 @@ package org.neatore.weeklycomma.controller;
 import org.neatore.weeklycomma.domain.AdminSetting;
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.AdminSettingDto;
+import org.neatore.weeklycomma.dto.RecommendationSettingsDto;
 import org.neatore.weeklycomma.service.AdminSettingService;
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 
@@ -25,6 +26,19 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/adminsettings")
 public class AdminSettingController {
     private final AdminSettingService adminSettingService;
+
+    @GetMapping("/recommendations")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<RecommendationSettingsDto> getRecommendations() {
+        return ResponseEntity.ok(adminSettingService.getRecommendations());
+    }
+
+    @PutMapping("/recommendations")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<Void> setRecommendations(@Valid @RequestBody RecommendationSettingsDto request) {
+        adminSettingService.replaceRecommendations(request);
+        return ResponseEntity.ok().build();
+    }
 
     @GetMapping
     public ResponseEntity<String> getAdminSetting(@RequestParam String key) {

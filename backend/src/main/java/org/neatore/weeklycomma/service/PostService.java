@@ -19,6 +19,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PostService {
     private final PostRepository postRepository;
+    private final AdminSettingService adminSettingService;
 
     @Transactional
     public long addPost(String title, String content, String author, Post.PostType type, Post.Attribution attr) {
@@ -43,6 +44,9 @@ public class PostService {
 
     @Transactional
     public void deletePost(Long id) {
+        adminSettingService.getAdminSettingsByValue(Long.toString(id)).stream()
+                .filter(setting -> setting.getKey().startsWith("recommend_post_"))
+                .forEach(adminSettingService::deleteAdminSetting);
         Post post = postRepository.getPostById(id);
         postRepository.delete(post);
     }

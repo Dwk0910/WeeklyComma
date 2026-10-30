@@ -1,46 +1,24 @@
 import React, { useState, useEffect } from "react";
-import {
-    MdOutlineFileUpload,
-    MdCheckCircle,
-    MdCached,
-    MdDelete,
-    MdSearch,
-    MdClose,
-    MdLink
-} from "react-icons/md";
+import { MdOutlineFileUpload, MdCheckCircle, MdCached, MdDelete, MdLink } from "react-icons/md";
 
 import { BACKEND_ADDRESS, api } from "../../index.tsx";
 import SubmitButton from "./lib_component/SubmitButton.tsx";
 import Component, { Title, SubTitle } from "./lib_component/Component";
 import ServerImg from "../../component/ServerImg.tsx";
+import { isAxiosError } from "axios";
+import RecommendationPicker from "./recommendations/RecommendationPicker.tsx";
+import {
+    plainText,
+    type Course,
+    type RecommendationBook,
+    type RecommendationPost,
+    type RecommendationSettings
+} from "./recommendations/types.ts";
 
 const LEVEL_STYLES: Record<string, { label: string; color: string }> = {
     high: { label: "상급", color: "bg-red-600" },
     mid: { label: "중급", color: "bg-yellow-500" },
     low: { label: "초급", color: "bg-blue-600" }
-};
-
-type BookResponse = {
-    title: string;
-    subtitle: string;
-    author: string;
-    publisher: string;
-    isbn: string;
-    pubDate: number;
-    coverImg: string;
-    customCoverImg: string | null;
-    description: string;
-    difficulty: string;
-    adult: boolean;
-};
-
-type RecommendationPost = {
-    id: number;
-    title: string;
-    createdAt: number;
-    attributions?: {
-        bookId?: string;
-    };
 };
 
 type BannerItem = {
@@ -68,30 +46,24 @@ export const fetchAdminSetting = async (key: string): Promise<string | null> => 
 };
 
 export default function ManageMainPage() {
-    const [books, setBooks] = useState<
-        Record<string, { title: string; author: string; isbn?: string }>
-    >({
-        high: { title: "책 미설정", author: "-" },
-        mid: { title: "책 미설정", author: "-" },
-        low: { title: "책 미설정", author: "-" }
+    const [books, setBooks] = useState<Record<Course, RecommendationBook | null>>({
+        high: null,
+        mid: null,
+        low: null
     });
-
-    const [mainPick, setMainPick] = useState<string>("high");
-    const [recommendationPosts, setRecommendationPosts] = useState<
-        Record<string, RecommendationPost[]>
-    >({});
-    const [selectedRecommendationPostIds, setSelectedRecommendationPostIds] = useState<
-        Record<string, string>
-    >({});
+    const [mainPick, setMainPick] = useState<Course>("high");
+    const [selectedPosts, setSelectedPosts] = useState<Partial<Record<Course, RecommendationPost>>>(
+        {}
+    );
+    const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+    const [settingsError, setSettingsError] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
 
     const [leftBanners, setLeftBanners] = useState<BannerItem[]>([]);
     const [topRightBanners, setTopRightBanners] = useState<BannerItem[]>([]);
     const [bottomRightBanners, setBottomRightBanners] = useState<BannerItem[]>([]);
 
-    const [searchModalLevel, setSearchModalLevel] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [searchResults, setSearchResults] = useState<BookResponse[]>([]);
-    const [isSearching, setIsSearching] = useState<boolean>(false);
+    const [searchModalLevel, setSearchModalLevel] = useState<Course | null>(null);
 
     const [deletedServerIds, setDeletedServerIds] = useState<string[]>([]);
 
@@ -109,75 +81,83 @@ export default function ManageMainPage() {
             });
     };
 
-    const fetchRecommendationPosts = async (isbn: string): Promise<RecommendationPost[]> => {
-        const res = await api.get<RecommendationPost[]>(`${BACKEND_ADDRESS}posts`, {
-            params: {
-                postType: "G_RECOMMENDATION",
-                bookId: isbn
-            }
-        });
-
-        return res.data;
-    };
-
     useEffect(() => {
+        let cancelled = false;
         const fetchInitialData = async () => {
-            const mainPickVal = await fetchAdminSetting("mainPick");
-            if (mainPickVal) setMainPick(mainPickVal);
-
-            const leftVal = await fetchAdminSetting("leftBanner");
-            if (leftVal) setLeftBanners(parseBannerData(leftVal));
-
-            const topVal = await fetchAdminSetting("topRightBanners");
-            if (topVal) setTopRightBanners(parseBannerData(topVal));
-
-            const bottomVal = await fetchAdminSetting("bottomRightBanners");
-            if (bottomVal) setBottomRightBanners(parseBannerData(bottomVal));
-
-            const levels = ["high", "mid", "low"];
-            for (const level of levels) {
-                const isbn = await fetchAdminSetting(`recommend_isbn_${level}`);
-                if (isbn) {
-                    try {
-                        const bookRes = await api.get<BookResponse>(
-                            `${BACKEND_ADDRESS}books/${isbn}`
+            try {
+                const response = await api.get<RecommendationSettings>(
+                    "adminsettings/recommendations"
+                );
+                const loadedBooks: Record<Course, RecommendationBook | null> = {
+                    high: null,
+                    mid: null,
+                    low: null
+                };
+                const loadedPosts: Partial<Record<Course, RecommendationPost>> = {};
+                await Promise.all(
+                    response.data.selections.map(async (selection) => {
+                        const bookResponse = await api.get<RecommendationBook>(
+                            `books/${encodeURIComponent(selection.isbn)}`
                         );
-                        if (bookRes?.data) {
-                            const savedPostId = await fetchAdminSetting(`recommend_post_${level}`);
-                            const availablePosts = await fetchRecommendationPosts(
-                                bookRes.data.isbn
-                            );
-
-                            setBooks((prev) => ({
-                                ...prev,
-                                [level]: {
-                                    title: bookRes.data.title,
-                                    author: bookRes.data.author,
-                                    isbn: bookRes.data.isbn
-                                }
-                            }));
-                            setRecommendationPosts((prev) => ({
-                                ...prev,
-                                [level]: availablePosts
-                            }));
-                            setSelectedRecommendationPostIds((prev) => ({
-                                ...prev,
-                                [level]:
-                                    savedPostId &&
-                                    availablePosts.some((post) => String(post.id) === savedPostId)
-                                        ? savedPostId
-                                        : ""
-                            }));
+                        loadedBooks[selection.course] = bookResponse.data;
+                        if (selection.postId) {
+                            try {
+                                const postResponse = await api.get<RecommendationPost>(
+                                    `posts/${selection.postId}`
+                                );
+                                if (postResponse.data.attributions?.bookId === selection.isbn)
+                                    loadedPosts[selection.course] = postResponse.data;
+                            } catch {
+                                // An incomplete legacy selection must be repaired before saving.
+                            }
                         }
-                    } catch (err) {
-                        console.error(`도서 또는 추천글 조회 실패 [isbn: ${isbn}]:`, err);
-                    }
-                }
+                    })
+                );
+                if (cancelled) return;
+                setBooks(loadedBooks);
+                setSelectedPosts(loadedPosts);
+                setMainPick(
+                    response.data.mainPick || response.data.selections[0]?.course || "high"
+                );
+                const [left, top, bottom] = await Promise.all(
+                    ["leftBanner", "topRightBanners", "bottomRightBanners"].map(async (key) => {
+                        const setting = await api.get("adminsettings", { params: { key } });
+                        return setting.data == null ? null : String(setting.data);
+                    })
+                );
+                if (cancelled) return;
+                if (left) setLeftBanners(parseBannerData(left));
+                if (top) setTopRightBanners(parseBannerData(top));
+                if (bottom) setBottomRightBanners(parseBannerData(bottom));
+            } catch {
+                if (!cancelled)
+                    setSettingsError(
+                        "현재 선정 정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요."
+                    );
+            } finally {
+                if (!cancelled) setIsLoadingSettings(false);
             }
         };
-
         void fetchInitialData();
+        return () => {
+            cancelled = true;
+        };
     }, []);
+
+    const clearSelection = (course: Course) => {
+        setBooks((previous) => ({ ...previous, [course]: null }));
+        setSelectedPosts((previous) => {
+            const next = { ...previous };
+            delete next[course];
+            return next;
+        });
+        if (mainPick === course) {
+            const next = (Object.keys(books) as Course[]).find(
+                (other) => other !== course && books[other]
+            );
+            setMainPick(next || "high");
+        }
+    };
 
     const handleFileNameLoaded = (
         target: "left" | "top" | "bottom",
@@ -207,58 +187,6 @@ export default function ManageMainPage() {
         if (target === "left") setLeftBanners(updater);
         else if (target === "top") setTopRightBanners(updater);
         else setBottomRightBanners(updater);
-    };
-
-    const handleSearchBooks = async () => {
-        if (!searchQuery.trim()) return;
-        setIsSearching(true);
-        try {
-            const res = await api.get<BookResponse[]>(`${BACKEND_ADDRESS}books`, {
-                params: { query: searchQuery }
-            });
-
-            const targetLabel = LEVEL_STYLES[searchModalLevel || ""]?.label;
-
-            if (res.data && Array.isArray(res.data)) {
-                const filtered = res.data.filter((book) => book.difficulty === targetLabel);
-                setSearchResults(filtered);
-            } else {
-                setSearchResults([]);
-            }
-        } catch (err) {
-            console.error("도서 검색 중 오류:", err);
-            alert("도서 검색에 실패했습니다.");
-        } finally {
-            setIsSearching(false);
-        }
-    };
-
-    const handleSelectBook = async (book: BookResponse) => {
-        if (!searchModalLevel) return;
-
-        const level = searchModalLevel;
-        setBooks((prev) => ({
-            ...prev,
-            [level]: {
-                title: book.title,
-                author: book.author,
-                isbn: book.isbn
-            }
-        }));
-
-        setSearchModalLevel(null);
-        setSearchQuery("");
-        setSearchResults([]);
-
-        setRecommendationPosts((prev) => ({ ...prev, [level]: [] }));
-        setSelectedRecommendationPostIds((prev) => ({ ...prev, [level]: "" }));
-
-        try {
-            const posts = await fetchRecommendationPosts(book.isbn);
-            setRecommendationPosts((prev) => ({ ...prev, [level]: posts }));
-        } catch (err) {
-            console.error(`추천글 조회 실패 [isbn: ${book.isbn}]:`, err);
-        }
     };
 
     const isValidFile = (file: File) => {
@@ -361,6 +289,23 @@ export default function ManageMainPage() {
     };
 
     const onApply = async () => {
+        if (isSaving || isLoadingSettings || settingsError) return;
+        const selections: RecommendationSettings["selections"] = [];
+        for (const course of Object.keys(books) as Course[]) {
+            const book = books[course];
+            if (!book) continue;
+            const post = selectedPosts[course];
+            if (!post || post.attributions?.bookId !== book.isbn) {
+                alert("추천 도서와 연결할 추천글을 함께 선택해 주세요.");
+                setSearchModalLevel(course);
+                return;
+            }
+            selections.push({ course, isbn: book.isbn, postId: post.id });
+        }
+        const savedMainPick = selections.some((selection) => selection.course === mainPick)
+            ? mainPick
+            : selections[0]?.course || null;
+        setIsSaving(true);
         try {
             for (const id of deletedServerIds) {
                 await api.delete(`${BACKEND_ADDRESS}files`, { params: { id } }).catch(() => null);
@@ -370,40 +315,7 @@ export default function ManageMainPage() {
             const finalTopPayload = await processBannerList(topRightBanners);
             const finalBottomPayload = await processBannerList(bottomRightBanners);
 
-            const levels = ["high", "mid", "low"];
-            for (const level of levels) {
-                const targetIsbn = books[level]?.isbn;
-                const keyName = `recommend_isbn_${level}`;
-
-                if (targetIsbn) {
-                    await api.put(`${BACKEND_ADDRESS}adminsettings`, {
-                        key: keyName,
-                        value: targetIsbn
-                    });
-                } else {
-                    await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
-                        params: { key: keyName }
-                    });
-                }
-
-                const targetPostId = targetIsbn ? selectedRecommendationPostIds[level] : undefined;
-                const postKeyName = `recommend_post_${level}`;
-                if (targetPostId) {
-                    await api.put(`${BACKEND_ADDRESS}adminsettings`, {
-                        key: postKeyName,
-                        value: targetPostId
-                    });
-                } else {
-                    await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
-                        params: { key: postKeyName }
-                    });
-                }
-            }
-
-            await api.put(`${BACKEND_ADDRESS}adminsettings`, {
-                key: "mainPick",
-                value: mainPick
-            });
+            await api.put("adminsettings/recommendations", { selections, mainPick: savedMainPick });
 
             if (finalLeftPayload.length > 0) {
                 await api.put(`${BACKEND_ADDRESS}adminsettings`, {
@@ -443,18 +355,39 @@ export default function ManageMainPage() {
             window.location.reload();
         } catch (err) {
             console.error("저장 중 에러 발생:", err);
-            alert("저장 중 오류가 발생했습니다.");
+            alert(
+                isAxiosError(err)
+                    ? err.response?.data?.message || "저장 중 오류가 발생했습니다."
+                    : "저장 중 오류가 발생했습니다."
+            );
+        } finally {
+            setIsSaving(false);
         }
     };
 
     return (
         <Component>
             <Title>메인 페이지 관리</Title>
+            {isLoadingSettings && (
+                <p role="status" className="text-sm text-gray-500 ml-4">
+                    현재 설정을 불러오는 중입니다.
+                </p>
+            )}
+            {settingsError && (
+                <p role="alert" className="text-sm text-red-600 ml-4">
+                    {settingsError}
+                </p>
+            )}
+            {isSaving && (
+                <p role="status" className="text-sm text-blue-600 ml-4">
+                    설정을 저장하고 있습니다.
+                </p>
+            )}
 
             {/* --- 도서 관리 섹션 --- */}
             <SubTitle description={"정기 추천 도서 관리"}>정기추천 책 관리</SubTitle>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ml-4 mr-5">
-                {Object.entries(books).map(([level, info]) => (
+                {(Object.keys(books) as Course[]).map((level) => (
                     <div
                         key={level}
                         className={`relative p-5 border-2 rounded-md transition-all ${
@@ -471,7 +404,7 @@ export default function ManageMainPage() {
                             </div>
                             <div
                                 className="absolute cursor-pointer left-18"
-                                onClick={() => setMainPick(level)}
+                                onClick={() => books[level] && setMainPick(level)}
                             >
                                 <MdCheckCircle
                                     size={26}
@@ -481,55 +414,56 @@ export default function ManageMainPage() {
                                 />
                             </div>
                             <button
-                                onClick={() => {
-                                    setSearchModalLevel(level);
-                                    setSearchQuery("");
-                                    setSearchResults([]);
-                                }}
+                                disabled={isLoadingSettings || !!settingsError || isSaving}
+                                onClick={() => setSearchModalLevel(level)}
                                 className="flex items-center text-xs text-gray-400 hover:text-blue-500 transition-colors"
                             >
                                 <MdCached size={16} className="mr-1" /> 교체
                             </button>
                         </div>
-                        <div className="cursor-pointer" onClick={() => setMainPick(level)}>
-                            <div className="font-bold text-xl text-gray-800">{info.title}</div>
-                            <div className="text-gray-500 mt-1 text-[0.8rem]">{info.author}</div>
+                        <div
+                            className="cursor-pointer"
+                            onClick={() => books[level] && setMainPick(level)}
+                        >
+                            <div className="font-bold text-xl text-gray-800">
+                                {plainText(books[level]?.title) || "책 미설정"}
+                            </div>
+                            <div className="text-gray-500 mt-1 text-[0.8rem]">
+                                {plainText(books[level]?.author) || "-"}
+                            </div>
                         </div>
-                        <div className="mt-4">
-                            <label className="block text-sm font-bold text-gray-700 mb-1">
-                                추천글
-                            </label>
-                            <select
-                                value={selectedRecommendationPostIds[level] || ""}
-                                onChange={(event) =>
-                                    setSelectedRecommendationPostIds((prev) => ({
-                                        ...prev,
-                                        [level]: event.target.value
-                                    }))
+                        <div className="mt-4 text-sm">
+                            <div className="font-semibold text-gray-600 mb-1">연결된 추천글</div>
+                            <div
+                                className={
+                                    books[level] && !selectedPosts[level]
+                                        ? "text-red-500"
+                                        : "text-gray-700"
                                 }
-                                onClick={(event) => event.stopPropagation()}
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white"
-                                disabled={!recommendationPosts[level]?.length}
                             >
-                                <option value="">
-                                    {recommendationPosts[level]?.length
-                                        ? "추천글을 선택해 주세요"
-                                        : "등록된 추천글 없음"}
-                                </option>
-                                {(recommendationPosts[level] || []).map((post) => (
-                                    <option key={post.id} value={post.id}>
-                                        {post.title}
-                                    </option>
-                                ))}
-                            </select>
+                                {plainText(selectedPosts[level]?.title) ||
+                                    (books[level]
+                                        ? "교체 창에서 추천글을 함께 선택해 주세요."
+                                        : "미선정")}
+                            </div>
+                            {books[level] && (
+                                <button
+                                    type="button"
+                                    onClick={() => clearSelection(level)}
+                                    disabled={isSaving}
+                                    className="text-xs text-gray-400 hover:text-red-500 underline mt-3"
+                                >
+                                    선정 해제
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}
             </div>
 
             <div className={"font-suite text-[0.8rem] text-gray-500 mb-8 mt-2 ml-4"}>
-                작성 시점과 관계없이 추천글을 선택할 수 있습니다. 주차가 바뀌면 현재 선정 정보는
-                이력으로 저장되고 초기화됩니다.
+                교체 창에서 도서와 추천글을 함께 선택합니다. 작성 주차에 따른 제한은 없습니다.
+                주차가 바뀌면 현재 선정 정보는 이력으로 저장되고 초기화됩니다.
             </div>
 
             {/* --- 배너 관리 섹션 --- */}
@@ -755,78 +689,20 @@ export default function ManageMainPage() {
                 onClick_apply={onApply}
             />
 
-            {/* --- 도서 검색 팝업 (모달) --- */}
             {searchModalLevel && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg w-full max-w-lg p-6 relative shadow-xl">
-                        <button
-                            onClick={() => setSearchModalLevel(null)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                        >
-                            <MdClose size={24} />
-                        </button>
-
-                        <h3 className="text-lg font-bold mb-1">
-                            {LEVEL_STYLES[searchModalLevel]?.label} 도서 검색
-                        </h3>
-                        <p className="text-xs text-gray-500 mb-4">
-                            난이도가{" "}
-                            <span className="font-bold text-blue-600">
-                                [{LEVEL_STYLES[searchModalLevel]?.label}]
-                            </span>
-                            인 도서만 필터링됩니다.
-                        </p>
-
-                        <div className="flex gap-2 mb-4">
-                            <input
-                                type="text"
-                                className="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-                                placeholder="책 제목 또는 저자 검색..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSearchBooks()}
-                            />
-                            <button
-                                onClick={handleSearchBooks}
-                                className="bg-blue-600 text-white px-4 py-2 rounded text-sm flex items-center gap-1 hover:bg-blue-700 transition-colors"
-                            >
-                                <MdSearch size={18} /> 검색
-                            </button>
-                        </div>
-
-                        <div className="max-h-60 overflow-y-auto space-y-2 border-t pt-3">
-                            {isSearching ? (
-                                <div className="text-center py-6 text-gray-400 text-sm">
-                                    검색 중...
-                                </div>
-                            ) : searchResults.length > 0 ? (
-                                searchResults.map((book) => (
-                                    <div
-                                        key={book.isbn}
-                                        onClick={() => handleSelectBook(book)}
-                                        className="p-3 border rounded hover:bg-blue-50 cursor-pointer flex justify-between items-center transition-colors"
-                                    >
-                                        <div>
-                                            <div className="font-bold text-sm text-gray-800">
-                                                {book.title}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {book.author} | {book.publisher}
-                                            </div>
-                                        </div>
-                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                            {book.isbn}
-                                        </span>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-6 text-gray-400 text-sm">
-                                    검색 결과가 없습니다.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                <RecommendationPicker
+                    course={searchModalLevel}
+                    initialBook={books[searchModalLevel]}
+                    initialPostId={selectedPosts[searchModalLevel]?.id}
+                    onClose={() => setSearchModalLevel(null)}
+                    onSelect={(book, post) => {
+                        const course = searchModalLevel;
+                        setBooks((previous) => ({ ...previous, [course]: book }));
+                        setSelectedPosts((previous) => ({ ...previous, [course]: post }));
+                        if (!books[mainPick]) setMainPick(course);
+                        setSearchModalLevel(null);
+                    }}
+                />
             )}
         </Component>
     );
