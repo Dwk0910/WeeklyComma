@@ -30,7 +30,7 @@ public class AdminSettingController {
     public ResponseEntity<String> getAdminSetting(@RequestParam String key) {
         AdminSetting as = adminSettingService.getAdminSetting(key);
         if (as == null) return ResponseEntity.ok(null);
-        return ResponseEntity.ok(adminSettingService.getAdminSetting(key).getValue());
+        return ResponseEntity.ok(as.getValue());
     }
 
     @PutMapping

@@ -27,9 +27,6 @@ type RecommendationPost = {
     content: string;
     attributions?: {
         bookId?: string;
-        recommendationYear?: number;
-        recommendationMonth?: number;
-        recommendationWeek?: number;
     };
 };
 
@@ -86,10 +83,7 @@ export default function Main() {
             });
     };
 
-    const loadRecommendation = useCallback(async (
-        level: string,
-        weekData: CurrentWeekResponse | null
-    ) => {
+    const loadRecommendation = useCallback(async (level: string) => {
         setIsRecommendationLoading(true);
         setRecommendationBook(null);
         setRecommendationPost(null);
@@ -104,18 +98,13 @@ export default function Main() {
             setRecommendationBook(bookRes.data);
 
             const recommendationPostId = await fetchAdminSetting(`recommend_post_${level}`);
-            if (!weekData || !recommendationPostId) return;
+            if (!recommendationPostId) return;
 
             const postRes = await api.get<RecommendationPost>(
                 `${BACKEND_ADDRESS}posts/${recommendationPostId}`
             );
             const post = postRes.data;
-            const isCurrentWeekPost =
-                post.attributions?.bookId === recommendationIsbn &&
-                post.attributions?.recommendationYear === weekData.year &&
-                post.attributions?.recommendationMonth === weekData.month &&
-                post.attributions?.recommendationWeek === weekData.week;
-            setRecommendationPost(isCurrentWeekPost ? post : null);
+            setRecommendationPost(post.attributions?.bookId === recommendationIsbn ? post : null);
         } catch (err) {
             console.error(`추천 도서 또는 추천글 조회 실패 [level: ${level}]:`, err);
         } finally {
@@ -125,8 +114,6 @@ export default function Main() {
 
     useEffect(() => {
         const fetch = async () => {
-            let weekData: CurrentWeekResponse | null = null;
-
             // latest notice via PostController
             try {
                 const res = await api.get(`${BACKEND_ADDRESS}posts/latestnotice`);
@@ -139,8 +126,7 @@ export default function Main() {
                 const weekRes = await api.get<CurrentWeekResponse>(
                     `${BACKEND_ADDRESS}current-week`
                 );
-                weekData = weekRes.data;
-                setCurrentWeek(weekData);
+                setCurrentWeek(weekRes.data);
             } catch (err) {
                 console.error("현재 주차 조회 실패:", err);
             }
@@ -150,7 +136,7 @@ export default function Main() {
             const bottomVal = await fetchAdminSetting("bottomRightBanners");
             const mainPick = (await fetchAdminSetting("mainPick")) || "high";
             setSelectedRecommendationLevel(mainPick);
-            await loadRecommendation(mainPick, weekData);
+            await loadRecommendation(mainPick);
 
             const main = parseBannerData(leftVal);
             const tops = parseBannerData(topVal);
@@ -168,11 +154,11 @@ export default function Main() {
         };
 
         void fetch();
-    }, []);
+    }, [loadRecommendation]);
 
     const handleRecommendationLevelChange = async (level: string) => {
         setSelectedRecommendationLevel(level);
-        await loadRecommendation(level, currentWeek);
+        await loadRecommendation(level);
     };
 
     // autoplay

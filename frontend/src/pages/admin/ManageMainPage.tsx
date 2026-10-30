@@ -34,21 +34,12 @@ type BookResponse = {
     adult: boolean;
 };
 
-type CurrentWeekResponse = {
-    year: number;
-    month: number;
-    week: number;
-};
-
 type RecommendationPost = {
     id: number;
     title: string;
     createdAt: number;
     attributions?: {
         bookId?: string;
-        recommendationYear?: number;
-        recommendationMonth?: number;
-        recommendationWeek?: number;
     };
 };
 
@@ -86,7 +77,6 @@ export default function ManageMainPage() {
     });
 
     const [mainPick, setMainPick] = useState<string>("high");
-    const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
     const [recommendationPosts, setRecommendationPosts] = useState<
         Record<string, RecommendationPost[]>
     >({});
@@ -119,10 +109,7 @@ export default function ManageMainPage() {
             });
     };
 
-    const fetchCurrentWeekPosts = async (
-        isbn: string,
-        week: CurrentWeekResponse
-    ): Promise<RecommendationPost[]> => {
+    const fetchRecommendationPosts = async (isbn: string): Promise<RecommendationPost[]> => {
         const res = await api.get<RecommendationPost[]>(`${BACKEND_ADDRESS}posts`, {
             params: {
                 postType: "G_RECOMMENDATION",
@@ -130,27 +117,11 @@ export default function ManageMainPage() {
             }
         });
 
-        return res.data.filter(
-            (post) =>
-                post.attributions?.recommendationYear === week.year &&
-                post.attributions?.recommendationMonth === week.month &&
-                post.attributions?.recommendationWeek === week.week
-        );
+        return res.data;
     };
 
     useEffect(() => {
         const fetchInitialData = async () => {
-            let weekData: CurrentWeekResponse | null = null;
-            try {
-                const weekRes = await api.get<CurrentWeekResponse>(
-                    `${BACKEND_ADDRESS}current-week`
-                );
-                weekData = weekRes.data;
-                setCurrentWeek(weekData);
-            } catch (err) {
-                console.error("현재 주차 조회 실패:", err);
-            }
-
             const mainPickVal = await fetchAdminSetting("mainPick");
             if (mainPickVal) setMainPick(mainPickVal);
 
@@ -173,13 +144,9 @@ export default function ManageMainPage() {
                         );
                         if (bookRes?.data) {
                             const savedPostId = await fetchAdminSetting(`recommend_post_${level}`);
-                            let currentPosts: RecommendationPost[] = [];
-                            if (weekData) {
-                                currentPosts = await fetchCurrentWeekPosts(
-                                    bookRes.data.isbn,
-                                    weekData
-                                );
-                            }
+                            const availablePosts = await fetchRecommendationPosts(
+                                bookRes.data.isbn
+                            );
 
                             setBooks((prev) => ({
                                 ...prev,
@@ -191,13 +158,13 @@ export default function ManageMainPage() {
                             }));
                             setRecommendationPosts((prev) => ({
                                 ...prev,
-                                [level]: currentPosts
+                                [level]: availablePosts
                             }));
                             setSelectedRecommendationPostIds((prev) => ({
                                 ...prev,
                                 [level]:
                                     savedPostId &&
-                                    currentPosts.some((post) => String(post.id) === savedPostId)
+                                    availablePosts.some((post) => String(post.id) === savedPostId)
                                         ? savedPostId
                                         : ""
                             }));
@@ -286,13 +253,11 @@ export default function ManageMainPage() {
         setRecommendationPosts((prev) => ({ ...prev, [level]: [] }));
         setSelectedRecommendationPostIds((prev) => ({ ...prev, [level]: "" }));
 
-        if (currentWeek) {
-            try {
-                const posts = await fetchCurrentWeekPosts(book.isbn, currentWeek);
-                setRecommendationPosts((prev) => ({ ...prev, [level]: posts }));
-            } catch (err) {
-                console.error(`추천글 조회 실패 [isbn: ${book.isbn}]:`, err);
-            }
+        try {
+            const posts = await fetchRecommendationPosts(book.isbn);
+            setRecommendationPosts((prev) => ({ ...prev, [level]: posts }));
+        } catch (err) {
+            console.error(`추천글 조회 실패 [isbn: ${book.isbn}]:`, err);
         }
     };
 
@@ -532,7 +497,7 @@ export default function ManageMainPage() {
                         </div>
                         <div className="mt-4">
                             <label className="block text-sm font-bold text-gray-700 mb-1">
-                                이번 주차 추천글
+                                추천글
                             </label>
                             <select
                                 value={selectedRecommendationPostIds[level] || ""}
@@ -549,7 +514,7 @@ export default function ManageMainPage() {
                                 <option value="">
                                     {recommendationPosts[level]?.length
                                         ? "추천글을 선택해 주세요"
-                                        : "이번 주차 추천글 없음"}
+                                        : "등록된 추천글 없음"}
                                 </option>
                                 {(recommendationPosts[level] || []).map((post) => (
                                     <option key={post.id} value={post.id}>
@@ -563,8 +528,8 @@ export default function ManageMainPage() {
             </div>
 
             <div className={"font-suite text-[0.8rem] text-gray-500 mb-8 mt-2 ml-4"}>
-                홈화면에는 선택된 책의 현재 주차 추천글만 표시됩니다. 지난 주차 추천글은 기록으로
-                보존되며 수정할 수 없습니다.
+                작성 시점과 관계없이 추천글을 선택할 수 있습니다. 주차가 바뀌면 현재 선정 정보는
+                이력으로 저장되고 초기화됩니다.
             </div>
 
             {/* --- 배너 관리 섹션 --- */}

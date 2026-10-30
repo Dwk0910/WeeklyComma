@@ -24,9 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.neatore.weeklycomma.dto.PostDto;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import org.springframework.util.ReflectionUtils;
-
-import java.util.Arrays;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -89,22 +86,10 @@ public class Post extends BaseTimeEntity {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class Attribution {
         private String bookId;
-        private Integer recommendationYear;
-        private Integer recommendationMonth;
-        private Integer recommendationWeek;
-
-        public Attribution(String bookId) {
-            this.bookId = bookId;
-        }
 
         @JsonIgnore
         public boolean isEmpty() {
-            // Post클래스의 모든 필드를 가져온 뒤 ReflectionUtils를 통해 이(this) 객체의 필드 값중 하나라도 null인지 확인
-            return Arrays.stream(this.getClass().getDeclaredFields())
-                    .allMatch(field -> {
-                        ReflectionUtils.makeAccessible(field);
-                        return ReflectionUtils.getField(field, this) == null;
-                    });
+            return bookId == null;
         }
     }
 }

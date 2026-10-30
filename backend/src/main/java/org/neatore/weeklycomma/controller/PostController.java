@@ -84,11 +84,7 @@ public class PostController {
     @PutMapping("/{id}")
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> editPost(@PathVariable Long id, @Valid @RequestBody PostDto.PostRequest postDto) {
-        try {
-            this.postService.editPost(id, postDto);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(409).build();
-        }
+        this.postService.editPost(id, postDto);
         return ResponseEntity.ok().build();
     }
 

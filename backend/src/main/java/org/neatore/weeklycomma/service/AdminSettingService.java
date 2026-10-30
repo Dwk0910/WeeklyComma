@@ -14,8 +14,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminSettingService {
     private final AdminSettingRepository adminSettingRepository;
+    private final RecommendationExpirationService recommendationExpirationService;
 
+    @Transactional
     public AdminSetting getAdminSetting(String key) {
+        recommendationExpirationService.expireRecommendations();
         return adminSettingRepository.getAdminSettingByKey(key);
     }
 
@@ -25,16 +28,19 @@ public class AdminSettingService {
 
     @Transactional
     public void updateAdminSetting(String key, String value) {
+        recommendationExpirationService.expireRecommendations();
         adminSettingRepository.save(new AdminSetting(key, value));
     }
 
     @Transactional
     public void deleteAdminSetting(String key) {
+        recommendationExpirationService.expireRecommendations();
         adminSettingRepository.deleteById(key);
     }
 
     @Transactional
     public void deleteAdminSetting(AdminSetting as) {
+        recommendationExpirationService.expireRecommendations();
         adminSettingRepository.delete(as);
     }
 }

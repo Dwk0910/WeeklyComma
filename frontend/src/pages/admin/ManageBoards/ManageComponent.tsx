@@ -23,16 +23,7 @@ export type Post = {
     content: string;
     attributions?: {
         bookId?: string;
-        recommendationYear?: number;
-        recommendationMonth?: number;
-        recommendationWeek?: number;
     };
-};
-
-type CurrentWeekResponse = {
-    year: number;
-    month: number;
-    week: number;
 };
 
 export default function ManageComponent({
@@ -53,17 +44,12 @@ export default function ManageComponent({
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     // 수정 시 전달할 게시글 상태
     const [editingPost, setEditingPost] = useState<Post | null>(null);
-    const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
     const postsRequestId = useRef(0);
-    const [selectedRecommendationPostIds, setSelectedRecommendationPostIds] = useState<
-        string[]
-    >([]);
+    const [selectedRecommendationPostIds, setSelectedRecommendationPostIds] = useState<string[]>(
+        []
+    );
 
     useEffect(() => {
-        api.get<CurrentWeekResponse>(BACKEND_ADDRESS + "current-week")
-            .then((res) => setCurrentWeek(res.data))
-            .catch((err) => console.error("현재 주차 조회 실패:", err));
-
         Promise.all(
             ["high", "mid", "low"].map((level) =>
                 api
@@ -84,20 +70,6 @@ export default function ManageComponent({
             )
             .catch((err) => console.error("메인 추천글 지정 상태 조회 실패:", err));
     }, []);
-
-    const isPastRecommendation = (post: Post) => {
-        const attr = post.attributions;
-        return (
-            post.type === "G_RECOMMENDATION" &&
-            !!currentWeek &&
-            attr?.recommendationYear != null &&
-            attr.recommendationMonth != null &&
-            attr.recommendationWeek != null &&
-            (attr.recommendationYear !== currentWeek.year ||
-                attr.recommendationMonth !== currentWeek.month ||
-                attr.recommendationWeek !== currentWeek.week)
-        );
-    };
 
     const getPosts: () => Promise<void> = useCallback(async () => {
         const requestId = ++postsRequestId.current;
@@ -157,10 +129,6 @@ export default function ManageComponent({
 
     // 수정 창으로 전환하는 핸들러
     const handleStartEdit = (post: Post) => {
-        if (isPastRecommendation(post)) {
-            alert("지난 주차 추천글은 수정할 수 없습니다.");
-            return;
-        }
         setEditingPost(post);
         setViewingPost(null); // 조회 모달 닫기
         setPostEditorVisible(true); // 에디터 열기
@@ -253,10 +221,7 @@ export default function ManageComponent({
                                     setPosts((prev) =>
                                         prev.filter((post) => !deletedIds.includes(post.id))
                                     );
-                                    if (
-                                        editingPost &&
-                                        deletedIds.includes(editingPost.id)
-                                    ) {
+                                    if (editingPost && deletedIds.includes(editingPost.id)) {
                                         setEditingPost(null);
                                         setPostEditorVisible(false);
                                     }
@@ -340,17 +305,13 @@ export default function ManageComponent({
                                         onClick={() => setViewingPost(item)} // 글 조회 모달 오픈
                                     >
                                         {item.title}
-                                        {selectedRecommendationPostIds.includes(String(item.id)) &&
-                                            item.attributions?.recommendationYear &&
-                                            item.attributions.recommendationMonth &&
-                                            item.attributions.recommendationWeek && (
-                                                <span className="ml-2 text-xs text-gray-400 no-underline">
-                                                    (
-                                                    {item.attributions.recommendationYear}년{" "}
-                                                    {item.attributions.recommendationMonth}월{" "}
-                                                    {item.attributions.recommendationWeek}주차)
-                                                </span>
-                                            )}
+                                        {selectedRecommendationPostIds.includes(
+                                            String(item.id)
+                                        ) && (
+                                            <span className="ml-2 text-xs text-gray-400 no-underline">
+                                                (이주의 도서 선정)
+                                            </span>
+                                        )}
                                         {item.isPinned && (
                                             <BsPinAngle className={"text-gray-500 ml-1"} />
                                         )}
@@ -442,19 +403,13 @@ export default function ManageComponent({
 
                             {/* Footer Actions */}
                             <div className="flex justify-end gap-2 px-6 py-3 border-t border-gray-200 bg-gray-50">
-                                {isPastRecommendation(viewingPost) ? (
-                                    <span className="px-4 py-2 text-sm text-gray-500 font-suite">
-                                        지난 주차 추천글은 수정할 수 없습니다.
-                                    </span>
-                                ) : (
-                                    <button
-                                        onClick={() => handleStartEdit(viewingPost)}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors cursor-pointer font-suite"
-                                    >
-                                        <LuPencil size={16} />
-                                        수정
-                                    </button>
-                                )}
+                                <button
+                                    onClick={() => handleStartEdit(viewingPost)}
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors cursor-pointer font-suite"
+                                >
+                                    <LuPencil size={16} />
+                                    수정
+                                </button>
                                 <button
                                     onClick={() => setViewingPost(null)}
                                     className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded hover:bg-gray-300 transition-colors cursor-pointer font-suite"

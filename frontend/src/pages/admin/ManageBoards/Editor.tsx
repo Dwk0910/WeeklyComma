@@ -226,11 +226,7 @@ export default function Editor({
             })
             .catch((err) => {
                 console.error("글 저장 실패:", err);
-                alert(
-                    err.response?.status === 409
-                        ? "지난 주차 추천글은 수정할 수 없습니다."
-                        : "글 저장에 실패했습니다."
-                );
+                alert("글 저장에 실패했습니다.");
             });
     };
 
