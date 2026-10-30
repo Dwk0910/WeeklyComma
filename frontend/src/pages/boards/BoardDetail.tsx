@@ -1,13 +1,12 @@
 import { type BoardConfig } from "./boardConfig.ts";
 import { useEffect, useState } from "react";
 import { isAxiosError } from "axios";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { LuArrowLeft, LuArrowUp, LuArrowDown } from "react-icons/lu";
 import { api } from "../../index.tsx";
 import { type Post } from "../../types/post.ts";
 import PostContent from "../../component/PostContent.tsx";
 import PageTitle from "../../component/PageTitle.tsx";
-import NotFound from "../NotFound.tsx";
 import { PostDate, BoardFeedback, BoardHeading, PinnedPostBadge } from "./BoardShared.tsx";
 
 export default function BoardDetail({ board }: { board: BoardConfig }) {
@@ -92,7 +91,7 @@ function BoardDetailContent({ id, board }: { id: string; board: BoardConfig }) {
     const newer = index >= 0 ? neighbors.posts[index - 1] : undefined;
     const older = index >= 0 ? neighbors.posts[index + 1] : undefined;
 
-    if (result.status === "missing") return <NotFound />;
+    if (result.status === "missing") return <Navigate to="/404" replace />;
 
     return (
         <main className="mx-5 mt-14 mb-24 min-h-140 font-suite">

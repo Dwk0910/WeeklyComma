@@ -113,7 +113,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
                 aria-label="주 메뉴"
                 className={"w-full flex mx-15 font-suite text-xl menucontainer"}
             >
-                <span onClick={() => window.location.assign("/about")}>소개</span>
+                <NavLink to="/about" className={menuLinkClassName}>
+                    소개
+                </NavLink>
                 <NavLink to="/notices" className={menuLinkClassName}>
                     공지
                 </NavLink>
@@ -123,9 +125,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
                 <span>즐겨찾기</span>
                 <span>To. 쉼표지기</span>
                 {admin && (
-                    <span className={"ml-10"} onClick={() => window.location.assign("/management")}>
+                    <NavLink to="/management" className={menuLinkClassName}>
                         관리
-                    </span>
+                    </NavLink>
                 )}
             </nav>
         </>

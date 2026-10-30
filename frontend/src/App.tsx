@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 import { getLSdata } from "./index.tsx";
@@ -14,6 +14,7 @@ import About from "./pages/About.tsx";
 import BoardList from "./pages/boards/BoardList.tsx";
 import BoardDetail from "./pages/boards/BoardDetail.tsx";
 import { NOTICE_BOARD } from "./pages/boards/boardConfig.ts";
+import NotFound from "./pages/NotFound.tsx";
 
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
@@ -63,6 +64,8 @@ export default function App() {
                                 path="/notices/:id"
                                 element={<BoardDetail board={NOTICE_BOARD} />}
                             />
+                            <Route path={"/404"} element={<NotFound />} />
+                            <Route path="*" element={<Navigate to="/404" replace />} />
                         </Routes>
                     </div>
                     <div className={"w-full border-t border-gray-400"} />
