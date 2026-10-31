@@ -278,8 +278,8 @@ class BookStarServiceTest {
         @Bean BookService bookService(BookRepository books, BookStarRepository stars, AdminSettingService settings) {
             return new BookService(books, null, null, stars, settings);
         }
-        @Bean UserService userService(UserRepository users, BookStarRepository stars) {
-            return new UserService(users, null, stars);
+        @Bean UserService userService(UserRepository users, BookStarRepository stars, org.neatore.weeklycomma.repository.InquiryRepository inquiries) {
+            return new UserService(users, null, stars, inquiries);
         }
     }
 }

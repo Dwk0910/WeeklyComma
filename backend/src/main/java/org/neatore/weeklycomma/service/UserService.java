@@ -23,6 +23,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final OAuthService oauthService;
     private final BookStarRepository bookStarRepository;
+    private final org.neatore.weeklycomma.repository.InquiryRepository inquiryRepository;
 
     public User getUserByEmail(String email) {
         return userRepository.getUserByEmail(email);
@@ -70,6 +71,7 @@ public class UserService {
 
     @Transactional
     public void deleteUser(UUID userId) {
+        inquiryRepository.deleteByOwnerId(userId);
         bookStarRepository.deleteForUser(userId);
         userRepository.deleteById(userId);
     }
