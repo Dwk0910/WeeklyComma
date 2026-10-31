@@ -285,24 +285,26 @@ export default function Login() {
                             />
                         </div>
                         <div className="login-divider">또는</div>
-                        <button
-                            type="button"
-                            className="login-naver"
-                            onClick={() => void social("OAUTH_NAVER")}
-                            disabled={pending || retrySeconds > 0}
-                        >
-                            <SiNaver aria-hidden="true" />
-                            네이버로 시작하기
-                        </button>
-                        <button
-                            type="button"
-                            className="login-google"
-                            onClick={() => void social("OAUTH_GOOGLE")}
-                            disabled={pending || retrySeconds > 0}
-                        >
-                            <FcGoogle aria-hidden="true" />
-                            Google로 시작하기
-                        </button>
+                        <div className="login-social-buttons">
+                            <button
+                                type="button"
+                                className="login-naver"
+                                onClick={() => void social("OAUTH_NAVER")}
+                                disabled={pending || retrySeconds > 0}
+                            >
+                                <SiNaver aria-hidden="true" />
+                                네이버로 시작하기
+                            </button>
+                            <button
+                                type="button"
+                                className="login-google"
+                                onClick={() => void social("OAUTH_GOOGLE")}
+                                disabled={pending || retrySeconds > 0}
+                            >
+                                <FcGoogle aria-hidden="true" />
+                                Google로 시작하기
+                            </button>
+                        </div>
                     </motion.form>
                     <div className="login-account-links" aria-label="계정 메뉴">
                         <button type="button" disabled aria-label="비밀번호 찾기 (준비 중)">

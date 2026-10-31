@@ -35,6 +35,11 @@
     gap: 23px;
     margin-top: 32px;
 }
+.login-social-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 .login-field label {
     display: block;
     margin-bottom: 8px;
