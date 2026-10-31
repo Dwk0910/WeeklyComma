@@ -1,186 +1,90 @@
-import * as React from "react";
-import { Navigate } from "react-router-dom";
-import { useEffect, useState, type ReactNode } from "react";
-import { getLSdata } from "../../index.tsx";
-
+import { Fragment, useState } from "react";
+import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 import { clsx } from "clsx";
-
 import { MdKeyboardArrowUp } from "react-icons/md";
-
+import { getLSdata } from "../../index.tsx";
 import Title from "../../component/Title.tsx";
 
-// Managment component imports
-import ManageMainPage from "./ManageMainPage.tsx";
-import ManageNotifications from "./ManageBoards/ManageNotifications.tsx";
-import ManageEventBoards from "./ManageBoards/ManageEventBoards.tsx";
-import ManageRecommendation from "./ManageBooks/ManageRecommendation.tsx";
-
-// Management menu definitions
-type Menu = {
-    name: string;
-    component?: (key: string) => ReactNode;
-    submenus?: { name: string; component: (key: string) => ReactNode }[];
-};
-
+type MenuLink = { name: string; path: string };
+type Menu = MenuLink | { name: string; submenus: MenuLink[] };
 const menu: Menu[] = [
-    {
-        name: "메인 페이지 관리",
-        component: (key) => <ManageMainPage key={key} />
-    },
-    { name: "문의 관리", component: () => <Navigate to="/management/inquiries" /> },
+    { name: "메인 페이지 관리", path: "/management" },
+    { name: "문의 관리", path: "/management/inquiries" },
     {
         name: "게시판 글 관리",
         submenus: [
-            {
-                name: "공지 게시판",
-                component: (key) => {
-                    return <ManageNotifications key={key} />;
-                }
-            },
-            {
-                name: "이벤트 게시판",
-                component: (key) => {
-                    return <ManageEventBoards key={key} />;
-                }
-            }
+            { name: "공지 게시판", path: "/management/notices" },
+            { name: "이벤트 게시판", path: "/management/events" }
         ]
     },
     {
         name: "책 관리",
-        submenus: [
-            {
-                name: "추천 책 관리",
-                component: (key) => <ManageRecommendation key={key} />
-            }
-        ]
+        submenus: [{ name: "추천 책 관리", path: "/management/recommendations" }]
     }
 ];
+const menuStyle =
+    "w-full border-b border-gray-300 px-4 py-2.5 text-left font-suite text-lg transition-colors hover:bg-gray-100 cursor-pointer";
 
 export default function Management() {
-    const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+    const { pathname } = useLocation();
+    const [subMenuOpen, setSubMenuOpen] = useState<Record<string, boolean>>({});
+    const session = getLSdata();
+    if (!session || session["userType"] !== "CURATOR") return <Navigate to="/" replace />;
 
-    // <div>메인 페이지 관리</div>
-    // <div>공지글 작성</div>
-    // <div>이벤트글 작성</div>
-    // <div>정기추천글 작성</div>
-    // <div>일반추천글 작성</div>
-    // <div>쉼표지기 문의사항 관리 및 답변</div>
-    // <div>기타 관리</div>
-
-    // Menu state
-    const [currentMenu, setCurrentMenu] = useState<string>();
-    const [subMenuOpen, setSubMenuOpen] = useState<{ [collapsibleMenuName: string]: boolean }>({});
-
-    // Authentication check & initial registering collapsible menu items to state values
-    useEffect(() => {
-        (() => {
-            const lsdata = getLSdata();
-            if (lsdata && lsdata["userType"] == "CURATOR") setAuthenticated(true);
-            else setAuthenticated(false);
-        })();
-
-        (() => {
-            setCurrentMenu(menu[0].name);
-            for (const item of menu) {
-                if (item.submenus)
-                    setSubMenuOpen((prev) => ({
-                        ...prev,
-                        [item.name]: false
-                    }));
-            }
-        })();
-    }, []);
-
-    if (authenticated == null) return <div>관리자 인증 중입니다. 잠시만 기다려 주십시오...</div>;
-    else if (!authenticated) window.location.replace(".");
+    const renderLink = (item: MenuLink, nested = false) => (
+        <NavLink
+            key={item.path}
+            to={item.path}
+            end={item.path === "/management"}
+            className={({ isActive }) => clsx(menuStyle, isActive && "bg-gray-200")}
+        >
+            <span className={nested ? "ml-4" : undefined}>{item.name}</span>
+        </NavLink>
+    );
 
     return (
         <>
-            <Title subtitle={"주간쉼표 서비스를 관리합니다."}>주간쉼표 대시보드</Title>
-            <div className={"flex"}>
-                <style>
-                    {`
-                        .dashboard_btn_container > div {
-                            padding: 0.6rem 1rem;
-                            font-family: 'suite', monospace;
-                            font-size: 1.1rem;
-                            border-bottom: 1px solid #d1d5db;
-                            transition: background-color 0.16s ease-in-out;
-                            cursor: pointer;
-                        }
-                      
-                        .dashboard_btn_container > div:hover {
-                            background-color: #f3f4f6;
-                        }
-                        `}
-                </style>
-                <div
-                    className={
-                        "flex-2/7 flex flex-col border-r border-l border-gray-300 dashboard_btn_container select-none"
-                    }
+            <Title subtitle="주간쉼표 서비스를 관리합니다.">주간쉼표 대시보드</Title>
+            <div className="flex">
+                <nav
+                    aria-label="관리 메뉴"
+                    className="flex w-64 shrink-0 flex-col border-x border-gray-300 select-none"
                 >
                     {menu.map((item) => {
-                        if (!item.submenus) {
-                            return (
-                                <div
-                                    key={`dashboard_btn_container_${item.name}`}
-                                    className={clsx(currentMenu == item.name && "bg-gray-200")}
-                                    onClick={() => setCurrentMenu(item.name)}
+                        if ("path" in item) return renderLink(item);
+                        const open =
+                            subMenuOpen[item.name] ??
+                            item.submenus.some((child) => pathname === child.path);
+                        return (
+                            <Fragment key={item.name}>
+                                <button
+                                    type="button"
+                                    aria-expanded={open}
+                                    className={clsx(menuStyle, "flex items-center justify-between")}
+                                    onClick={() =>
+                                        setSubMenuOpen((prev) => ({ ...prev, [item.name]: !open }))
+                                    }
                                 >
                                     {item.name}
-                                </div>
-                            );
-                        } else
-                            return (
-                                <React.Fragment
-                                    key={`dashboard_btn_container_collapsible_${item.name}`}
-                                >
-                                    <div
-                                        className={"flex items-center justify-between"}
-                                        onClick={() => {
-                                            setSubMenuOpen((prev) => ({
-                                                ...prev,
-                                                [item.name]: !prev[item.name]
-                                            }));
-                                        }}
-                                    >
-                                        {item.name}
-                                        <span
-                                            className={clsx(
-                                                "transition-transform duration-200 ease-in-out",
-                                                subMenuOpen[item.name] ? "rotate-0" : "rotate-180"
-                                            )}
-                                        >
-                                            <MdKeyboardArrowUp />
-                                        </span>
-                                    </div>
-                                    {subMenuOpen[item.name] &&
-                                        item.submenus.map((submenu) => (
-                                            <div
-                                                key={`dashboard_submenu_btn_container_${submenu.name}`}
-                                                className={clsx(
-                                                    currentMenu == submenu.name && "bg-gray-200"
-                                                )}
-                                                onClick={() => {
-                                                    setCurrentMenu(submenu.name);
-                                                }}
-                                            >
-                                                <span className={"ml-4"}>{submenu.name}</span>
-                                            </div>
-                                        ))}
-                                </React.Fragment>
-                            );
+                                    <MdKeyboardArrowUp
+                                        aria-hidden="true"
+                                        className={clsx(
+                                            "transition-transform",
+                                            !open && "rotate-180"
+                                        )}
+                                    />
+                                </button>
+                                {open && item.submenus.map((child) => renderLink(child, true))}
+                            </Fragment>
+                        );
                     })}
-                </div>
-                <div className={"flex-6/7 h-170 overflow-y-scroll"}>
-                    {menu.map((item) => {
-                        const key = `dashboard_component_${item.name}`;
-                        if (item.name == currentMenu && item.component) return item.component(key);
-                        else if (item.submenus) {
-                            const submenu = item.submenus.find((q) => q.name == currentMenu);
-                            return submenu && submenu.component(key);
-                        }
-                    })}
+                </nav>
+                <div
+                    key={pathname}
+                    className="h-170 min-w-0 flex-1 overflow-y-auto"
+                    aria-label="관리 내용"
+                >
+                    <Outlet />
                 </div>
             </div>
         </>

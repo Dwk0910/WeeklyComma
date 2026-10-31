@@ -111,8 +111,8 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
         return () => controller.abort();
     }, [url, attempt, invalid]);
     useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [location.pathname, page]);
+        if (!admin) window.scrollTo(0, 0);
+    }, [location.pathname, page, admin]);
 
     const active = result.url === url ? result : undefined;
     if (invalid || active?.status === 404) return <Navigate to="/404" replace />;
@@ -121,7 +121,11 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
     if (listing && !isNew && page > Math.max(1, listing.pages))
         return <Navigate to={`${base}?page=${Math.max(1, listing.pages)}`} replace />;
     return (
-        <main className="mx-5 mt-14 mb-24 min-h-140 font-suite">
+        <main
+            className={
+                admin ? "px-6 pt-4 pb-10 font-suite" : "mx-5 mt-14 mb-24 min-h-140 font-suite"
+            }
+        >
             <PageTitle title={admin ? "문의 관리" : "To. 쉼표지기"} />
             <header className="mb-8 flex items-end justify-between gap-6">
                 <div>
@@ -134,11 +138,6 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                             : "책과 주간쉼표에 전하고 싶은 이야기를 남겨주세요."}
                     </p>
                 </div>
-                {admin && (
-                    <Link className={button} to="/management">
-                        관리 대시보드
-                    </Link>
-                )}
             </header>
             {!active?.data ? (
                 <div className="border-t border-neutral-800">

@@ -11,6 +11,10 @@ import RequireLogin from "./component/RequireLogin.tsx";
 // Router pages
 import Main from "./pages/Main.tsx";
 import Management from "./pages/admin/Management.tsx";
+import ManageMainPage from "./pages/admin/ManageMainPage.tsx";
+import ManageNotifications from "./pages/admin/ManageBoards/ManageNotifications.tsx";
+import ManageEventBoards from "./pages/admin/ManageBoards/ManageEventBoards.tsx";
+import ManageRecommendation from "./pages/admin/ManageBooks/ManageRecommendation.tsx";
 import About from "./pages/About.tsx";
 import BoardList from "./pages/boards/BoardList.tsx";
 import BoardDetail from "./pages/boards/BoardDetail.tsx";
@@ -89,15 +93,23 @@ export default function App() {
                                 element={<RecommendationDetail weekly />}
                             />
                             <Route element={<RequireLogin />}>
-                                <Route path="/management" element={<Management />} />
+                                <Route path="/management" element={<Management />}>
+                                    <Route index element={<ManageMainPage />} />
+                                    <Route path="notices" element={<ManageNotifications />} />
+                                    <Route path="events" element={<ManageEventBoards />} />
+                                    <Route
+                                        path="recommendations"
+                                        element={<ManageRecommendation />}
+                                    />
+                                    <Route
+                                        path="inquiries/*"
+                                        element={<Inquiries key="admin-inquiries" admin />}
+                                    />
+                                </Route>
                                 <Route path="/favorites" element={<Favorites />} />
                                 <Route
                                     path="/to-curator/*"
                                     element={<Inquiries key="my-inquiries" />}
-                                />
-                                <Route
-                                    path="/management/inquiries/*"
-                                    element={<Inquiries key="admin-inquiries" admin />}
                                 />
                             </Route>
                             <Route path={"/404"} element={<NotFound />} />
