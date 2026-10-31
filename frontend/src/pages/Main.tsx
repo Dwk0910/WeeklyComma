@@ -117,7 +117,7 @@ export default function Main() {
                 if (!signal?.aborted && version === (starVersions.current[isbn] || 0)) {
                     setStarErrors((previous) => ({
                         ...previous,
-                        [isbn]: "Star 정보를 불러오지 못했습니다."
+                        [isbn]: "책갈피 정보를 불러오지 못했습니다."
                     }));
                 }
             });
@@ -143,7 +143,7 @@ export default function Main() {
         if (!getLSdata()) {
             setStarErrors((previous) => ({
                 ...previous,
-                [isbn]: "Star를 등록하려면 상단에서 로그인해 주세요."
+                [isbn]: "책갈피를 꽂으려면 상단에서 로그인해 주세요."
             }));
             return;
         }
@@ -172,7 +172,7 @@ export default function Main() {
             const message =
                 isAxiosError(error) && error.response?.status === 401
                     ? "로그인이 만료되었습니다. 다시 로그인해 주세요."
-                    : "Star를 저장하지 못했습니다. 다시 눌러 주세요.";
+                    : "책갈피를 변경하지 못했습니다. 다시 눌러 주세요.";
             setStarErrors((previous) => ({ ...previous, [isbn]: message }));
         } finally {
             starRequests.current.delete(isbn);
@@ -689,7 +689,7 @@ export default function Main() {
                     ) : popularBooks.length === 0 ? (
                         !popularError && (
                             <p className="font-suite text-gray-400 py-12">
-                                아직 Star가 10개를 초과한 과거 추천 도서가 없습니다.
+                                아직 책갈피가 11개 이상 꽂힌 과거 추천 도서가 없습니다.
                             </p>
                         )
                     ) : (

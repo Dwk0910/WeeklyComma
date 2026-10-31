@@ -1,5 +1,4 @@
-import { CiStar } from "react-icons/ci";
-import { AiFillStar } from "react-icons/ai";
+import { LuBookmark } from "react-icons/lu";
 
 export type BookStarStatus = { starCount: number; starred: boolean };
 
@@ -22,22 +21,29 @@ export default function BookStarButton({
     onRetry: () => void;
     className?: string;
 }) {
+    const action = status?.starred ? "책갈피 빼기" : "책갈피 꽂기";
+    const count = status?.starCount ?? fallbackCount;
+    const countLabel =
+        count === undefined ? "책갈피 수 확인 중" : `책갈피 ${count.toLocaleString("ko-KR")}개`;
     return (
         <div className={className}>
             <button
                 type="button"
                 onClick={onToggle}
                 disabled={pending || !status}
-                aria-label={`${title} Star ${status?.starred ? "취소" : "등록"}`}
+                aria-label={`${title} ${action}, ${countLabel}`}
                 aria-pressed={status?.starred || false}
-                title={status?.starred ? "Star 취소" : "Star 등록"}
-                className={`flex items-center justify-start rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 disabled:cursor-wait ${status?.starred ? "text-amber-500" : "text-gray-700 hover:text-amber-500"}`}
+                title={`${action} · ${countLabel}`}
+                className={`flex items-center justify-start rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-600 disabled:cursor-wait ${status?.starred ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-900"}`}
             >
                 <span className="text-[1.1rem] -ml-0.5" aria-hidden="true">
-                    {status?.starred ? <AiFillStar /> : <CiStar />}
+                    <LuBookmark
+                        fill={status?.starred ? "currentColor" : "none"}
+                        strokeWidth={1.5}
+                    />
                 </span>
                 <span className="font-suite ml-1 text-[0.8rem]">
-                    {(status?.starCount ?? fallbackCount)?.toLocaleString("ko-KR") ?? "…"}
+                    {count?.toLocaleString("ko-KR") ?? "…"}
                 </span>
             </button>
             {error && (

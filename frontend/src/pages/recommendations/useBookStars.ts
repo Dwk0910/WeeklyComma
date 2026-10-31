@@ -25,7 +25,7 @@ export function useBookStars(isbns: string[]) {
             if (!signal?.aborted && version === (versions.current[isbn] || 0)) {
                 setErrors((previous) => ({
                     ...previous,
-                    [isbn]: "Star 정보를 불러오지 못했습니다."
+                    [isbn]: "책갈피 정보를 불러오지 못했습니다."
                 }));
             }
         }
@@ -43,7 +43,7 @@ export function useBookStars(isbns: string[]) {
         if (!getLSdata()) {
             setErrors((previous) => ({
                 ...previous,
-                [isbn]: "Star를 등록하려면 상단에서 로그인해 주세요."
+                [isbn]: "책갈피를 꽂으려면 상단에서 로그인해 주세요."
             }));
             return;
         }
@@ -65,7 +65,7 @@ export function useBookStars(isbns: string[]) {
                 [isbn]:
                     isAxiosError(error) && error.response?.status === 401
                         ? "로그인이 만료되었습니다. 다시 로그인해 주세요."
-                        : "Star를 저장하지 못했습니다. 다시 눌러 주세요."
+                        : "책갈피를 변경하지 못했습니다. 다시 눌러 주세요."
             }));
         } finally {
             requests.current.delete(isbn);

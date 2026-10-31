@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 // import { TbTriangleFilled } from "react-icons/tb";
 import { IoCloseCircleOutline } from "react-icons/io5";
 import { HiMagnifyingGlass } from "react-icons/hi2";
-import { CiStar } from "react-icons/ci";
+import { LuBookmark } from "react-icons/lu";
 
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
@@ -60,8 +60,8 @@ export default function TopBar({ admin }: { admin: boolean }) {
                     <Link to="/notices" aria-label="공지 목록 보기" className="text-5xl">
                         <img src={megaphone} alt="" className="w-8" />
                     </Link>
-                    <Link to="/favorites" aria-label="즐겨찾기 보기" className="text-4xl ml-3 w-8">
-                        <CiStar aria-hidden="true" />
+                    <Link to="/favorites" aria-label="내 책갈피 보기" className="text-4xl ml-3 w-8">
+                        <LuBookmark aria-hidden="true" strokeWidth={1.5} />
                     </Link>
                     <div
                         className={
@@ -129,7 +129,7 @@ export default function TopBar({ admin }: { admin: boolean }) {
                     일반추천
                 </NavLink>
                 <NavLink to="/favorites" className={menuLinkClassName}>
-                    즐겨찾기
+                    내 책갈피
                 </NavLink>
                 <NavLink to="/to-curator" className={menuLinkClassName}>
                     To. 쉼표지기

@@ -69,7 +69,7 @@ export default function Favorites() {
                 ...previous,
                 items: previous.items.filter((entry) => entry.book.isbn !== isbn)
             }));
-            setAnnouncement(`${plainText(item.book.title)}의 Star를 취소했습니다.`);
+            setAnnouncement(`${plainText(item.book.title)}에서 책갈피를 뺐습니다.`);
         } catch (error) {
             if (isAxiosError(error) && error.response?.status === 401) {
                 setResult({ status: "unauthorized", items: [] });
@@ -78,11 +78,11 @@ export default function Favorites() {
                     ...previous,
                     items: previous.items.filter((entry) => entry.book.isbn !== isbn)
                 }));
-                setAnnouncement("삭제된 도서를 즐겨찾기에서 정리했습니다.");
+                setAnnouncement("삭제된 도서를 내 책갈피 목록에서 정리했습니다.");
             } else {
                 setErrors((previous) => ({
                     ...previous,
-                    [isbn]: "Star를 취소하지 못했습니다. 다시 눌러 주세요."
+                    [isbn]: "책갈피를 빼지 못했습니다. 다시 눌러 주세요."
                 }));
             }
         } finally {
@@ -97,12 +97,12 @@ export default function Favorites() {
 
     return (
         <main className="mx-5 mt-14 mb-24 min-h-140 font-suite">
-            <PageTitle title="즐겨찾기" />
+            <PageTitle title="내 책갈피" />
             <header className="mb-8 flex items-end justify-between gap-6">
                 <div>
-                    <h1 className="font-seoulnamsan text-3xl text-neutral-900">즐겨찾기</h1>
+                    <h1 className="font-seoulnamsan text-3xl text-neutral-900">내 책갈피</h1>
                     <p className="mt-3 text-sm text-neutral-500">
-                        Star를 눌러 담아 둔 책들을 다시 만나보세요.
+                        책갈피를 꽂아 둔 책들을 다시 만나보세요.
                     </p>
                 </div>
                 {result.status === "success" && (
@@ -119,8 +119,8 @@ export default function Favorites() {
                     <BoardFeedback
                         title={
                             result.status === "loading"
-                                ? "즐겨찾기를 불러오는 중입니다."
-                                : "즐겨찾기를 불러오지 못했습니다."
+                                ? "책갈피를 꽂은 책을 불러오는 중입니다."
+                                : "책갈피를 꽂은 책을 불러오지 못했습니다."
                         }
                         error={result.status === "error"}
                         onRetry={
@@ -134,9 +134,9 @@ export default function Favorites() {
                     />
                 ) : result.items.length === 0 ? (
                     <div className="py-24 text-center">
-                        <p className="text-neutral-600">아직 Star를 누른 책이 없습니다.</p>
+                        <p className="text-neutral-600">아직 책갈피를 꽂은 책이 없습니다.</p>
                         <p className="mt-3 text-sm text-neutral-500">
-                            마음에 드는 책에 Star를 눌러 나만의 책 목록을 만들어 보세요.
+                            다시 보고 싶은 책에 책갈피를 꽂아 나만의 책 목록을 만들어 보세요.
                         </p>
                         <Link
                             to="/recommendations"
@@ -146,7 +146,7 @@ export default function Favorites() {
                         </Link>
                     </div>
                 ) : (
-                    <ul className="grid grid-cols-2 gap-x-12" aria-label="내가 Star를 누른 책">
+                    <ul className="grid grid-cols-2 gap-x-12" aria-label="내가 책갈피를 꽂은 책">
                         {visible.map((item) => {
                             const book = item.book;
                             const title = plainText(book.title);
@@ -209,7 +209,7 @@ export default function Favorites() {
             </div>
             {result.status === "success" && pageCount > 1 && (
                 <nav
-                    aria-label="즐겨찾기 목록 페이지"
+                    aria-label="내 책갈피 목록 페이지"
                     className="mt-10 flex items-center justify-center gap-2 text-sm"
                 >
                     {page > 1 && (
