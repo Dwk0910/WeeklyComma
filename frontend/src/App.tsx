@@ -17,6 +17,7 @@ import { NOTICE_BOARD, EVENT_BOARD } from "./pages/boards/boardConfig.ts";
 import NotFound from "./pages/NotFound.tsx";
 import RecommendationList from "./pages/recommendations/RecommendationList.tsx";
 import RecommendationDetail from "./pages/recommendations/RecommendationDetail.tsx";
+import Favorites from "./pages/Favorites.tsx";
 
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
@@ -87,6 +88,9 @@ export default function App() {
                                 path="/weekly-recommendations/:id"
                                 element={<RecommendationDetail weekly />}
                             />
+                            <Route path="/favorites" element={<Favorites />} />
+                            {/* Reserved for the upcoming login screen; keep redirects out of the 404 route. */}
+                            <Route path="/login" element={null} />
                             <Route path={"/404"} element={<NotFound />} />
                             <Route path="*" element={<Navigate to="/404" replace />} />
                         </Routes>

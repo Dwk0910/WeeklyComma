@@ -60,9 +60,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
                     <Link to="/notices" aria-label="공지 목록 보기" className="text-5xl">
                         <img src={megaphone} alt="" className="w-8" />
                     </Link>
-                    <span className={"text-4xl ml-3 cursor-pointer w-8"}>
-                        <CiStar />
-                    </span>
+                    <Link to="/favorites" aria-label="즐겨찾기 보기" className="text-4xl ml-3 w-8">
+                        <CiStar aria-hidden="true" />
+                    </Link>
                     <div
                         className={
                             "flex flex-col items-end text-3xl ml-4 w-7.5 cursor-pointer group/menu-icon"
@@ -128,7 +128,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
                 <NavLink to="/recommendations" className={menuLinkClassName}>
                     일반추천
                 </NavLink>
-                <span>즐겨찾기</span>
+                <NavLink to="/favorites" className={menuLinkClassName}>
+                    즐겨찾기
+                </NavLink>
                 <span>To. 쉼표지기</span>
                 {admin && (
                     <NavLink to="/management" className={menuLinkClassName}>

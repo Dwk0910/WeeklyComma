@@ -10,6 +10,7 @@ import org.neatore.weeklycomma.service.JwtService;
 import org.neatore.weeklycomma.dto.BookStarDto;
 import org.neatore.weeklycomma.dto.PopularBookDto;
 import org.neatore.weeklycomma.dto.BookDto;
+import org.neatore.weeklycomma.dto.StarredBookDto;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,6 +35,12 @@ public class BookController {
     private final BookService bookService;
     private final BookStarService bookStarService;
     private final JwtService jwtService;
+
+    @GetMapping("/starred")
+    @RequiresAuthentication
+    public ResponseEntity<List<StarredBookDto>> getStarredBooks(@CookieValue("WCA_ACCESS") String token) {
+        return ResponseEntity.ok(bookStarService.getStarredBooks(jwtService.getUser(token)));
+    }
 
     @GetMapping("/popular")
     public ResponseEntity<List<PopularBookDto>> getPopularRecommendations(@RequestParam(defaultValue = "6") int limit) {

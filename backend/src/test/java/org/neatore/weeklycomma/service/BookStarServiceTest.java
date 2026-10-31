@@ -202,6 +202,46 @@ class BookStarServiceTest {
         assertThrows(ResponseStatusException.class, () -> stars.getPopularRecommendations(51));
     }
 
+    @Test
+    void favoritesRequireLoginAndIncludeOnlyThatUsersBooksWithoutPopularityOrHistoryLimits() {
+        book("shared"); book("only-first"); book("only-second");
+        User first = user(0), second = user(1);
+        stars.addStar("shared", first);
+        stars.addStar("shared", second);
+        stars.addStar("only-first", first);
+        stars.addStar("only-second", second);
+        archive("shared", 101);
+        archive("shared", 102);
+
+        assertEquals(401, assertThrows(ResponseStatusException.class,
+                () -> stars.getStarredBooks(null)).getStatusCode().value());
+        var firstList = stars.getStarredBooks(first);
+        assertEquals(List.of("only-first", "shared"), firstList.stream().map(item -> item.book().isbn()).toList());
+        assertEquals(List.of(1L, 2L), firstList.stream().map(item -> item.starCount()).toList());
+        assertEquals(List.of("only-second", "shared"), stars.getStarredBooks(second).stream().map(item -> item.book().isbn()).toList());
+        assertTrue(stars.getStarredBooks(user(2)).isEmpty());
+    }
+
+    @Test
+    void favoritesTrackRemovalAndDeletionAndKeepCustomCovers() {
+        var book = book("saved");
+        book.setCustomCoverImg("saved-cover-file");
+        books.save(book);
+        User first = user(0), second = user(1);
+        stars.addStar("saved", first);
+        stars.addStar("saved", second);
+        assertEquals("saved-cover-file", stars.getStarredBooks(first).get(0).book().customCoverImg());
+
+        stars.removeStar("saved", first);
+        assertTrue(stars.getStarredBooks(first).isEmpty());
+        assertEquals(1, stars.getStarredBooks(second).get(0).starCount());
+        // This repository fixture has no file storage; cover retrieval was checked above.
+        book.setCustomCoverImg(null);
+        books.save(book);
+        context.getBean(BookService.class).deleteBook("saved");
+        assertTrue(stars.getStarredBooks(second).isEmpty());
+    }
+
     private Book book(String isbn) {
         return books.save(new Book(new BookDto.RegisterRequest(isbn, "Title " + isbn, "Subtitle", "Author", "Publisher",
                 1767225600L, "https://example.test/cover.jpg", null, "Description", "상급", false)));

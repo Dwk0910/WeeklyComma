@@ -24,13 +24,12 @@ export const getLSdata: () => never | null = () => {
     else return null;
 };
 
-const lsdata = getLSdata();
-
-if (lsdata && lsdata["csrfToken"])
-    api.interceptors.request.use((config) => {
-        config.headers["X-CSRF-Token"] = lsdata["csrfToken"];
-        return config;
-    });
+api.interceptors.request.use((config) => {
+    // The initial session check may populate or refresh this value after startup.
+    const lsdata = getLSdata();
+    if (lsdata && lsdata["csrfToken"]) config.headers["X-CSRF-Token"] = lsdata["csrfToken"];
+    return config;
+});
 
 const root = createRoot(document.getElementById("root")!);
 

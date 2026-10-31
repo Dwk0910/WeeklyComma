@@ -5,6 +5,7 @@ import org.neatore.weeklycomma.domain.Book;
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.BookStarDto;
 import org.neatore.weeklycomma.dto.PopularBookDto;
+import org.neatore.weeklycomma.dto.StarredBookDto;
 import org.neatore.weeklycomma.repository.BookRepository;
 import org.neatore.weeklycomma.repository.BookStarRepository;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,17 @@ public class BookStarService {
     private final BookRepository bookRepository;
     private final BookStarRepository bookStarRepository;
     private final RecommendationExpirationService recommendationExpirationService;
+
+    @Transactional(readOnly = true)
+    public List<StarredBookDto> getStarredBooks(User user) {
+        requireUser(user);
+        var books = bookStarRepository.findStarredBooks(user);
+        if (books.isEmpty()) return List.of();
+        var isbns = books.stream().map(Book::getIsbn).toList();
+        var counts = bookStarRepository.countForIsbns(isbns).stream().collect(Collectors.toMap(
+                BookStarRepository.CountByIsbn::getIsbn, BookStarRepository.CountByIsbn::getStarCount));
+        return books.stream().map(book -> new StarredBookDto(book.toDto(), counts.getOrDefault(book.getIsbn(), 0L))).toList();
+    }
 
     @Transactional(readOnly = true)
     public BookStarDto getStatus(String isbn, User user) {

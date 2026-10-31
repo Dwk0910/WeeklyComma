@@ -19,6 +19,10 @@ public interface BookStarRepository extends JpaRepository<BookStar, BookStar.Id>
 
     @Query("SELECT s.book.isbn AS isbn, COUNT(s) AS starCount FROM BookStar s WHERE s.book.isbn IN :isbns GROUP BY s.book.isbn")
     List<CountByIsbn> countForIsbns(@Param("isbns") List<String> isbns);
+
+    @Query("SELECT s.book FROM BookStar s WHERE s.user = :user ORDER BY s.book.title ASC, s.book.isbn ASC")
+    List<Book> findStarredBooks(@Param("user") User user);
+
     long countByBook(Book book);
     boolean existsByUserAndBook(User user, Book book);
 
