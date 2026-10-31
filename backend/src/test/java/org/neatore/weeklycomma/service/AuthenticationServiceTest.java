@@ -61,19 +61,23 @@ class AuthenticationServiceTest {
         context.registerBean(LoginSessionService.class);
         context.registerBean(org.springframework.jdbc.core.JdbcTemplate.class, () -> new org.springframework.jdbc.core.JdbcTemplate(ds));
         context.registerBean(LoginThrottleService.class);
-        context.registerBean(UserService.class, () -> new UserService(context.getBean(UserRepository.class), null, null, null, null, context.getBean(LoginPasswordService.class), context.getBean(LoginSessionService.class)));
+        OAuthService oauth = new OAuthService() {
+            @Override public JSONObject getUserProfileNaver(String code, String redirect, String state) {
+                if (providerUnavailable) throw new RestClientException("test provider unavailable");
+                return profile;
+            }
+            @Override public JSONObject getUserProfileGoogle(String code, String redirect, String verifier, String nonce) {
+                if (providerUnavailable) throw new RestClientException("test provider unavailable");
+                return profile;
+            }
+        };
+        context.registerBean(UserService.class, () -> new UserService(context.getBean(UserRepository.class), oauth, null, null, null, context.getBean(LoginPasswordService.class), context.getBean(LoginSessionService.class)));
         context.registerBean(JwtService.class);
         context.refresh();
         users = context.getBean(UserService.class);
         repository = context.getBean(UserRepository.class);
         passwords = context.getBean(LoginPasswordService.class);
         jwt = context.getBean(JwtService.class);
-        OAuthService oauth = new OAuthService() {
-            @Override public JSONObject getUserProfileNaver(String code, String redirect, String state) {
-                if (providerUnavailable) throw new RestClientException("test provider unavailable");
-                return profile;
-            }
-        };
         throttle = context.getBean(LoginThrottleService.class);
         sessions = context.getBean(LoginSessionService.class);
         controller = new AuthenticationController(oauth, users, jwt, passwords, throttle);
@@ -248,6 +252,43 @@ class AuthenticationServiceTest {
         var token = jwt.createToken(users.getUserByEmail("reader@example.test"), LoginSessionService.MAX_AGE.toMillis());
         ((HikariDataSource) context.getBean(DataSource.class)).close();
         assertThrows(org.springframework.transaction.CannotCreateTransactionException.class, () -> jwt.validateToken(token.jwtToken()));
+    }
+
+    AuthDto.LoginRequest google() {
+        return new AuthDto.LoginRequest(AuthType.OAUTH_GOOGLE, null, null, "google-code",
+                "http://localhost:5173/authcallback/OAUTH_GOOGLE", "state", "v".repeat(43), "test-nonce-123456789");
+    }
+    @Test void googleLoginDoesNotAuthenticateANaverUserWithTheSameProviderSubject() {
+        repository.save(new User("naver", "naver@example.test", "same-subject", null, User.UserType.CURATOR, AuthType.OAUTH_NAVER));
+        profile = new JSONObject().put("id", "same-subject");
+        assertEquals(401, login(google()).getStatusCode().value());
+        var own = repository.save(new User("google", "google@example.test", AuthType.OAUTH_GOOGLE.subjectKey("same-subject"), null, User.UserType.GENERAL, AuthType.OAUTH_GOOGLE));
+        var response = login(google());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("GENERAL", new JSONObject(response.getBody()).getString("userType"));
+        String cookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
+        String token = cookie.substring("WCA_ACCESS=".length(), cookie.indexOf(';'));
+        assertEquals(own.getId(), jwt.getUser(token).getId());
+        assertTrue(jwt.validateToken(token));
+    }
+    @Test void googleSignupUsesNamespacedIdentityAndNeverLinksByEmail() {
+        profile = new JSONObject().put("id", "google-subject").put("email", "google@example.test");
+        var request = new UserDto.SignupRequest(AuthType.OAUTH_GOOGLE, "google", null, null, "code",
+                "http://localhost:5173/signupcallback/OAUTH_GOOGLE", "state", "v".repeat(43), "test-nonce-123456789");
+        users.addUser(request);
+        User added = users.getUserByEmail("google@example.test");
+        assertEquals(AuthType.OAUTH_GOOGLE, added.getAuthType());
+        assertEquals("OAUTH_GOOGLE:google-subject", added.getOauthId());
+        assertNull(added.getPassword());
+        assertEquals(User.UserType.GENERAL, added.getUserType());
+        var duplicate = assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> users.addUser(request));
+        assertEquals(409, duplicate.getStatusCode().value());
+        createLocal();
+        profile = new JSONObject().put("id", "another-subject").put("email", "reader@example.test");
+        var conflict = assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> users.addUser(request));
+        assertEquals(409, conflict.getStatusCode().value());
+        assertEquals(AuthType.LOCAL, users.getUserByEmail("reader@example.test").getAuthType());
+        assertEquals(401, login(google()).getStatusCode().value());
     }
 
 }

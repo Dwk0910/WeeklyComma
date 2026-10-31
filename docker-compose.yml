@@ -13,6 +13,8 @@ services:
       ALADIN_API_KEY: ${ALADIN_API_KEY:?}
       OAUTH_NAVER_CLI_ID: ${OAUTH_NAVER_CLI_ID:?}
       OAUTH_NAVER_CLI_KEY: ${OAUTH_NAVER_CLI_KEY:?}
+      OAUTH_GOOGLE_CLI_ID: ${OAUTH_GOOGLE_CLI_ID:-}
+      OAUTH_GOOGLE_CLI_KEY: ${OAUTH_GOOGLE_CLI_KEY:-}
     volumes:
       - ./data:/app/data
 

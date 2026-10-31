@@ -119,7 +119,8 @@
     margin-top: 3px;
 }
 .login-submit,
-.login-naver {
+.login-naver,
+.login-google {
     width: 100%;
     min-height: 48px;
     display: flex;
@@ -150,16 +151,19 @@
     transform: translateX(3px);
 }
 .login-submit:disabled,
-.login-naver:disabled {
+.login-naver:disabled,
+.login-google:disabled {
     opacity: 0.6;
     cursor: wait;
 }
-.login-naver {
+.login-naver,
+.login-google {
     background: #fff;
     border: 1px solid #d4d4d4;
     color: #404040;
 }
-.login-naver:hover:not(:disabled) {
+.login-naver:hover:not(:disabled),
+.login-google:hover:not(:disabled) {
     background: #f7f7f7;
 }
 .login-naver > svg {
@@ -224,4 +228,16 @@
         animation: none !important;
         transition: none !important;
     }
+}
+
+.login-google > svg {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+.login-success {
+    margin-top: 16px;
+    color: #34734c;
+    font-size: 13px;
+    line-height: 1.6;
 }

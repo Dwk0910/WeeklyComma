@@ -61,3 +61,16 @@ OAuth에서는 네이버가 비밀번호 검증을 맡습니다. 로컬 로그�
 - [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 - [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
 - [Spring Security Password Storage](https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html)
+
+## Google OAuth 추가
+
+- 서버는 루트 `.env`의 `OAUTH_GOOGLE_CLI_ID`, `OAUTH_GOOGLE_CLI_KEY`를 사용합니다. 프런트의 `VITE_OAUTH_GOOGLE_CLIENT_ID`는 같은 Client ID이며, Client Secret은 프런트에 넣지 않습니다. Docker Compose는 두 서버 변수를 컨테이너로 전달합니다.
+- 승인된 리디렉션 URI는 프런트 origin 뒤의 `/authcallback/OAUTH_GOOGLE`(로그인), `/signupcallback/OAUTH_GOOGLE`(가입)입니다. 로컬 origin은 `http://localhost:5173`, 현재 운영 설정은 `https://www.weeklycomma.kro.kr`입니다. 실제 요청과 등록 URI가 정확히 일치해야 합니다.
+- 기존처럼 회원가입과 로그인을 분리합니다. 상단 `회원가입`에서 네이버 또는 Google을 선택하고 이름을 입력합니다. 가입 완료 후 해당 제공자로 로그인합니다. 별도 회원가입 페이지·비밀번호 찾기 화면은 여전히 준비 중입니다.
+- 프런트는 제공자·가입/로그인 목적별로 state를 분리하고 15분 안에 한 번만 소비합니다. Google은 S256 PKCE와 nonce를 함께 사용합니다. 서버는 공식 Google Java SDK로 ID 토큰의 서명·issuer·audience·시간을 확인하고 nonce·authorized party·이메일 인증 여부를 추가 검증합니다. 토큰 교환 시 Secret은 HTTPS POST 본문에만 보냅니다.
+- 계정 조회는 제공자와 고유 subject를 함께 사용합니다. 기존 네이버 ID는 유지하고 Google ID는 `OAUTH_GOOGLE:` 접두사로 저장하여 기존 DB의 고유 제약에서도 충돌하지 않게 합니다. 이메일이 같더라도 기존 계정에 자동 연결하지 않으며, 중복 가입은 409와 기존 로그인 방법 안내로 처리합니다. 신규 소셜 계정의 권한은 GENERAL입니다.
+- 인증 코드를 재사용하거나 잘못된 서명·audience·nonce로 로그인할 수 없습니다. 제공자 오류 응답 원문이나 토큰은 사용자에게 전달하지 않습니다. 실제 Google 동의/로그인 완료는 본인 계정으로 확인해야 합니다.
+
+근거: [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect), [Google Discovery](https://accounts.google.com/.well-known/openid-configuration).
+
+기존 SQLite의 `user.auth_type` CHECK 제약은 Hibernate가 자동으로 확장하지 못하므로 `OAuthProviderMigration`이 시작 시 갱신합니다. 테이블 재구성은 트랜잭션 안에서 수행하며 기존 값·인덱스·트리거를 보존합니다. 부모 테이블 교체 중 연쇄 삭제를 막고 외래 키 무결성을 확인한 뒤 커밋합니다. 반영 전 DB 백업이 필요합니다.

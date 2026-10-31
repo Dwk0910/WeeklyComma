@@ -88,14 +88,14 @@ public class AuthenticationController {
             if (retry > 0) throw new AuthenticationThrottledException(retry);
             JSONObject profile;
             try {
-                profile = oAuthService.getUserProfileNaver(request.auth_code(), request.redirect_uri(), request.state());
+                profile = oAuthService.getUserProfile(request.authType(), request.auth_code(), request.redirect_uri(), request.state(), request.code_verifier(), request.nonce());
             } catch (org.springframework.web.client.RestClientException ex) {
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
             }
             if (profile == null || profile.optString("id").isBlank())
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            user = userService.getUserByOauthId(profile.optString("id"));
-            if (user == null || user.getAuthType() != AuthType.OAUTH_NAVER)
+            user = userService.getUserByOauthId(request.authType(), profile.optString("id"));
+            if (user == null || user.getAuthType() != request.authType())
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         jwtService.revokeToken(previousToken);

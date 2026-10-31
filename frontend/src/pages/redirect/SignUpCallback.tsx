@@ -1,37 +1,72 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { isAxiosError } from "axios";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-
 import WaitingScreen from "./WaitingScreen.tsx";
-import { BACKEND_ADDRESS, api } from "../../index.tsx";
+import { api } from "../../index.tsx";
+import { consumeOAuth, isOAuthProvider, oauthRedirectUri } from "../../lib/loginFlow.ts";
 
 export default function SignUpCallback() {
     const { oauth_type } = useParams();
-    const [searchParams] = useSearchParams();
-
+    const [params] = useSearchParams();
     const navigate = useNavigate();
-
-    const redirect_uri = encodeURI(window.location.origin + `/signupcallback/${oauth_type}`);
-    const auth_code = searchParams.get("code");
-    const state = searchParams.get("state");
-    const userName = localStorage.getItem("username");
-
+    const operation = useRef<Promise<string> | null>(null);
     useEffect(() => {
-        if (auth_code == null || oauth_type == null || oauth_type === "")
-            navigate("/", { replace: true });
-
-        void api
-            .post(BACKEND_ADDRESS + "users", {
-                authType: oauth_type,
-                auth_code,
-                redirect_uri,
-                state,
-                userName
+        let active = true;
+        if (!operation.current)
+            operation.current = (async () => {
+                if (!isOAuthProvider(oauth_type)) throw new Error("expired");
+                let pending;
+                try {
+                    pending = consumeOAuth(oauth_type, "signup", params.get("state"));
+                } catch {
+                    throw new Error("expired");
+                }
+                if (params.has("error")) throw new Error("cancelled");
+                if (
+                    !params.get("code") ||
+                    (oauth_type === "OAUTH_GOOGLE" &&
+                        params.has("iss") &&
+                        params.get("iss") !== "https://accounts.google.com")
+                )
+                    throw new Error("expired");
+                try {
+                    await api.post("users", {
+                        authType: oauth_type,
+                        auth_code: params.get("code"),
+                        state: params.get("state"),
+                        redirect_uri: oauthRedirectUri(oauth_type, "signup"),
+                        userName: pending.userName,
+                        code_verifier: pending.codeVerifier,
+                        nonce: pending.nonce
+                    });
+                } catch (error) {
+                    throw new Error(
+                        isAxiosError(error) && error.response?.status === 409
+                            ? "signup_conflict"
+                            : "signup_unavailable",
+                        { cause: error }
+                    );
+                }
+                return pending.returnTo;
+            })();
+        operation.current
+            .then((returnTo) => {
+                if (active)
+                    navigate(
+                        `/login?${new URLSearchParams({ registered: oauth_type || "", returnTo })}`,
+                        { replace: true }
+                    );
             })
-            .then(() => {
-                navigate("/", { replace: true });
+            .catch((error: unknown) => {
+                if (active)
+                    navigate(
+                        `/login?${new URLSearchParams({ error: error instanceof Error ? error.message : "signup_unavailable", provider: isOAuthProvider(oauth_type) ? oauth_type : "" })}`,
+                        { replace: true }
+                    );
             });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
+        return () => {
+            active = false;
+        };
+    }, [navigate, oauth_type, params]);
     return <WaitingScreen />;
 }

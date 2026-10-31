@@ -10,4 +10,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     User getUserByEmail(String email);
     java.util.List<User> findAllByEmailIgnoreCase(String email);
     User getUserByOauthId(String oauthId);
+    User findByAuthTypeAndOauthId(org.neatore.weeklycomma.dto.login.AuthType authType, String oauthId);
 }

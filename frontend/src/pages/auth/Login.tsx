@@ -5,18 +5,27 @@ import { isAxiosError } from "axios";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { LuArrowRight, LuBookmark, LuCircleAlert, LuEye, LuEyeOff } from "react-icons/lu";
 import { SiNaver } from "react-icons/si";
+import { FcGoogle } from "react-icons/fc";
 import { api } from "../../index.tsx";
 import { getLSdata, saveSession } from "../../lib/session.ts";
-import { safeReturnTo, startNaverLogin, validateLogin } from "../../lib/loginFlow.ts";
-import type { LoginErrors, LoginFields } from "../../lib/loginFlow.ts";
+import {
+    safeReturnTo,
+    startOAuth,
+    validateLogin,
+    oauthProviders,
+    isOAuthProvider
+} from "../../lib/loginFlow.ts";
+import type { LoginErrors, LoginFields, OAuthProvider } from "../../lib/loginFlow.ts";
 import PageTitle from "../../component/PageTitle.tsx";
 import "./Login.css";
 
 const oauthErrors: Record<string, string> = {
-    cancelled: "네이버 로그인을 취소했습니다. 다시 시도하거나 이메일로 로그인해 주세요.",
-    expired: "로그인 요청을 확인할 수 없습니다. 네이버 로그인을 다시 시작해 주세요.",
-    account: "연결된 계정을 확인하지 못했습니다. 가입한 네이버 계정인지 확인해 주세요.",
-    unavailable: "네이버 로그인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요."
+    cancelled: "소셜 로그인을 취소했습니다. 다시 시도하거나 이메일로 로그인해 주세요.",
+    expired: "로그인 요청을 확인할 수 없습니다. 소셜 로그인을 다시 시작해 주세요.",
+    account: "연결된 계정을 확인하지 못했습니다. 가입한 계정인지 확인해 주세요.",
+    unavailable: "소셜 로그인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    signup_conflict: "이미 가입된 계정입니다. 기존에 가입한 방법으로 로그인해 주세요.",
+    signup_unavailable: "회원가입을 완료하지 못했습니다. 상단 회원가입에서 다시 시작해 주세요."
 };
 
 type Feedback = { kind: "credentials" | "service"; message: string } | null;
@@ -82,7 +91,7 @@ export default function Login() {
     }
     async function submit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (request.current || retrySeconds) return;
+        if (pending || request.current || retrySeconds) return;
         const nextErrors = validateLogin(values);
         setErrors(nextErrors);
         setFeedback(null);
@@ -133,17 +142,24 @@ export default function Login() {
             if (request.current === controller) request.current = null;
         }
     }
-    function naver() {
+    async function social(provider: OAuthProvider) {
         if (pending || retrySeconds) return;
         setFeedback(null);
+        setPending(true);
         try {
-            startNaverLogin(import.meta.env.VITE_OAUTH_NAVER_CLIENT_ID, returnTo);
+            await startOAuth(
+                provider,
+                provider === "OAUTH_NAVER"
+                    ? import.meta.env.VITE_OAUTH_NAVER_CLIENT_ID
+                    : import.meta.env.VITE_OAUTH_GOOGLE_CLIENT_ID,
+                returnTo
+            );
         } catch {
             setFeedback({
                 kind: "service",
-                message:
-                    "지금은 네이버 로그인에 연결할 수 없습니다. 이메일로 로그인하거나 잠시 후 다시 시도해 주세요."
+                message: `${oauthProviders[provider].label} 로그인에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.`
             });
+            setPending(false);
         }
     }
     if (getLSdata()) return <Navigate to={returnTo} replace />;
@@ -164,6 +180,11 @@ export default function Login() {
                         머물렀던 페이지로.
                     </h1>
                     <p className="login-intro">좋아하는 책들이 기다리고 있어요.</p>
+                    {isOAuthProvider(params.get("registered") || undefined) && (
+                        <p className="login-success" role="status">
+                            회원가입이 완료되었습니다. 가입한 방법으로 로그인해 주세요.
+                        </p>
+                    )}
                     <motion.form
                         noValidate
                         onSubmit={submit}
@@ -267,11 +288,20 @@ export default function Login() {
                         <button
                             type="button"
                             className="login-naver"
-                            onClick={naver}
+                            onClick={() => void social("OAUTH_NAVER")}
                             disabled={pending || retrySeconds > 0}
                         >
                             <SiNaver aria-hidden="true" />
                             네이버로 시작하기
+                        </button>
+                        <button
+                            type="button"
+                            className="login-google"
+                            onClick={() => void social("OAUTH_GOOGLE")}
+                            disabled={pending || retrySeconds > 0}
+                        >
+                            <FcGoogle aria-hidden="true" />
+                            Google로 시작하기
                         </button>
                     </motion.form>
                     <div className="login-account-links" aria-label="계정 메뉴">

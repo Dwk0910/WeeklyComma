@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { isAxiosError } from "axios";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../index.tsx";
-import { consumeNaverLogin } from "../../lib/loginFlow.ts";
+import { consumeOAuth, isOAuthProvider, oauthRedirectUri } from "../../lib/loginFlow.ts";
 import { saveSession } from "../../lib/session.ts";
 import WaitingScreen from "./WaitingScreen";
 
@@ -17,9 +17,17 @@ export default function AuthCallback() {
         if (!operation.current) {
             operation.current = (async () => {
                 let returnTo = "/";
+                let pending;
                 try {
-                    if (oauth_type !== "OAUTH_NAVER") throw new Error("Invalid provider");
-                    returnTo = consumeNaverLogin(params.get("state"));
+                    if (!isOAuthProvider(oauth_type)) throw new Error("Invalid provider");
+                    pending = consumeOAuth(oauth_type, "login", params.get("state"));
+                    returnTo = pending.returnTo;
+                    if (
+                        oauth_type === "OAUTH_GOOGLE" &&
+                        params.has("iss") &&
+                        params.get("iss") !== "https://accounts.google.com"
+                    )
+                        throw new Error("Invalid issuer");
                 } catch {
                     throw { reason: "expired", returnTo };
                 }
@@ -28,10 +36,12 @@ export default function AuthCallback() {
                 if (!code) throw { reason: "expired", returnTo };
                 try {
                     const { data } = await api.post("authsessions", {
-                        authType: "OAUTH_NAVER",
+                        authType: pending.provider,
+                        code_verifier: pending.codeVerifier,
+                        nonce: pending.nonce,
                         auth_code: code,
                         state: params.get("state"),
-                        redirect_uri: window.location.origin + "/authcallback/OAUTH_NAVER"
+                        redirect_uri: oauthRedirectUri(pending.provider, "login")
                     });
                     return { data, returnTo };
                 } catch (error) {
@@ -55,7 +65,7 @@ export default function AuthCallback() {
                 if (!active) return;
                 const error = failure as { reason?: string; returnTo?: string } | null;
                 navigate(
-                    `/login?${new URLSearchParams({ error: error?.reason || "unavailable", returnTo: error?.returnTo || "/" })}`,
+                    `/login?${new URLSearchParams({ error: error?.reason || "unavailable", returnTo: error?.returnTo || "/", provider: isOAuthProvider(oauth_type) ? oauth_type : "" })}`,
                     { replace: true }
                 );
             });

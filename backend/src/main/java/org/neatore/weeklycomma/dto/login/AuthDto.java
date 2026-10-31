@@ -13,6 +13,12 @@ public class AuthDto {
             String password,
             String auth_code,
             String redirect_uri,
-            String state
-    ) {}
+            String state,
+            @jakarta.validation.constraints.Size(max = 128) String code_verifier,
+            @jakarta.validation.constraints.Size(max = 128) String nonce
+    ) {
+        public LoginRequest(AuthType authType, String email, String password, String auth_code, String redirect_uri, String state) {
+            this(authType, email, password, auth_code, redirect_uri, state, null, null);
+        }
+    }
 }

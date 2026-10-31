@@ -35,8 +35,8 @@ public class UserService {
         return matches.size() == 1 ? matches.get(0) : null;
     }
 
-    public User getUserByOauthId(String email) {
-        return userRepository.getUserByOauthId(email);
+    public User getUserByOauthId(AuthType provider, String subject) {
+        return userRepository.findByAuthTypeAndOauthId(provider, provider.subjectKey(subject));
     }
 
     public User getUserById(UUID userId) {
@@ -59,18 +59,20 @@ public class UserService {
                 if (!userRepository.findAllByEmailIgnoreCase(email).isEmpty()) conflict = true;
             }
 
-            case OAUTH_NAVER -> {
-                JSONObject userProfile = oauthService.getUserProfileNaver(request.auth_code(), request.redirect_uri(), request.state());
+            case OAUTH_NAVER, OAUTH_GOOGLE -> {
+                JSONObject userProfile = oauthService.getUserProfile(authType, request.auth_code(), request.redirect_uri(), request.state(), request.code_verifier(), request.nonce());
                 if (userProfile == null || userProfile.optString("id").isBlank() || userProfile.optString("email").isBlank())
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
                 password = null;
-                oauthId = userProfile.optString("id");
+                oauthId = authType.subjectKey(userProfile.optString("id"));
                 email = LoginThrottleService.normalizeEmail(userProfile.optString("email"));
 
                 if (!userRepository.findAllByEmailIgnoreCase(email).isEmpty() || userRepository.getUserByOauthId(oauthId) != null) conflict = true;
             }
         }
 
+        if (conflict && authType != AuthType.LOCAL)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 가입된 계정입니다. 기존 로그인 방법을 이용해 주세요.");
         if (!conflict) userRepository.save(new User(userName, email, oauthId, password, User.UserType.GENERAL, authType));
     }
 
