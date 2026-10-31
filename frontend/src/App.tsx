@@ -6,6 +6,7 @@ import { getLSdata } from "./index.tsx";
 import PreTopBar from "./component/PreTopBar";
 import TopBar from "./component/TopBar";
 import Footer from "./component/Footer.tsx";
+import RequireLogin from "./component/RequireLogin.tsx";
 
 // Router pages
 import Main from "./pages/Main.tsx";
@@ -18,6 +19,7 @@ import NotFound from "./pages/NotFound.tsx";
 import RecommendationList from "./pages/recommendations/RecommendationList.tsx";
 import RecommendationDetail from "./pages/recommendations/RecommendationDetail.tsx";
 import Favorites from "./pages/Favorites.tsx";
+import Inquiries from "./pages/Inquiries.tsx";
 
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
@@ -28,17 +30,16 @@ export default function App() {
     const [admin, setAdmin] = useState<boolean>(false);
     const [name, setName] = useState<string>("");
 
-    // Backend server check
     useEffect(() => {
-        // Server health & client login check
-        (async () => {
+        const syncSession = () => {
             const lsdata = getLSdata();
-            if (lsdata) {
-                setLogin(true);
-                setName(lsdata["userName"]);
-                setAdmin(lsdata["userType"] == "CURATOR");
-            }
-        })();
+            setLogin(!!lsdata);
+            setName(lsdata ? lsdata["userName"] : "");
+            setAdmin(!!lsdata && lsdata["userType"] === "CURATOR");
+        };
+        syncSession();
+        window.addEventListener("weeklycomma:session-change", syncSession);
+        return () => window.removeEventListener("weeklycomma:session-change", syncSession);
     }, []);
 
     return (
@@ -57,7 +58,6 @@ export default function App() {
                                 element={<SignUpCallback />}
                             />
                             <Route path={"/logout"} element={<Logout />} />
-                            <Route path={"/management"} element={<Management />} />
                             <Route path={"/about"} element={<About />} />
                             <Route
                                 path="/notices"
@@ -88,9 +88,18 @@ export default function App() {
                                 path="/weekly-recommendations/:id"
                                 element={<RecommendationDetail weekly />}
                             />
-                            <Route path="/favorites" element={<Favorites />} />
-                            {/* Reserved for the upcoming login screen; keep redirects out of the 404 route. */}
-                            <Route path="/login" element={null} />
+                            <Route element={<RequireLogin />}>
+                                <Route path="/management" element={<Management />} />
+                                <Route path="/favorites" element={<Favorites />} />
+                                <Route
+                                    path="/to-curator/*"
+                                    element={<Inquiries key="my-inquiries" />}
+                                />
+                                <Route
+                                    path="/management/inquiries/*"
+                                    element={<Inquiries key="admin-inquiries" admin />}
+                                />
+                            </Route>
                             <Route path={"/404"} element={<NotFound />} />
                             <Route path="*" element={<Navigate to="/404" replace />} />
                         </Routes>

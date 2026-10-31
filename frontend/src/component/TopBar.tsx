@@ -131,7 +131,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
                 <NavLink to="/favorites" className={menuLinkClassName}>
                     즐겨찾기
                 </NavLink>
-                <span>To. 쉼표지기</span>
+                <NavLink to="/to-curator" className={menuLinkClassName}>
+                    To. 쉼표지기
+                </NavLink>
                 {admin && (
                     <NavLink to="/management" className={menuLinkClassName}>
                         관리

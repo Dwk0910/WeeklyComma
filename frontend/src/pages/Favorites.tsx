@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { LoginRedirect } from "../component/RequireLogin.tsx";
 import { api } from "../index.tsx";
 import PageTitle from "../component/PageTitle.tsx";
 import ServerImg from "../component/ServerImg.tsx";
@@ -22,7 +23,6 @@ export default function Favorites() {
     const [announcement, setAnnouncement] = useState("");
     const requests = useRef(new Set<string>());
     const [searchParams] = useSearchParams();
-    const location = useLocation();
 
     useEffect(() => {
         const controller = new AbortController();
@@ -92,12 +92,7 @@ export default function Favorites() {
     };
 
     if (result.status === "unauthorized") {
-        return (
-            <Navigate
-                to={`/login?${new URLSearchParams({ returnTo: location.pathname + location.search })}`}
-                replace
-            />
-        );
+        return <LoginRedirect />;
     }
 
     return (

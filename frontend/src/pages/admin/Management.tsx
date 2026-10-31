@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Navigate } from "react-router-dom";
 import { useEffect, useState, type ReactNode } from "react";
 import { getLSdata } from "../../index.tsx";
 
@@ -26,6 +27,7 @@ const menu: Menu[] = [
         name: "메인 페이지 관리",
         component: (key) => <ManageMainPage key={key} />
     },
+    { name: "문의 관리", component: () => <Navigate to="/management/inquiries" /> },
     {
         name: "게시판 글 관리",
         submenus: [
