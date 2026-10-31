@@ -15,6 +15,9 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.sql.Timestamp;
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.UUID;
@@ -52,6 +55,52 @@ class InquiryServiceTest {
     InquiryDto.Create request(String title) { return new InquiryDto.Create(Inquiry.Category.BUG, title, "문의 내용"); }
     void fails(int status, org.junit.jupiter.api.function.Executable call) {
         assertEquals(status, assertThrows(ResponseStatusException.class, call).getStatusCode().value());
+    }
+
+    @Test void adminSearchCombinesFieldsAndPaginatesMatchingInquiries() {
+        for (int i = 0; i < 12; i++)
+            inquiries.create(first, new InquiryDto.Create(Inquiry.Category.BOOK, "Book forest " + i, "함께 읽을 자연 이야기 Shared"));
+        inquiries.create(second, new InquiryDto.Create(Inquiry.Category.BOOK, "Book forest", "함께 읽을 자연 이야기 Shared"));
+        inquiries.create(first, new InquiryDto.Create(Inquiry.Category.BUG, "다른 제목", "자연 이야기"));
+        inquiries.create(first, new InquiryDto.Create(Inquiry.Category.BUG, "Book forest", "다른 내용"));
+        var filter = new InquiryDto.Search("  irs  ", "FOREST", "자연 이야기 SHARED", null, null);
+        var firstPage = inquiries.search(curator, 0, filter);
+        var secondPage = inquiries.search(curator, 1, filter);
+        assertEquals(12, firstPage.total()); assertEquals(2, firstPage.pages());
+        assertEquals(10, firstPage.items().size()); assertEquals(2, secondPage.items().size());
+        assertEquals("Book forest 11", firstPage.items().get(0).title());
+        assertEquals("Book forest 1", secondPage.items().get(0).title());
+        assertEquals(15, inquiries.search(curator, 0, new InquiryDto.Search("  ", null, null, null, null)).total());
+        assertEquals(1, inquiries.search(curator, 0, new InquiryDto.Search("Second", null, null, null, null)).total());
+        assertEquals(0, inquiries.search(curator, 0, new InquiryDto.Search(null, "없는 제목", null, null, null)).total());
+        fails(401, () -> inquiries.search(null, 0, filter));
+        fails(403, () -> inquiries.search(first, 0, filter));
+        fails(400, () -> inquiries.search(curator, -1, filter));
+        fails(400, () -> inquiries.search(curator, 0, new InquiryDto.Search(null, "a".repeat(201), null, null, null)));
+    }
+
+    @Test void searchTreatsWildcardCharactersLiterally() {
+        inquiries.create(first, new InquiryDto.Create(Inquiry.Category.OTHER, "100%_done\\path", "내용"));
+        inquiries.create(first, new InquiryDto.Create(Inquiry.Category.OTHER, "100xxdonepath", "내용"));
+        for (String term : List.of("%", "_", "\\", "100%_done\\path"))
+            assertEquals(1, inquiries.search(curator, 0, new InquiryDto.Search(null, term, null, null, null)).total());
+        assertEquals(0, inquiries.search(curator, 0, new InquiryDto.Search(null, "' OR 1=1 --", null, null, null)).total());
+    }
+
+    @Test void searchIncludesWholeKoreanCalendarDaysAndSupportsOpenDateBounds() {
+        var jdbc = new JdbcTemplate(context.getBean(DataSource.class));
+        String[] dates = {"2026-10-30T14:59:59Z", "2026-10-30T15:00:00Z", "2026-10-31T14:59:59.999Z", "2026-10-31T15:00:00Z"};
+        for (int i = 0; i < dates.length; i++) {
+            long id = inquiries.create(first, request("시각 " + i)).inquiry().id();
+            jdbc.update("UPDATE inquiry SET created_at=? WHERE id=?", Timestamp.from(Instant.parse(dates[i])), id);
+        }
+        var date = LocalDate.parse("2026-10-31");
+        var result = inquiries.search(curator, 0, new InquiryDto.Search(null, null, null, date, date));
+        assertEquals(List.of("시각 2", "시각 1"), result.items().stream().map(InquiryDto.Summary::title).toList());
+        assertEquals(3, inquiries.search(curator, 0, new InquiryDto.Search(null, null, null, date, null)).total());
+        assertEquals(3, inquiries.search(curator, 0, new InquiryDto.Search(null, null, null, null, date)).total());
+        fails(400, () -> inquiries.search(curator, 0, new InquiryDto.Search(null, null, null, date.plusDays(1), date)));
+        fails(400, () -> inquiries.search(curator, 0, new InquiryDto.Search(null, null, null, null, LocalDate.MAX)));
     }
 
     @Test void bookConversationsKeepTheirCategoryThroughCuratorReply() {

@@ -13,6 +13,7 @@ import { api } from "../index.tsx";
 import PageTitle from "../component/PageTitle.tsx";
 import { LoginRedirect } from "../component/RequireLogin.tsx";
 import InquiryAttachments from "./InquiryAttachments.tsx";
+import InquiryFilters from "./InquiryFilters.tsx";
 import {
     FILE_ACCEPT,
     FILE_EXTENSIONS,
@@ -88,7 +89,22 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
     const isDetail =
         /^\d+$/.test(route) && Number.isSafeInteger(Number(route)) && Number(route) > 0;
     const invalid = !!route && !isNew && !isDetail;
-    const url = isDetail ? `${endpoint}/${route}` : `${endpoint}?page=${isNew ? 0 : page - 1}`;
+    const filters = new URLSearchParams();
+    if (admin) {
+        for (const key of ["authorName", "title", "content", "from", "to"]) {
+            const value = params.get(key)?.trim();
+            if (value) filters.set(key, value);
+        }
+    }
+    const filtered = filters.size > 0;
+    const listQuery = (targetPage = page) => {
+        const query = new URLSearchParams(filters);
+        if (targetPage > 1) query.set("page", String(targetPage));
+        return query.size ? `?${query}` : "";
+    };
+    const apiQuery = new URLSearchParams(filters);
+    apiQuery.set("page", String(isNew ? 0 : page - 1));
+    const url = isDetail ? `${endpoint}/${route}` : `${endpoint}?${apiQuery}`;
     const [result, setResult] = useState<{ url: string; data?: Listing | Detail; status?: number }>(
         { url: "" }
     );
@@ -119,7 +135,7 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
     if (active?.status === 401 || sessionExpired) return <LoginRedirect />;
     const listing = !isDetail ? (active?.data as Listing | undefined) : undefined;
     if (listing && !isNew && page > Math.max(1, listing.pages))
-        return <Navigate to={`${base}?page=${Math.max(1, listing.pages)}`} replace />;
+        return <Navigate to={`${base}${listQuery(Math.max(1, listing.pages))}`} replace />;
     return (
         <main
             className={
@@ -139,15 +155,18 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                     </p>
                 </div>
             </header>
+            {admin && !isDetail && <InquiryFilters key={params.toString()} />}
             {!active?.data ? (
                 <div className="border-t border-neutral-800">
                     <BoardFeedback
                         title={
                             active?.status === 403
                                 ? "문의 관리 권한이 없습니다."
-                                : active?.status
-                                  ? "문의를 불러오지 못했습니다."
-                                  : "문의를 불러오는 중입니다."
+                                : active?.status === 400
+                                  ? "검색어 길이와 날짜 범위를 확인해 주세요."
+                                  : active?.status
+                                    ? "문의를 불러오지 못했습니다."
+                                    : "문의를 불러오는 중입니다."
                         }
                         error={!!active?.status}
                         onRetry={
@@ -166,7 +185,7 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                 <InquiryDetail
                     key={route}
                     detail={active.data as Detail}
-                    base={base}
+                    base={`${base}${listQuery()}`}
                     admin={admin}
                     onUnauthorized={login}
                 />
@@ -174,7 +193,7 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                 <>
                     <div className="mb-5 flex items-center justify-between">
                         <h2 className="text-lg">
-                            {admin ? "받은 이야기" : "내가 보낸 이야기"}{" "}
+                            {admin ? (filtered ? "검색 결과" : "받은 이야기") : "내가 보낸 이야기"}{" "}
                             <span className="ml-2 text-sm text-neutral-500">
                                 {listing!.total.toLocaleString("ko-KR")}
                             </span>
@@ -192,7 +211,7 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                         {listing!.items.map((item) => (
                             <li key={item.id} className="border-b border-neutral-200">
                                 <Link
-                                    to={`${base}/${item.id}`}
+                                    to={`${base}/${item.id}${listQuery()}`}
                                     className="flex items-center gap-7 px-4 py-6 hover:bg-neutral-50"
                                 >
                                     <Status answered={item.answered} category={item.category} />
@@ -218,7 +237,9 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                         <BoardFeedback
                             title={
                                 admin
-                                    ? "아직 접수된 문의가 없습니다."
+                                    ? filtered
+                                        ? "검색 조건에 맞는 문의가 없습니다."
+                                        : "아직 접수된 문의가 없습니다."
                                     : "아직 보낸 이야기가 없습니다. 새 의견 남기기로 첫 이야기를 전해주세요."
                             }
                         />
@@ -229,7 +250,7 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                             className="mt-8 flex items-center justify-center gap-6"
                         >
                             {page > 1 && (
-                                <Link className={button} to={`${base}?page=${page - 1}`}>
+                                <Link className={button} to={`${base}${listQuery(page - 1)}`}>
                                     이전
                                 </Link>
                             )}
@@ -237,7 +258,7 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                                 {page} / {listing!.pages}
                             </span>
                             {page < listing!.pages && (
-                                <Link className={button} to={`${base}?page=${page + 1}`}>
+                                <Link className={button} to={`${base}${listQuery(page + 1)}`}>
                                     다음
                                 </Link>
                             )}

@@ -2,6 +2,7 @@ package org.neatore.weeklycomma.dto;
 
 import jakarta.validation.constraints.*;
 import org.neatore.weeklycomma.domain.Inquiry;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.neatore.weeklycomma.service.DBFileService.Attachment;
@@ -12,6 +13,7 @@ public class InquiryDto {
         public Create { attachmentIds = attachmentIds == null ? List.of() : attachmentIds; }
         public Create(Inquiry.Category category, String title, String content) { this(category, title, content, List.of()); }
     }
+    public record Search(String authorName, String title, String content, LocalDate from, LocalDate to) {}
     public record Answer(@NotBlank @Size(max = 10000) String content) {}
     public record Summary(long id, Inquiry.Category category, String title, String authorName,
                           long createdAt, boolean answered) {}

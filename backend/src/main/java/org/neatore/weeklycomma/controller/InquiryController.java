@@ -1,6 +1,8 @@
 package org.neatore.weeklycomma.controller;
 
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import lombok.RequiredArgsConstructor;
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 import org.neatore.weeklycomma.domain.User;
@@ -30,8 +32,14 @@ public class InquiryController {
         return inquiries.create(jwt.getUser(token), input);
     }
     @GetMapping("/admin") @RequiresAuthentication(User.UserType.CURATOR)
-    public InquiryDto.Listing adminList(@CookieValue("WCA_ACCESS") String token, @RequestParam(defaultValue = "0") int page) {
-        return inquiries.list(jwt.getUser(token), page, true);
+    public InquiryDto.Listing adminList(@CookieValue("WCA_ACCESS") String token,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) String authorName,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return inquiries.search(jwt.getUser(token), page, new InquiryDto.Search(authorName, title, content, from, to));
     }
     @GetMapping("/admin/{id}") @RequiresAuthentication(User.UserType.CURATOR)
     public InquiryDto.Detail adminGet(@CookieValue("WCA_ACCESS") String token, @PathVariable long id) {

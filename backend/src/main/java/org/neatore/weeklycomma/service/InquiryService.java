@@ -1,6 +1,12 @@
 package org.neatore.weeklycomma.service;
 
 import lombok.RequiredArgsConstructor;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Locale;
 import org.neatore.weeklycomma.domain.Inquiry;
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.dto.InquiryDto;
@@ -25,6 +31,40 @@ public class InquiryService {
         var paging = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
         var result = admin ? repository.findAll(paging) : repository.findByOwnerId(user.getId(), paging);
         return new InquiryDto.Listing(result.map(InquiryDto::summary).getContent(), result.getTotalElements(), result.getTotalPages());
+    }
+
+    public InquiryDto.Listing search(User user, int page, InquiryDto.Search input) {
+        authorize(user, true);
+        if (page < 0 || (input.from() != null && input.to() != null && input.from().isAfter(input.to())))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        for (var date : new java.time.LocalDate[]{input.from(), input.to()}) {
+            if (date != null && (date.getYear() < 1 || date.getYear() > 9999))
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        String author = searchPattern(input.authorName());
+        String title = searchPattern(input.title());
+        String content = searchPattern(input.content());
+        var zone = ZoneId.of("Asia/Seoul");
+        Instant from = input.from() == null ? null : input.from().atStartOfDay(zone).toInstant();
+        Instant until = input.to() == null ? null : input.to().plusDays(1).atStartOfDay(zone).toInstant();
+        Specification<Inquiry> filter = (root, query, cb) -> {
+            var predicates = new ArrayList<Predicate>();
+            if (author != null) predicates.add(cb.like(cb.lower(root.get("authorName")), author, '\\'));
+            if (title != null) predicates.add(cb.like(cb.lower(root.get("title")), title, '\\'));
+            if (content != null) predicates.add(cb.like(root.get("content"), content, '\\'));
+            if (from != null) predicates.add(cb.greaterThanOrEqualTo(root.<Instant>get("createdAt"), from));
+            if (until != null) predicates.add(cb.lessThan(root.<Instant>get("createdAt"), until));
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        var paging = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
+        var result = repository.findAll(filter, paging);
+        return new InquiryDto.Listing(result.map(InquiryDto::summary).getContent(), result.getTotalElements(), result.getTotalPages());
+    }
+
+    private String searchPattern(String text) {
+        if (text == null || text.isBlank()) return null;
+        if (text.length() > 200) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return "%" + text.strip().toLowerCase(Locale.ROOT).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
     }
 
     public InquiryDto.Detail get(User user, long id, boolean admin) {
