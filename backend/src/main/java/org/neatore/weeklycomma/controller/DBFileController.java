@@ -1,81 +1,49 @@
 package org.neatore.weeklycomma.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.http.client.utils.URIBuilder;
-
 import org.neatore.weeklycomma.domain.User;
 import org.neatore.weeklycomma.annotations.RequiresAuthentication;
 import org.neatore.weeklycomma.service.DBFileService;
-
+import org.neatore.weeklycomma.service.JwtService;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.util.UriUtils;
-
-import java.net.URISyntaxException;
+import org.springframework.web.server.ResponseStatusException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 
-@RestController
-@RequestMapping("/files")
-@RequiredArgsConstructor
+@RestController @RequestMapping("/files") @RequiredArgsConstructor
 public class DBFileController {
     private final DBFileService dbFileService;
+    private final JwtService jwt;
 
     @GetMapping("/{id}")
-    public ResponseEntity<Resource> getFile(@PathVariable String id) {
-        try {
-            DBFileService.DBFileResponse f_ = dbFileService.load(id);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + UriUtils.encode(f_.getName(), StandardCharsets.UTF_8) + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(f_.getFile().length())
-                    .body(new FileSystemResource(f_.getFile()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Resource> getFile(@PathVariable String id,
+            @CookieValue(value = "WCA_ACCESS", required = false) String token,
+            @RequestHeader(value = "X-CSRF-Token", required = false) String csrf) {
+        User user = token != null && jwt.validateToken(token) && jwt.getCsrfToken(token).equals(csrf) ? jwt.getUser(token) : null;
+        var file = dbFileService.load(id, user);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .header("X-Content-Type-Options", "nosniff")
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(file.getName(), StandardCharsets.UTF_8).build().toString())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM).contentLength(file.getFile().length())
+                .body(new FileSystemResource(file.getFile()));
     }
 
-    @PostMapping
-    @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> saveFile(@RequestParam(value = "prevId", required = false) String prevId, @RequestParam("file") MultipartFile file) throws URISyntaxException {
-        // Save new file first
-        UUID newId = dbFileService.save(file);
-
-        // If a previous file id is provided and it's different from the newly created id,
-        // attempt to delete the previous file so DB doesn't keep orphaned file records.
-        if (prevId != null && !prevId.isEmpty() && !prevId.equals(newId)) {
-            try {
-                dbFileService.delete(prevId);
-            } catch (Exception e) {
-                // Suppress so upload still succeeds; log to stderr for diagnostics
-                System.err.println("Failed to delete previous file id=" + prevId + ": " + e.getMessage());
-            }
-        }
-
-        return ResponseEntity.created(
-                new URIBuilder("/files/" + newId)
-                        .build()
-        ).build();
+    @PostMapping @RequiresAuthentication
+    public ResponseEntity<Void> saveFile(@CookieValue("WCA_ACCESS") String token,
+            @RequestParam(value = "prevId", required = false) String prevId,
+            @RequestParam(defaultValue = "public") String purpose, @RequestParam("file") MultipartFile file) {
+        if (!purpose.equals("public") && !purpose.equals("inquiry")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        var id = dbFileService.upload(file, jwt.getUser(token), purpose.equals("inquiry"), prevId);
+        return ResponseEntity.created(URI.create("/files/" + id)).build();
     }
 
-    @DeleteMapping
-    @RequiresAuthentication(User.UserType.CURATOR)
-    public ResponseEntity<Void> deleteFile(@RequestParam String id) {
-        this.dbFileService.delete(id);
+    @DeleteMapping @RequiresAuthentication
+    public ResponseEntity<Void> deleteFile(@CookieValue("WCA_ACCESS") String token, @RequestParam String id) {
+        dbFileService.deleteUpload(id, jwt.getUser(token));
         return ResponseEntity.ok().build();
     }
 }

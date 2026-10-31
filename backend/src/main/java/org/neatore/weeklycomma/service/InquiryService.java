@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional(readOnly = true)
 public class InquiryService {
     private final InquiryRepository repository;
+    private final DBFileService files;
 
     public InquiryDto.Listing list(User user, int page, boolean admin) {
         authorize(user, admin);
@@ -27,7 +28,7 @@ public class InquiryService {
     }
 
     public InquiryDto.Detail get(User user, long id, boolean admin) {
-        return InquiryDto.detail(find(user, id, admin));
+        return detail(find(user, id, admin));
     }
 
     @Transactional
@@ -35,15 +36,19 @@ public class InquiryService {
         authorize(user, false);
         if (input.category() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         var inquiry = new Inquiry(user, input.category(), validText(input.title(), 150), validText(input.content(), 10000));
-        return InquiryDto.detail(repository.saveAndFlush(inquiry));
+        repository.saveAndFlush(inquiry);
+        files.attach(input.attachmentIds(), user, inquiry.getId());
+        return detail(inquiry);
     }
 
     @Transactional
     public InquiryDto.Detail answer(User user, long id, InquiryDto.Answer input) {
         var inquiry = find(user, id, true);
         inquiry.answer(validText(input.content(), 10000));
-        return InquiryDto.detail(inquiry);
+        return detail(inquiry);
     }
+
+    private InquiryDto.Detail detail(Inquiry inquiry) { return InquiryDto.detail(inquiry, files.attachments(inquiry.getId())); }
 
     private Inquiry find(User user, long id, boolean admin) {
         authorize(user, admin);
