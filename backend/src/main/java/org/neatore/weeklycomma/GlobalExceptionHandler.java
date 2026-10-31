@@ -17,6 +17,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handlerResponseStatusException(ResponseStatusException exception) {
         return ResponseEntity.status(exception.getStatusCode())
+                .headers(exception.getHeaders())
                 .body(Map.of("message", exception.getReason() == null ? "요청을 처리할 수 없습니다." : exception.getReason()));
     }
 

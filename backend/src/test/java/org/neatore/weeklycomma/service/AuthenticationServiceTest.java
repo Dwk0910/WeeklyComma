@@ -30,6 +30,22 @@ class AuthenticationServiceTest {
     AuthenticationController controller;
     JSONObject profile;
     boolean providerUnavailable;
+    MutableClock clock;
+    LoginThrottleService throttle;
+    LoginSessionService sessions;
+    static class MutableClock extends Clock {
+        java.time.Instant instant = java.time.Instant.parse("2026-10-31T12:00:00Z");
+        void advance(java.time.Duration duration) { instant = instant.plus(duration); }
+        public java.time.Instant instant() { return instant; }
+        public java.time.ZoneId getZone() { return java.time.ZoneOffset.UTC; }
+        public Clock withZone(java.time.ZoneId zone) { return this; }
+    }
+    org.springframework.mock.web.MockHttpServletRequest http(String ip) {
+        var request = new org.springframework.mock.web.MockHttpServletRequest(); request.setRemoteAddr(ip); return request;
+    }
+    org.springframework.http.ResponseEntity<String> login(AuthDto.LoginRequest request) {
+        return controller.login(request, http("127.0.0.1"), null);
+    }
 
     @BeforeEach void setUp() {
         var ds = new HikariDataSource();
@@ -38,10 +54,14 @@ class AuthenticationServiceTest {
         context = new AnnotationConfigApplicationContext();
         context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("test", Map.of("JWT_TOKEN_SECRET", "0123456789abcdef0123456789abcdef")));
         context.registerBean(DataSource.class, () -> ds);
-        context.registerBean(Clock.class, Clock::systemUTC);
+        clock = new MutableClock();
+        context.registerBean(Clock.class, () -> clock);
         context.register(RecommendationExpirationServiceTest.TestConfiguration.class);
         context.registerBean(LoginPasswordService.class);
-        context.registerBean(UserService.class, () -> new UserService(context.getBean(UserRepository.class), null, null, null, null, context.getBean(LoginPasswordService.class)));
+        context.registerBean(LoginSessionService.class);
+        context.registerBean(org.springframework.jdbc.core.JdbcTemplate.class, () -> new org.springframework.jdbc.core.JdbcTemplate(ds));
+        context.registerBean(LoginThrottleService.class);
+        context.registerBean(UserService.class, () -> new UserService(context.getBean(UserRepository.class), null, null, null, null, context.getBean(LoginPasswordService.class), context.getBean(LoginSessionService.class)));
         context.registerBean(JwtService.class);
         context.refresh();
         users = context.getBean(UserService.class);
@@ -54,7 +74,9 @@ class AuthenticationServiceTest {
                 return profile;
             }
         };
-        controller = new AuthenticationController(oauth, users, jwt, passwords);
+        throttle = context.getBean(LoginThrottleService.class);
+        sessions = context.getBean(LoginSessionService.class);
+        controller = new AuthenticationController(oauth, users, jwt, passwords, throttle);
     }
     @AfterEach void close() { if (context != null) context.close(); }
     AuthDto.LoginRequest local(String email, String password) { return new AuthDto.LoginRequest(AuthType.LOCAL, email, password, null, null, null); }
@@ -66,7 +88,7 @@ class AuthenticationServiceTest {
         User user = users.getUserByEmail("reader@example.test");
         assertNotEquals("correct password", user.getPassword());
         assertTrue(passwords.matches("correct password", user.getPassword()));
-        var response = controller.login(local(" reader@example.test ", "correct password"));
+        var response = login(local(" reader@example.test ", "correct password"));
         assertEquals(200, response.getStatusCode().value());
         String cookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
         assertNotNull(cookie);
@@ -85,7 +107,7 @@ class AuthenticationServiceTest {
         createLocal();
         repository.save(new User("social", "social@example.test", "naver-id", passwords.encode("correct password"), User.UserType.GENERAL, AuthType.OAUTH_NAVER));
         for (var request : new AuthDto.LoginRequest[]{local("reader@example.test", "wrong password"), local("missing@example.test", "correct password"), local("social@example.test", "correct password")}) {
-            var response = controller.login(request);
+            var response = login(request);
             assertEquals(401, response.getStatusCode().value());
             assertNull(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE));
             assertNull(response.getBody());
@@ -93,35 +115,35 @@ class AuthenticationServiceTest {
     }
     @Test void blankAndOversizedCredentialsAreRejectedByCharacterCount() {
         for (var request : new AuthDto.LoginRequest[]{local(null, "x"), local("", "x"), local("a@example.test", null), local("a@example.test", " "), local("a@example.test", "a".repeat(129)), local("a@example.test", "가".repeat(129))})
-            assertEquals(400, controller.login(request).getStatusCode().value());
+            assertEquals(400, login(request).getStatusCode().value());
     }
     @Test void plaintextPasswordIsNeverAcceptedAsAHash() {
         repository.save(new User("legacy", "legacy@example.test", null, "plaintext", User.UserType.GENERAL, AuthType.LOCAL));
-        assertEquals(401, controller.login(local("legacy@example.test", "plaintext")).getStatusCode().value());
+        assertEquals(401, login(local("legacy@example.test", "plaintext")).getStatusCode().value());
     }
     @Test void passwordUpdateAlsoHashesAndInvalidatesOldPassword() {
         createLocal();
-        users.updateUser(users.getUserByEmail("reader@example.test").getId(), new UserDto.SignupRequest(AuthType.LOCAL, "독자", "reader@example.test", "new correct password", null, null, null));
-        assertEquals(401, controller.login(local("reader@example.test", "correct password")).getStatusCode().value());
-        assertEquals(200, controller.login(local("reader@example.test", "new correct password")).getStatusCode().value());
+        users.changePassword(users.getUserByEmail("reader@example.test").getId(), "correct password", "new correct password");
+        assertEquals(401, login(local("reader@example.test", "correct password")).getStatusCode().value());
+        assertEquals(200, login(local("reader@example.test", "new correct password")).getStatusCode().value());
     }
     @Test void missingProfileOrUnregisteredSocialUserDoesNotIssueCookie() {
-        assertEquals(401, controller.login(naver()).getStatusCode().value());
+        assertEquals(401, login(naver()).getStatusCode().value());
         profile = new JSONObject();
-        assertEquals(401, controller.login(naver()).getStatusCode().value());
+        assertEquals(401, login(naver()).getStatusCode().value());
         profile.put("id", "unknown");
-        assertEquals(401, controller.login(naver()).getStatusCode().value());
+        assertEquals(401, login(naver()).getStatusCode().value());
     }
     @Test void validSocialUserLogsInAndProviderFailuresAreRetryable() {
         repository.save(new User("네이버 독자", "naver@example.test", "known", null, User.UserType.GENERAL, AuthType.OAUTH_NAVER));
         profile = new JSONObject().put("id", "known");
-        assertEquals(200, controller.login(naver()).getStatusCode().value());
+        assertEquals(200, login(naver()).getStatusCode().value());
         providerUnavailable = true;
-        assertEquals(503, controller.login(naver()).getStatusCode().value());
+        assertEquals(503, login(naver()).getStatusCode().value());
     }
     @Test void incompleteOAuthRequestIsRejectedBeforeProviderCall() {
         providerUnavailable = true;
-        assertEquals(400, controller.login(new AuthDto.LoginRequest(AuthType.OAUTH_NAVER, null, null, null, null, null)).getStatusCode().value());
+        assertEquals(400, login(new AuthDto.LoginRequest(AuthType.OAUTH_NAVER, null, null, null, null, null)).getStatusCode().value());
     }
     @Test void argon2UsesDistinctSaltsAndAcceptsLongUnicodePassphrasesWithoutTruncation() {
         String phrase = "가나다라".repeat(16);
@@ -133,6 +155,99 @@ class AuthenticationServiceTest {
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("short"));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("passwordpassword"));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("x".repeat(128)));
+    }
+    @Test void bcryptIsUpgradedOnlyAfterSuccessfulAuthentication() {
+        String oldHash = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("older password");
+        repository.save(new User("legacy", "old@example.test", null, oldHash, User.UserType.GENERAL, AuthType.LOCAL));
+        assertEquals(401, login(local("old@example.test", "wrong")).getStatusCode().value());
+        assertEquals(oldHash, users.getUserByEmail("old@example.test").getPassword());
+        assertEquals(200, login(local("OLD@example.test", "older password")).getStatusCode().value());
+        assertTrue(users.getUserByEmail("old@example.test").getPassword().startsWith("$argon2id$"));
+    }
+    @Test void logoutRevokesCopiedTokensAndOnlyTheirOwnSession() {
+        createLocal();
+        User user = users.getUserByEmail("reader@example.test");
+        var first = jwt.createToken(user, LoginSessionService.MAX_AGE.toMillis());
+        var other = jwt.createToken(user, LoginSessionService.MAX_AGE.toMillis());
+        assertTrue(jwt.validateToken(first.jwtToken()));
+        controller.logout(first.jwtToken());
+        assertFalse(jwt.validateToken(first.jwtToken()));
+        assertTrue(jwt.validateToken(other.jwtToken()));
+        var persisted = context.getBean(org.neatore.weeklycomma.repository.LoginSessionRepository.class).findAll();
+        assertEquals(1, persisted.size());
+        assertFalse(persisted.get(0).getTokenHash().contains(other.jwtToken()));
+    }
+    @Test void changingPasswordRequiresCurrentPasswordAndRevokesAllSessionsIncludingRacingOldLogin() {
+        createLocal();
+        User stale = users.getUserByEmail("reader@example.test");
+        var first = jwt.createToken(stale, LoginSessionService.MAX_AGE.toMillis());
+        var second = jwt.createToken(stale, LoginSessionService.MAX_AGE.toMillis());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> users.changePassword(stale.getId(), "incorrect", "new correct password"));
+        assertTrue(jwt.validateToken(first.jwtToken()));
+        users.changePassword(stale.getId(), "correct password", "new correct password");
+        assertFalse(jwt.validateToken(first.jwtToken()));
+        assertFalse(jwt.validateToken(second.jwtToken()));
+        var racing = jwt.createToken(stale, LoginSessionService.MAX_AGE.toMillis());
+        assertFalse(jwt.validateToken(racing.jwtToken()));
+    }
+    @Test void idleAndAbsoluteTimeoutsAreEnforcedOnTheServer() {
+        createLocal(); User user = users.getUserByEmail("reader@example.test");
+        var idle = jwt.createToken(user, LoginSessionService.MAX_AGE.toMillis());
+        clock.advance(java.time.Duration.ofMinutes(30));
+        assertFalse(jwt.validateToken(idle.jwtToken()));
+        var active = jwt.createToken(user, java.time.Duration.ofDays(30).toMillis());
+        for (int i = 0; i < 35; i++) {
+            clock.advance(java.time.Duration.ofMinutes(20)); assertTrue(jwt.validateToken(active.jwtToken()));
+        }
+        clock.advance(java.time.Duration.ofMinutes(20)); assertFalse(jwt.validateToken(active.jwtToken()));
+        sessions.cleanup();
+        assertEquals(0, context.getBean(org.neatore.weeklycomma.repository.LoginSessionRepository.class).count());
+    }
+    @Test void repeatedFailuresAreLimitedAcrossEmailCaseAndSourceAddressesAndExpire() {
+        createLocal();
+        for (int i = 0; i < 5; i++) assertEquals(401, login(local("reader@example.test", "wrong")).getStatusCode().value());
+        var failure = assertThrows(org.neatore.weeklycomma.exception.AuthenticationThrottledException.class,
+                () -> controller.login(local(" READER@example.test ", "correct password"), http("192.0.2.2"), null));
+        assertEquals("900", failure.getHeaders().getFirst("Retry-After"));
+        // A new service instance still reads the persisted limits.
+        var restarted = new LoginThrottleService(context.getBean(org.springframework.jdbc.core.JdbcTemplate.class), clock);
+        assertTrue(restarted.reserveLogin("reader@example.test", "192.0.2.3") > 0);
+        clock.advance(java.time.Duration.ofMinutes(15));
+        assertEquals(200, login(local("reader@example.test", "correct password")).getStatusCode().value());
+    }
+    @Test void accountEnumerationAndPasswordSprayingCannotBypassLimits() {
+        for (int i = 0; i < 5; i++) assertEquals(401, login(local("missing@example.test", "wrong")).getStatusCode().value());
+        assertThrows(org.neatore.weeklycomma.exception.AuthenticationThrottledException.class,
+                () -> login(local("missing@example.test", "wrong")));
+        for (int i = 0; i < LoginThrottleService.IP_LIMIT; i++) assertEquals(0, throttle.reserveLogin("different" + i + "@example.test", "192.0.2.99"));
+        assertTrue(throttle.reserveLogin("one-more@example.test", "192.0.2.99") > 0);
+    }
+    @Test void concurrentReservationsCannotExceedTheAccountBudget() throws Exception {
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(10);
+        try {
+            var jobs = new java.util.ArrayList<java.util.concurrent.Callable<Long>>();
+            for (int i = 0; i < 20; i++) { final int n = i; jobs.add(() -> throttle.reserveLogin("same@example.test", "192.0.2." + n)); }
+            long allowed = 0;
+            for (var result : pool.invokeAll(jobs)) if (result.get() == 0) allowed++;
+            assertEquals(5, allowed);
+        } finally { pool.shutdownNow(); }
+    }
+    @Test void successResetsOnlyTheAccountCounterAndSignupHasAnIndependentIpLimit() {
+        for (int i = 0; i < 5; i++) assertEquals(0, throttle.reserveLogin("reader@example.test", "192.0.2.1"));
+        throttle.succeeded("reader@example.test");
+        assertEquals(0, throttle.reserveLogin("reader@example.test", "192.0.2.1"));
+        for (int i = 0; i < 54; i++) assertEquals(0, throttle.reserveLogin("other" + i + "@example.test", "192.0.2.1"));
+        assertTrue(throttle.reserveLogin("another@example.test", "192.0.2.1") > 0);
+        for (int i = 0; i < 10; i++) assertEquals(0, throttle.reserveSignup("192.0.2.1"));
+        assertTrue(throttle.reserveSignup("192.0.2.1") > 0);
+    }
+
+    @Test void databaseFailureIsNotMisreportedAsAnExpiredSession() {
+        createLocal();
+        var token = jwt.createToken(users.getUserByEmail("reader@example.test"), LoginSessionService.MAX_AGE.toMillis());
+        ((HikariDataSource) context.getBean(DataSource.class)).close();
+        assertThrows(org.springframework.transaction.CannotCreateTransactionException.class, () -> jwt.validateToken(token.jwtToken()));
     }
 
 }

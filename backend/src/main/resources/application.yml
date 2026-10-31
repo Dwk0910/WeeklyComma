@@ -3,9 +3,6 @@ spring:
     driver-class-name: org.sqlite.JDBC
     url: jdbc:sqlite:/app/data/weeklycomma.db?busy_timeout=5000
     hikari.maximum-pool-size: 1
-  security.user:
-    name: admin
-    password: admin
 
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect

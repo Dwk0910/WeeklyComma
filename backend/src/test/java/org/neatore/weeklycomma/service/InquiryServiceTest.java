@@ -41,9 +41,10 @@ class InquiryServiceTest {
         context.registerBean(Clock.class, Clock::systemUTC);
         context.register(RecommendationExpirationServiceTest.TestConfiguration.class);
         context.registerBean(InquiryService.class);
+        context.registerBean(LoginSessionService.class);
         context.registerBean(DBFileService.class, () -> new DBFileService(context.getBean(DBFileRepository.class), directory.resolve("files").toString()));
         context.registerBean(UserService.class, () -> new UserService(context.getBean(UserRepository.class), null,
-                context.getBean(BookStarRepository.class), context.getBean(InquiryRepository.class), context.getBean(DBFileService.class), new LoginPasswordService()));
+                context.getBean(BookStarRepository.class), context.getBean(InquiryRepository.class), context.getBean(DBFileService.class), new LoginPasswordService(), context.getBean(LoginSessionService.class)));
         context.refresh();
         inquiries = context.getBean(InquiryService.class);
         var users = context.getBean(UserRepository.class);

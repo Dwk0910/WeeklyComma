@@ -28,9 +28,11 @@ public class UserService {
     private final org.neatore.weeklycomma.repository.InquiryRepository inquiryRepository;
     private final DBFileService files;
     private final LoginPasswordService passwords;
+    private final LoginSessionService sessions;
 
     public User getUserByEmail(String email) {
-        return userRepository.getUserByEmail(email);
+        var matches = userRepository.findAllByEmailIgnoreCase(LoginThrottleService.normalizeEmail(email));
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     public User getUserByOauthId(String email) {
@@ -43,7 +45,7 @@ public class UserService {
 
     @Transactional
     public void addUser(UserDto.SignupRequest request) {
-        String userName = request.userName(), email = request.email(), password = request.password(), oauthId = null;
+        String userName = request.userName(), email = LoginThrottleService.normalizeEmail(request.email()), password = request.password(), oauthId = null;
         AuthType authType = request.authType();
 
         boolean conflict = false;
@@ -54,7 +56,7 @@ public class UserService {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
                 email = email.trim();
                 password = passwords.encode(password);
-                if (userRepository.getUserByEmail(email) != null) conflict = true;
+                if (!userRepository.findAllByEmailIgnoreCase(email).isEmpty()) conflict = true;
             }
 
             case OAUTH_NAVER -> {
@@ -63,9 +65,9 @@ public class UserService {
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
                 password = null;
                 oauthId = userProfile.optString("id");
-                email = userProfile.optString("email");
+                email = LoginThrottleService.normalizeEmail(userProfile.optString("email"));
 
-                if (userRepository.getUserByEmail(email) != null || userRepository.getUserByOauthId(oauthId) != null) conflict = true;
+                if (!userRepository.findAllByEmailIgnoreCase(email).isEmpty() || userRepository.getUserByOauthId(oauthId) != null) conflict = true;
             }
         }
 
@@ -73,15 +75,31 @@ public class UserService {
     }
 
     @Transactional
-    public void updateUser(UUID userId, UserDto.SignupRequest request) {
-        User user = this.getUserById(userId);
-        user.setEmail(request.email());
-        if (user.getAuthType() == AuthType.LOCAL) user.setPassword(passwords.encode(request.password()));
+    public User authenticateLocal(String email, String password) {
+        User user = getUserByEmail(email);
+        String hash = user != null && user.getAuthType() == AuthType.LOCAL ? user.getPassword() : null;
+        if (!passwords.matches(password, hash)) return null;
+        if (passwords.needsUpgrade(hash)) {
+            user.setPassword(passwords.upgrade(password));
+            userRepository.save(user);
+        }
+        return user;
+    }
+
+    @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+        User user = getUserById(userId);
+        if (user.getAuthType() != AuthType.LOCAL || !passwords.matches(currentPassword, user.getPassword()))
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        user.setPassword(passwords.encode(newPassword));
+        user.setAuthVersion(UUID.randomUUID().toString());
         userRepository.save(user);
+        sessions.revokeForUser(userId);
     }
 
     @Transactional
     public void deleteUser(UUID userId) {
+        sessions.revokeForUser(userId);
         files.deleteOwned(userId);
         inquiryRepository.deleteByOwnerId(userId);
         bookStarRepository.deleteForUser(userId);

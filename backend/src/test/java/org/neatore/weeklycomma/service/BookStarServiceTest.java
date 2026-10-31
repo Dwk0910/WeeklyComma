@@ -281,8 +281,8 @@ class BookStarServiceTest {
         @Bean DBFileService fileService(org.neatore.weeklycomma.repository.DBFileRepository files) {
             return new DBFileService(files, System.getProperty("java.io.tmpdir"));
         }
-        @Bean UserService userService(UserRepository users, BookStarRepository stars, org.neatore.weeklycomma.repository.InquiryRepository inquiries, DBFileService files) {
-            return new UserService(users, null, stars, inquiries, files, new LoginPasswordService());
+        @Bean UserService userService(UserRepository users, BookStarRepository stars, org.neatore.weeklycomma.repository.InquiryRepository inquiries, DBFileService files, org.neatore.weeklycomma.repository.LoginSessionRepository sessions, Clock clock) {
+            return new UserService(users, null, stars, inquiries, files, new LoginPasswordService(), new LoginSessionService(sessions, clock));
         }
     }
 }

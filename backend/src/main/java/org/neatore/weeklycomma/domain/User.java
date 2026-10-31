@@ -62,4 +62,7 @@ public class User {
 
     @Setter
     private String password;
+
+    @Setter
+    private String authVersion = UUID.randomUUID().toString();
 }

@@ -21,6 +21,9 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+    if (["post", "put", "patch", "delete"].includes(config.method || "")) {
+        config.headers["X-Requested-With"] = "WeeklyComma";
+    }
     // The initial session check may populate or refresh this value after startup.
     const lsdata = getLSdata();
     if (lsdata && lsdata["csrfToken"]) config.headers["X-CSRF-Token"] = lsdata["csrfToken"];
