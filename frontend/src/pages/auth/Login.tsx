@@ -57,6 +57,18 @@ export default function Login() {
     });
     const [visible, setVisible] = useState(false);
     const [pending, setPending] = useState(false);
+    const [retryUntil, setRetryUntil] = useState(0);
+    const [now, setNow] = useState(() => Date.now());
+    const retrySeconds = Math.max(0, Math.ceil((retryUntil - now) / 1000));
+    useEffect(() => {
+        if (!retryUntil) return;
+        const timer = window.setInterval(() => {
+            const current = Date.now();
+            setNow(current);
+            if (current >= retryUntil) window.clearInterval(timer);
+        }, 1000);
+        return () => window.clearInterval(timer);
+    }, [retryUntil]);
     const request = useRef<AbortController | null>(null);
     const emailRef = useRef<HTMLInputElement>(null);
     const passwordRef = useRef<HTMLInputElement>(null);
@@ -66,11 +78,11 @@ export default function Login() {
     function update(field: keyof LoginFields, value: string) {
         setValues((previous) => ({ ...previous, [field]: value }));
         if (errors[field]) setErrors((previous) => ({ ...previous, [field]: undefined }));
-        if (feedback) setFeedback(null);
+        if (feedback && !retrySeconds) setFeedback(null);
     }
     async function submit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (request.current) return;
+        if (request.current || retrySeconds) return;
         const nextErrors = validateLogin(values);
         setErrors(nextErrors);
         setFeedback(null);
@@ -93,6 +105,13 @@ export default function Login() {
         } catch (error) {
             if (controller.signal.aborted) return;
             const status = isAxiosError(error) ? error.response?.status : undefined;
+            if (status === 429 && isAxiosError(error)) {
+                const header = Number(error.response?.headers["retry-after"]);
+                const delay = Number.isFinite(header) && header > 0 ? Math.min(header, 3600) : 60;
+                const current = Date.now();
+                setNow(current);
+                setRetryUntil(current + delay * 1000);
+            }
             setFeedback(
                 status === 401
                     ? {
@@ -115,7 +134,7 @@ export default function Login() {
         }
     }
     function naver() {
-        if (pending) return;
+        if (pending || retrySeconds) return;
         setFeedback(null);
         try {
             startNaverLogin(import.meta.env.VITE_OAUTH_NAVER_CLIENT_ID, returnTo);
@@ -223,8 +242,18 @@ export default function Login() {
                             <ErrorMessage id="login-password-error" message={errors.password} />
                         </div>
                         <div>
-                            <button type="submit" className="login-submit" disabled={pending}>
-                                <span>{pending ? "로그인하는 중" : "로그인"}</span>
+                            <button
+                                type="submit"
+                                className="login-submit"
+                                disabled={pending || retrySeconds > 0}
+                            >
+                                <span>
+                                    {pending
+                                        ? "로그인하는 중"
+                                        : retrySeconds > 0
+                                          ? `${Math.floor(retrySeconds / 60)}분 ${retrySeconds % 60}초 후 다시 시도`
+                                          : "로그인"}
+                                </span>
                                 <LuArrowRight aria-hidden="true" />
                             </button>
                             <ErrorMessage
@@ -239,7 +268,7 @@ export default function Login() {
                             type="button"
                             className="login-naver"
                             onClick={naver}
-                            disabled={pending}
+                            disabled={pending || retrySeconds > 0}
                         >
                             <SiNaver aria-hidden="true" />
                             네이버로 시작하기
