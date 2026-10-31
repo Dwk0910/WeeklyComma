@@ -21,14 +21,18 @@ test("returnTo keeps local destinations and rejects external targets and login l
         assert.equal(safeReturnTo(path), "/", String(path));
     }
 });
-test("validates both blank fields, email syntax, and multibyte password size", () => {
+test("validates both blank fields, email syntax, and password character limit", () => {
     assert.deepEqual(Object.keys(validateLogin({ email: "", password: "" })), [
         "email",
         "password"
     ]);
     assert.ok(validateLogin({ email: "bad-email", password: "secret" }).email);
-    assert.ok(validateLogin({ email: "reader@example.test", password: "가".repeat(25) }).password);
+    assert.ok(validateLogin({ email: "reader@example.test", password: "가".repeat(129) }).password);
     assert.deepEqual(validateLogin({ email: " reader@example.test ", password: "secret" }), {});
+    assert.deepEqual(
+        validateLogin({ email: "reader@example.test", password: "가나다라".repeat(16) }),
+        {}
+    );
 });
 test("OAuth state is bound to this tab, expires, and can only be consumed once", () => {
     let item: string | null = null;

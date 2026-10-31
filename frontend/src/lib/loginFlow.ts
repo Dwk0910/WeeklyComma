@@ -68,7 +68,7 @@ export function validateLogin(values: LoginFields): LoginErrors {
     else if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         errors.email = "이메일 형식을 확인해 주세요.";
     if (!values.password.trim()) errors.password = "비밀번호를 입력해 주세요.";
-    else if (new TextEncoder().encode(values.password).length > 72)
+    else if (Array.from(values.password).length > 128)
         errors.password = "비밀번호가 너무 깁니다. 입력한 내용을 확인해 주세요.";
     return errors;
 }

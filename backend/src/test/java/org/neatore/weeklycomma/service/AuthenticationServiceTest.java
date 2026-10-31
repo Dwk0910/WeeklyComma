@@ -91,8 +91,8 @@ class AuthenticationServiceTest {
             assertNull(response.getBody());
         }
     }
-    @Test void blankAndOversizedCredentialsAreRejectedIncludingUtf8ByteLength() {
-        for (var request : new AuthDto.LoginRequest[]{local(null, "x"), local("", "x"), local("a@example.test", null), local("a@example.test", " "), local("a@example.test", "a".repeat(73)), local("a@example.test", "가".repeat(25))})
+    @Test void blankAndOversizedCredentialsAreRejectedByCharacterCount() {
+        for (var request : new AuthDto.LoginRequest[]{local(null, "x"), local("", "x"), local("a@example.test", null), local("a@example.test", " "), local("a@example.test", "a".repeat(129)), local("a@example.test", "가".repeat(129))})
             assertEquals(400, controller.login(request).getStatusCode().value());
     }
     @Test void plaintextPasswordIsNeverAcceptedAsAHash() {
@@ -101,9 +101,9 @@ class AuthenticationServiceTest {
     }
     @Test void passwordUpdateAlsoHashesAndInvalidatesOldPassword() {
         createLocal();
-        users.updateUser(users.getUserByEmail("reader@example.test").getId(), new UserDto.SignupRequest(AuthType.LOCAL, "독자", "reader@example.test", "new password", null, null, null));
+        users.updateUser(users.getUserByEmail("reader@example.test").getId(), new UserDto.SignupRequest(AuthType.LOCAL, "독자", "reader@example.test", "new correct password", null, null, null));
         assertEquals(401, controller.login(local("reader@example.test", "correct password")).getStatusCode().value());
-        assertEquals(200, controller.login(local("reader@example.test", "new password")).getStatusCode().value());
+        assertEquals(200, controller.login(local("reader@example.test", "new correct password")).getStatusCode().value());
     }
     @Test void missingProfileOrUnregisteredSocialUserDoesNotIssueCookie() {
         assertEquals(401, controller.login(naver()).getStatusCode().value());
@@ -123,4 +123,16 @@ class AuthenticationServiceTest {
         providerUnavailable = true;
         assertEquals(400, controller.login(new AuthDto.LoginRequest(AuthType.OAUTH_NAVER, null, null, null, null, null)).getStatusCode().value());
     }
+    @Test void argon2UsesDistinctSaltsAndAcceptsLongUnicodePassphrasesWithoutTruncation() {
+        String phrase = "가나다라".repeat(16);
+        String first = passwords.encode(phrase), second = passwords.encode(phrase);
+        assertTrue(first.startsWith("$argon2id$v=19$m=19456,t=2,p=1$"));
+        assertNotEquals(first, second);
+        assertTrue(passwords.matches(phrase, first));
+        assertFalse(passwords.matches(phrase + "끝", first));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("short"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("passwordpassword"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("x".repeat(128)));
+    }
+
 }
