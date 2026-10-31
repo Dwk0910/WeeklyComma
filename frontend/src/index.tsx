@@ -1,4 +1,6 @@
 import axios from "axios";
+import { getLSdata } from "./lib/session.ts";
+export { getLSdata } from "./lib/session.ts";
 
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -17,12 +19,6 @@ export const api = axios.create({
     timeout: 10000,
     withCredentials: true
 });
-
-export const getLSdata: () => never | null = () => {
-    const lsdata_ = localStorage.getItem("wca_lsdata");
-    if (lsdata_) return JSON.parse(lsdata_.toString());
-    else return null;
-};
 
 api.interceptors.request.use((config) => {
     // The initial session check may populate or refresh this value after startup.

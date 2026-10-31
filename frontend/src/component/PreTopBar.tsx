@@ -1,4 +1,6 @@
 import { clsx } from "clsx";
+import { Link, useLocation } from "react-router-dom";
+import { safeReturnTo } from "../lib/loginFlow.ts";
 
 export default function PreTopBar({ login, name }: { login: boolean; name: string }) {
     return (
@@ -35,6 +37,7 @@ export default function PreTopBar({ login, name }: { login: boolean; name: strin
 }
 
 const LoginInteraction = ({ login }: { login: boolean }) => {
+    const location = useLocation();
     return login ? (
         <div
             className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
@@ -44,25 +47,20 @@ const LoginInteraction = ({ login }: { login: boolean }) => {
         </div>
     ) : (
         <>
-            <div
-                className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
-                onClick={() => {
-                    const client_id = import.meta.env.VITE_OAUTH_NAVER_CLIENT_ID;
-                    const state = crypto.randomUUID();
-                    window.location.assign(
-                        `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=${window.location.origin + "/authcallback/OAUTH_NAVER"}&state=${state}`
-                    );
-                }}
+            <Link
+                className="text-[.8rem] text-neutral-700 mt-2 ml-4 hover:underline"
+                to={`/login?${new URLSearchParams({ returnTo: safeReturnTo(location.pathname + location.search) })}`}
             >
-                유저 로그인
-            </div>
+                로그인
+            </Link>
             <div
                 className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
                 onClick={() => {
                     const client_id = import.meta.env.VITE_OAUTH_NAVER_CLIENT_ID;
                     const state = crypto.randomUUID();
 
-                    const userName = prompt("Type username") as string;
+                    const userName = prompt("사용할 이름을 입력해 주세요.");
+                    if (!userName?.trim()) return;
                     localStorage.setItem("username", userName.replaceAll(" ", ""));
 
                     window.location.assign(
