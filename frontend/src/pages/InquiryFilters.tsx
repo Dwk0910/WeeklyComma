@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { useSearchParams } from "react-router-dom";
+import { SubTitle } from "./admin/lib_component/Component.tsx";
 
 const fields = [
     { key: "authorName", label: "사용자 이름", placeholder: "문의 작성 당시 이름" },
@@ -11,7 +12,7 @@ const input = "mt-2 w-full rounded-xs border border-neutral-300 bg-white px-3 py
 export default function InquiryFilters() {
     const [params, setParams] = useSearchParams();
     const [error, setError] = useState("");
-    function search(event: FormEvent<HTMLFormElement>) {
+    function search(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         const values = new FormData(event.currentTarget);
         const next = new URLSearchParams();
@@ -32,6 +33,9 @@ export default function InquiryFilters() {
             aria-label="문의 검색 및 필터"
             className="mb-7 space-y-4 border border-neutral-200 bg-neutral-50 p-5"
         >
+            <div role="heading" aria-level={2}>
+                <SubTitle>상세 검색</SubTitle>
+            </div>
             <div className="grid grid-cols-3 gap-4">
                 {fields.map(({ key, label, placeholder }) => (
                     <label key={key} className="text-sm">

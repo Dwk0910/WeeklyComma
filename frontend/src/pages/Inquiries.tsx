@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { isAxiosError } from "axios";
 import {
     Link,
@@ -14,6 +14,10 @@ import PageTitle from "../component/PageTitle.tsx";
 import { LoginRedirect } from "../component/RequireLogin.tsx";
 import InquiryAttachments from "./InquiryAttachments.tsx";
 import InquiryFilters from "./InquiryFilters.tsx";
+import AdminComponent, {
+    Title as AdminTitle,
+    SubTitle as AdminSubTitle
+} from "./admin/lib_component/Component.tsx";
 import {
     FILE_ACCEPT,
     FILE_EXTENSIONS,
@@ -136,25 +140,24 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
     const listing = !isDetail ? (active?.data as Listing | undefined) : undefined;
     if (listing && !isNew && page > Math.max(1, listing.pages))
         return <Navigate to={`${base}${listQuery(Math.max(1, listing.pages))}`} replace />;
-    return (
-        <main
-            className={
-                admin ? "px-6 pt-4 pb-10 font-suite" : "mx-5 mt-14 mb-24 min-h-140 font-suite"
-            }
-        >
+    const content = (
+        <>
             <PageTitle title={admin ? "문의 관리" : "To. 쉼표지기"} />
-            <header className="mb-8 flex items-end justify-between gap-6">
-                <div>
-                    <h1 className="font-seoulnamsan text-3xl text-neutral-900">
-                        {admin ? "문의 관리" : "To. 쉼표지기"}
-                    </h1>
-                    <p className="mt-3 text-sm text-neutral-500">
-                        {admin
-                            ? "이용자가 보낸 의견을 살펴보고, 필요한 경우 답변을 남깁니다."
-                            : "책과 주간쉼표에 전하고 싶은 이야기를 남겨주세요."}
+            {admin ? (
+                <>
+                    <AdminTitle>문의 관리</AdminTitle>
+                    <p className="mb-4 text-sm text-gray-500">
+                        이용자가 보낸 의견을 살펴보고, 필요한 경우 답변을 남깁니다.
                     </p>
-                </div>
-            </header>
+                </>
+            ) : (
+                <header className="mb-8">
+                    <h1 className="font-seoulnamsan text-3xl text-neutral-900">To. 쉼표지기</h1>
+                    <p className="mt-3 text-sm text-neutral-500">
+                        책과 주간쉼표에 전하고 싶은 이야기를 남겨주세요.
+                    </p>
+                </header>
+            )}
             {admin && !isDetail && <InquiryFilters key={params.toString()} />}
             {!active?.data ? (
                 <div className="border-t border-neutral-800">
@@ -192,12 +195,20 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
             ) : (
                 <>
                     <div className="mb-5 flex items-center justify-between">
-                        <h2 className="text-lg">
-                            {admin ? (filtered ? "검색 결과" : "받은 이야기") : "내가 보낸 이야기"}{" "}
-                            <span className="ml-2 text-sm text-neutral-500">
+                        <div className="flex items-baseline gap-2">
+                            {admin ? (
+                                <div role="heading" aria-level={2}>
+                                    <AdminSubTitle>
+                                        {filtered ? "검색 결과" : "받은 이야기"}
+                                    </AdminSubTitle>
+                                </div>
+                            ) : (
+                                <h2 className="text-lg">내가 보낸 이야기</h2>
+                            )}
+                            <span className="text-sm text-neutral-500">
                                 {listing!.total.toLocaleString("ko-KR")}
                             </span>
-                        </h2>
+                        </div>
                         {!admin && (
                             <Link className={primary} to={`${base}/new`}>
                                 새 의견 남기기
@@ -212,14 +223,18 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                             <li key={item.id} className="border-b border-neutral-200">
                                 <Link
                                     to={`${base}/${item.id}${listQuery()}`}
-                                    className="flex items-center gap-7 px-4 py-6 hover:bg-neutral-50"
+                                    className={`flex items-center gap-7 px-4 hover:bg-neutral-50 ${admin ? "py-4" : "py-6"}`}
                                 >
                                     <Status answered={item.answered} category={item.category} />
                                     <div className="min-w-0 flex-1">
                                         <p className="text-xs text-neutral-500">
                                             {kinds[item.category].label}
                                         </p>
-                                        <h3 className="mt-1 wrap-anywhere text-lg">{item.title}</h3>
+                                        <h3
+                                            className={`mt-1 wrap-anywhere ${admin ? "text-base" : "text-lg"}`}
+                                        >
+                                            {item.title}
+                                        </h3>
                                         {admin && (
                                             <p className="mt-1 text-sm text-neutral-500">
                                                 {item.authorName}
@@ -271,7 +286,14 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                     )}
                 </>
             )}
-        </main>
+        </>
+    );
+    return admin ? (
+        <AdminComponent>
+            <div className="pb-10 font-suite">{content}</div>
+        </AdminComponent>
+    ) : (
+        <main className="mx-5 mt-14 mb-24 min-h-140 font-suite">{content}</main>
     );
 }
 
@@ -295,7 +317,7 @@ function CreateInquiry({ base, onUnauthorized }: { base: string; onUnauthorized:
     const busy = useRef(false);
     const navigate = useNavigate();
     const kind = kinds[category];
-    async function submit(event: FormEvent) {
+    async function submit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         if (busy.current) return;
         if (!title.trim() || !content.trim()) {
@@ -533,7 +555,7 @@ function InquiryDetail({
     const busy = useRef(false);
     const navigate = useNavigate();
     const item = current.inquiry;
-    async function save(event: FormEvent) {
+    async function save(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         if (busy.current) return;
         if (!answer.trim()) {
