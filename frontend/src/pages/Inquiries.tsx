@@ -8,7 +8,7 @@ import {
     useParams,
     useSearchParams
 } from "react-router-dom";
-import { LuBug, LuLightbulb, LuMessageCircle } from "react-icons/lu";
+import { LuBookOpen, LuBug, LuLightbulb, LuMessageCircle } from "react-icons/lu";
 import { api } from "../index.tsx";
 import PageTitle from "../component/PageTitle.tsx";
 import { LoginRedirect } from "../component/RequireLogin.tsx";
@@ -23,6 +23,14 @@ import {
 import { BoardFeedback, PostDate } from "./boards/BoardShared.tsx";
 
 const kinds = {
+    BOOK: {
+        label: "책·추천 이야기",
+        short: "좋았던 책과, 책을 소개하는 일에 관한 제안을 들려주세요.",
+        help: "더 많은 사람에게 알리고 싶은 책, 소개글에서 짚어주고 싶은 부분, 책을 소개하는 일에 함께하고 싶은 마음을 전해주세요.",
+        placeholder:
+            "전하고 싶은 내용만 편하게 적어주세요.\n책 제목이나 관련 글과 함께, 제안하는 이유를 알려주시면 도움이 됩니다.",
+        icon: LuBookOpen
+    },
     BUG: {
         label: "오류 신고",
         short: "작동하지 않는 기능이 있어요.",
@@ -31,9 +39,9 @@ const kinds = {
         icon: LuBug
     },
     SUGGESTION: {
-        label: "개선 제안",
-        short: "이런 점이 달라지면 좋겠어요.",
-        help: "불편했던 점과 원하는 모습을 알려주시면 개선 방향을 이해하는 데 도움이 됩니다.",
+        label: "서비스 개선 제안",
+        short: "화면이나 기능에 바라는 점이 있어요.",
+        help: "주간쉼표의 화면이나 기능에서 불편했던 점과 원하는 모습을 알려주세요.",
         placeholder: "불편했던 점이나 제안하고 싶은 기능을 자유롭게 적어주세요.",
         icon: LuLightbulb
     },
@@ -122,8 +130,8 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                     </h1>
                     <p className="mt-3 text-sm text-neutral-500">
                         {admin
-                            ? "이용자가 보낸 의견을 확인하고 답변합니다."
-                            : "보낸 이야기와 쉼표지기의 답변을 한곳에서 확인하세요."}
+                            ? "이용자가 보낸 의견을 살펴보고, 필요한 경우 답변을 남깁니다."
+                            : "책과 주간쉼표에 전하고 싶은 이야기를 남겨주세요."}
                     </p>
                 </div>
                 {admin && (
@@ -188,7 +196,7 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
                                     to={`${base}/${item.id}`}
                                     className="flex items-center gap-7 px-4 py-6 hover:bg-neutral-50"
                                 >
-                                    <Status answered={item.answered} />
+                                    <Status answered={item.answered} category={item.category} />
                                     <div className="min-w-0 flex-1">
                                         <p className="text-xs text-neutral-500">
                                             {kinds[item.category].label}
@@ -247,19 +255,19 @@ export default function Inquiries({ admin = false }: { admin?: boolean }) {
     );
 }
 
-function Status({ answered }: { answered: boolean }) {
+function Status({ answered, category }: { answered: boolean; category: Kind }) {
     return (
         <span
             className={`inline-block shrink-0 rounded-xs border px-3 py-1 text-xs ${answered ? "border-neutral-700 text-neutral-800" : "border-neutral-300 text-neutral-500"}`}
         >
-            {answered ? "답변 완료" : "접수됨"}
+            {answered ? "답변 완료" : category === "BOOK" ? "전달됨" : "접수됨"}
         </span>
     );
 }
 
 function CreateInquiry({ base, onUnauthorized }: { base: string; onUnauthorized: () => void }) {
     const uploads = useInquiryUploads(onUnauthorized);
-    const [category, setCategory] = useState<Kind>("BUG");
+    const [category, setCategory] = useState<Kind>("BOOK");
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [pending, setPending] = useState(false);
@@ -319,7 +327,7 @@ function CreateInquiry({ base, onUnauthorized }: { base: string; onUnauthorized:
             <form onSubmit={submit} className="border-t border-neutral-800 pt-7">
                 <fieldset disabled={pending}>
                     <legend className="sr-only">문의 유형</legend>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         {(Object.keys(kinds) as Kind[]).map((key) => {
                             const Icon = kinds[key].icon;
                             return (
@@ -346,8 +354,50 @@ function CreateInquiry({ base, onUnauthorized }: { base: string; onUnauthorized:
                     <aside aria-live="polite">
                         <h3 className="text-lg">{kind.label}</h3>
                         <p className="mt-3 text-sm leading-7 text-neutral-500">{kind.help}</p>
+                        {category === "BOOK" && (
+                            <ul className="mt-5 space-y-5 text-sm leading-7">
+                                <li>
+                                    <h4 className="text-neutral-800">책 소개 제안</h4>
+                                    <p className="text-neutral-500">
+                                        책 제목·저자와 좋았던 점, 함께 읽었으면 하는 이유를
+                                        알려주세요.
+                                    </p>
+                                </li>
+                                <li>
+                                    <h4 className="text-neutral-800">소개글 수정 의견</h4>
+                                    <p className="text-neutral-500">
+                                        해당 글의 링크와 수정할 부분, 이유나 참고 자료를 적어주세요.
+                                    </p>
+                                </li>
+                                <li>
+                                    <h4 className="text-neutral-800">쉼표지기 참여 의향</h4>
+                                    <p className="text-neutral-500">
+                                        함께하고 싶은 이유와 직접 소개해 보고 싶은 책을 들려주세요.
+                                    </p>
+                                </li>
+                            </ul>
+                        )}
                     </aside>
                     <div className="space-y-7">
+                        {category === "BOOK" && (
+                            <section
+                                aria-label="책 이야기 보내기 안내"
+                                className="border border-neutral-200 bg-neutral-50 px-5 py-4 text-sm leading-7 text-neutral-600"
+                            >
+                                <h3 className="font-medium text-neutral-800">
+                                    보내기 전에 읽어주세요
+                                </h3>
+                                <p className="mt-2">
+                                    보내주신 이야기는 책 선정과 소개를 위한 참고 의견으로 받습니다.
+                                    모든 제안을 반영하거나 개별적으로 답변드리기는 어려울 수
+                                    있습니다.
+                                </p>
+                                <p className="mt-2">
+                                    쉼표지기 활동에 관심이 있다면 참여 의향을 남겨주세요. 정식 지원
+                                    접수는 아니며, 모집이나 선발을 약속하는 것은 아닙니다.
+                                </p>
+                            </section>
+                        )}
                         <label className="block text-sm">
                             제목
                             <input
@@ -506,7 +556,7 @@ function InquiryDetail({
             <article className="border-t border-neutral-800">
                 <header className="border-b border-neutral-200 py-7">
                     <div className="flex items-center gap-4">
-                        <Status answered={item.answered} />
+                        <Status answered={item.answered} category={item.category} />
                         <span className="text-sm text-neutral-500">
                             {kinds[item.category].label}
                         </span>
@@ -524,7 +574,11 @@ function InquiryDetail({
                     onUnauthorized={onUnauthorized}
                 />
                 <section className="bg-neutral-50 p-7">
-                    <h3 className="text-lg">쉼표지기의 답변</h3>
+                    <h3 className="text-lg">
+                        {!current.answer && item.category === "BOOK"
+                            ? "이야기를 보내주셔서 감사합니다"
+                            : "쉼표지기의 답변"}
+                    </h3>
                     {current.answer ? (
                         <>
                             <p className="mt-4 whitespace-pre-wrap wrap-anywhere leading-8">
@@ -538,7 +592,9 @@ function InquiryDetail({
                         </>
                     ) : (
                         <p className="mt-3 text-sm text-neutral-500">
-                            의견이 접수되었습니다. 아직 답변이 등록되지 않았습니다.
+                            {item.category === "BOOK"
+                                ? "책 선정과 소개를 위한 참고 의견으로 전달되었습니다. 모든 제안의 반영이나 개별 답변을 약속드리기는 어려운 점 양해 부탁드립니다."
+                                : "의견이 접수되었습니다. 아직 답변이 등록되지 않았습니다."}
                         </p>
                     )}
                 </section>

@@ -54,6 +54,17 @@ class InquiryServiceTest {
         assertEquals(status, assertThrows(ResponseStatusException.class, call).getStatusCode().value());
     }
 
+    @Test void bookConversationsKeepTheirCategoryThroughCuratorReply() {
+        var saved = inquiries.create(first, new InquiryDto.Create(Inquiry.Category.BOOK, "함께 읽고 싶은 책", "다음에는 자연에 관한 책을 소개해 주세요."));
+        long id = saved.inquiry().id();
+        assertEquals(Inquiry.Category.BOOK, inquiries.list(first, 0, false).items().get(0).category());
+        assertEquals(Inquiry.Category.BOOK, inquiries.list(curator, 0, true).items().get(0).category());
+        inquiries.answer(curator, id, new InquiryDto.Answer("다음 추천 주제로 살펴보겠습니다."));
+        var detail = inquiries.get(first, id, false);
+        assertEquals(Inquiry.Category.BOOK, detail.inquiry().category());
+        assertEquals("다음 추천 주제로 살펴보겠습니다.", detail.answer());
+    }
+
     @Test void privateInquiriesAreIsolatedFromOtherUsersAndPublicPosts() {
         var saved = inquiries.create(first, request("첫 문의"));
         long id = saved.inquiry().id();

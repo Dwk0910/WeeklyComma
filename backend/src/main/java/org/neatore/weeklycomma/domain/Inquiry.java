@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(indexes = @Index(name = "inquiry_owner_index", columnList = "owner_id"))
 public class Inquiry extends BaseTimeEntity {
-    public enum Category { BUG, SUGGESTION, OTHER }
+    public enum Category { BOOK, BUG, SUGGESTION, OTHER }
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @Column(name = "owner_id", nullable = false)
