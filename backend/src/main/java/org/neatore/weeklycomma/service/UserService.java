@@ -12,6 +12,8 @@ import org.neatore.weeklycomma.repository.BookStarRepository;
 import jakarta.transaction.Transactional;
 
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +27,7 @@ public class UserService {
     private final BookStarRepository bookStarRepository;
     private final org.neatore.weeklycomma.repository.InquiryRepository inquiryRepository;
     private final DBFileService files;
+    private final LoginPasswordService passwords;
 
     public User getUserByEmail(String email) {
         return userRepository.getUserByEmail(email);
@@ -43,30 +46,37 @@ public class UserService {
         String userName = request.userName(), email = request.email(), password = request.password(), oauthId = null;
         AuthType authType = request.authType();
 
-        boolean confilct = false;
+        boolean conflict = false;
 
         switch (request.authType()) {
             case LOCAL -> {
-                if (userRepository.getUserByEmail(request.email()) != null) confilct = true;
+                if (email == null || email.isBlank() || email.length() > 254 || !email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+                email = email.trim();
+                password = passwords.encode(password);
+                if (userRepository.getUserByEmail(email) != null) conflict = true;
             }
 
             case OAUTH_NAVER -> {
                 JSONObject userProfile = oauthService.getUserProfileNaver(request.auth_code(), request.redirect_uri(), request.state());
+                if (userProfile == null || userProfile.optString("id").isBlank() || userProfile.optString("email").isBlank())
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+                password = null;
                 oauthId = userProfile.optString("id");
                 email = userProfile.optString("email");
 
-                if (userRepository.getUserByEmail(email) != null || userRepository.getUserByOauthId(oauthId) != null) confilct = true;
+                if (userRepository.getUserByEmail(email) != null || userRepository.getUserByOauthId(oauthId) != null) conflict = true;
             }
         }
 
-        if (!confilct) userRepository.save(new User(userName, email, oauthId, password, User.UserType.GENERAL, authType));
+        if (!conflict) userRepository.save(new User(userName, email, oauthId, password, User.UserType.GENERAL, authType));
     }
 
     @Transactional
     public void updateUser(UUID userId, UserDto.SignupRequest request) {
         User user = this.getUserById(userId);
         user.setEmail(request.email());
-        user.setPassword(request.password());
+        if (user.getAuthType() == AuthType.LOCAL) user.setPassword(passwords.encode(request.password()));
         userRepository.save(user);
     }
 

@@ -282,7 +282,7 @@ class BookStarServiceTest {
             return new DBFileService(files, System.getProperty("java.io.tmpdir"));
         }
         @Bean UserService userService(UserRepository users, BookStarRepository stars, org.neatore.weeklycomma.repository.InquiryRepository inquiries, DBFileService files) {
-            return new UserService(users, null, stars, inquiries, files);
+            return new UserService(users, null, stars, inquiries, files, new LoginPasswordService());
         }
     }
 }

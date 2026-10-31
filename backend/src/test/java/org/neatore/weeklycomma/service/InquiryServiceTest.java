@@ -43,7 +43,7 @@ class InquiryServiceTest {
         context.registerBean(InquiryService.class);
         context.registerBean(DBFileService.class, () -> new DBFileService(context.getBean(DBFileRepository.class), directory.resolve("files").toString()));
         context.registerBean(UserService.class, () -> new UserService(context.getBean(UserRepository.class), null,
-                context.getBean(BookStarRepository.class), context.getBean(InquiryRepository.class), context.getBean(DBFileService.class)));
+                context.getBean(BookStarRepository.class), context.getBean(InquiryRepository.class), context.getBean(DBFileService.class), new LoginPasswordService()));
         context.refresh();
         inquiries = context.getBean(InquiryService.class);
         var users = context.getBean(UserRepository.class);

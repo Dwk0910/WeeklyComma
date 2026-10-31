@@ -39,6 +39,7 @@ public class AuthenticationController {
     private final OAuthService oAuthService;
     private final UserService userService;
     private final JwtService jwtService;
+    private final org.neatore.weeklycomma.service.LoginPasswordService passwords;
 
     private final Duration EXPIRATION_DURATION = Duration.ofDays(30);
 
@@ -62,41 +63,35 @@ public class AuthenticationController {
 
     @PostMapping
     public ResponseEntity<String> login(@Valid @RequestBody AuthDto.LoginRequest request) {
+        User user;
         if (request.authType() == AuthType.LOCAL) {
-            User user = userService.getUserByEmail(request.email());
-            if (user != null) {
-                // TODO: 비밀번호 검증
-            }
+            if (request.email() == null || request.email().isBlank() || request.email().length() > 254
+                    || !passwords.valid(request.password()))
+                return ResponseEntity.badRequest().build();
+            user = userService.getUserByEmail(request.email().trim());
+            String hash = user != null && user.getAuthType() == AuthType.LOCAL ? user.getPassword() : null;
+            if (!passwords.matches(request.password(), hash)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } else {
-            // OAUTH(소셜) 로그인
-
-            String oauthId = switch (request.authType()) {
-                case OAUTH_NAVER -> oAuthService.getUserProfileNaver(request.auth_code(), request.redirect_uri(), request.state()).optString("id");
-                default -> null;
-            };
-
-            User user = userService.getUserByOauthId(oauthId);
-
-            // Generate cookie
-            if (user != null) {
-                JwtService.JwtToken jwtToken = this.jwtService.createToken(user, EXPIRATION_DURATION.toMillis());
-
-                ResponseCookie jwtCookie = ResponseCookie.from("WCA_ACCESS", jwtToken.jwtToken())
-                        .httpOnly(true)
-                        .secure(true)
-                        .path("/")
-                        .domain(null)
-                        .maxAge(EXPIRATION_DURATION)
-                        .sameSite("none")
-                        .build();
-
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                        .body(this.getLSData(jwtToken));
+            if (request.auth_code() == null || request.auth_code().isBlank() || request.auth_code().length() > 2048
+                    || request.state() == null || request.state().isBlank() || request.state().length() > 512
+                    || request.redirect_uri() == null || request.redirect_uri().isBlank() || request.redirect_uri().length() > 2048)
+                return ResponseEntity.badRequest().build();
+            JSONObject profile;
+            try {
+                profile = oAuthService.getUserProfileNaver(request.auth_code(), request.redirect_uri(), request.state());
+            } catch (org.springframework.web.client.RestClientException ex) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
             }
+            if (profile == null || profile.optString("id").isBlank())
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            user = userService.getUserByOauthId(profile.optString("id"));
+            if (user == null || user.getAuthType() != AuthType.OAUTH_NAVER)
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        JwtService.JwtToken jwtToken = jwtService.createToken(user, EXPIRATION_DURATION.toMillis());
+        ResponseCookie cookie = ResponseCookie.from("WCA_ACCESS", jwtToken.jwtToken())
+                .httpOnly(true).secure(true).path("/").maxAge(EXPIRATION_DURATION).sameSite("None").build();
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(getLSData(jwtToken));
     }
 
     @DeleteMapping
@@ -108,7 +103,7 @@ public class AuthenticationController {
                 .secure(true)
                 .path("/")
                 .maxAge(0)
-                .sameSite("none")
+                .sameSite("None")
                 .build();
 
         return ResponseEntity.ok()
