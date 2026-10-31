@@ -12,6 +12,14 @@ import { LuBug, LuLightbulb, LuMessageCircle } from "react-icons/lu";
 import { api } from "../index.tsx";
 import PageTitle from "../component/PageTitle.tsx";
 import { LoginRedirect } from "../component/RequireLogin.tsx";
+import InquiryAttachments from "./InquiryAttachments.tsx";
+import {
+    FILE_ACCEPT,
+    FILE_EXTENSIONS,
+    fileSize,
+    useInquiryUploads,
+    type InquiryAttachment
+} from "./inquiryFiles.ts";
 import { BoardFeedback, PostDate } from "./boards/BoardShared.tsx";
 
 const kinds = {
@@ -51,6 +59,7 @@ type Detail = {
     content: string;
     answer: string | null;
     answeredAt: number | null;
+    attachments?: InquiryAttachment[];
 };
 type Listing = { items: Summary[]; total: number; pages: number };
 const button =
@@ -249,6 +258,7 @@ function Status({ answered }: { answered: boolean }) {
 }
 
 function CreateInquiry({ base, onUnauthorized }: { base: string; onUnauthorized: () => void }) {
+    const uploads = useInquiryUploads(onUnauthorized);
     const [category, setCategory] = useState<Kind>("BUG");
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
@@ -267,20 +277,31 @@ function CreateInquiry({ base, onUnauthorized }: { base: string; onUnauthorized:
         busy.current = true;
         setPending(true);
         setError("");
+        let submissionStarted = false;
         try {
+            const attachmentIds = await uploads.upload();
+            submissionStarted = true;
             const { data } = await api.post<Detail>("inquiries", {
                 category,
                 title: title.trim(),
-                content: content.trim()
+                content: content.trim(),
+                attachmentIds
             });
+            uploads.commit();
             navigate(`${base}/${data.inquiry.id}`, { replace: true });
         } catch (e) {
             if (errorStatus(e) === 401) onUnauthorized();
             else
                 setError(
                     errorStatus(e) === 400
-                        ? "제목은 150자, 내용은 10,000자 이내로 입력해 주세요."
-                        : "접수 여부를 확인하지 못했습니다. 내 문의함에서 확인한 뒤 다시 시도해 주세요."
+                        ? "제목·내용 길이와 첨부파일 형식·용량을 확인해 주세요."
+                        : errorStatus(e) === 413
+                          ? "파일당 50MB까지 첨부할 수 있습니다."
+                          : errorStatus(e) === 404 || errorStatus(e) === 409
+                            ? "첨부파일을 확인할 수 없습니다. 내 문의함에서 접수 여부를 확인하고, 미접수 상태라면 파일을 제거한 뒤 다시 첨부해 주세요."
+                            : !submissionStarted
+                              ? "첨부파일을 업로드하지 못했습니다. 작성 내용과 선택한 파일은 유지되니 다시 시도해 주세요."
+                              : "접수 여부를 확인하지 못했습니다. 내 문의함에서 확인한 뒤 다시 시도해 주세요."
                 );
         } finally {
             busy.current = false;
@@ -351,6 +372,58 @@ function CreateInquiry({ base, onUnauthorized }: { base: string; onUnauthorized:
                                 disabled={pending}
                             />
                         </label>
+                        <div className="space-y-3">
+                            <label className="block text-sm">
+                                첨부파일 <span className="text-neutral-500">(선택)</span>
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept={FILE_ACCEPT}
+                                    onChange={uploads.select}
+                                    disabled={pending}
+                                    className="mt-3 block w-full text-sm file:mr-4 file:cursor-pointer file:rounded-xs file:border file:border-neutral-300 file:bg-white file:px-4 file:py-2 disabled:opacity-50"
+                                />
+                            </label>
+                            <p className="text-xs leading-6 text-neutral-500">
+                                최대 5개 · 파일당 50MB · 전체 100MB
+                                <br />
+                                {FILE_EXTENSIONS.join(", ")}
+                            </p>
+                            <ul className="space-y-2" aria-label="선택한 첨부파일">
+                                {uploads.files.map((entry) => (
+                                    <li
+                                        key={entry.key}
+                                        className="flex items-center gap-4 border border-neutral-200 px-4 py-3 text-sm"
+                                    >
+                                        <span className="min-w-0 flex-1 wrap-anywhere">
+                                            {entry.file.name}
+                                        </span>
+                                        <span className="shrink-0 text-xs text-neutral-500">
+                                            {fileSize(entry.file.size)}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            disabled={pending}
+                                            onClick={() => void uploads.remove(entry)}
+                                            className="cursor-pointer text-neutral-600 underline underline-offset-4 disabled:opacity-50"
+                                            aria-label={`${entry.file.name} 제거`}
+                                        >
+                                            제거
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                            {uploads.error && (
+                                <p role="alert" className="text-sm text-red-700">
+                                    {uploads.error}
+                                </p>
+                            )}
+                            {pending && (
+                                <p role="status" className="text-sm text-neutral-600">
+                                    {uploads.progress}
+                                </p>
+                            )}
+                        </div>
                         <div className="flex items-center justify-between gap-5">
                             <p className="text-xs text-neutral-500">
                                 비밀번호 등 민감한 정보는 적지 마세요.
@@ -446,6 +519,10 @@ function InquiryDetail({
                 <p className="whitespace-pre-wrap wrap-anywhere py-10 leading-8">
                     {current.content}
                 </p>
+                <InquiryAttachments
+                    files={current.attachments || []}
+                    onUnauthorized={onUnauthorized}
+                />
                 <section className="bg-neutral-50 p-7">
                     <h3 className="text-lg">쉼표지기의 답변</h3>
                     {current.answer ? (
