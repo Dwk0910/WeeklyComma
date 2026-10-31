@@ -25,6 +25,7 @@ import RecommendationDetail from "./pages/recommendations/RecommendationDetail.t
 import Favorites from "./pages/Favorites.tsx";
 import Inquiries from "./pages/Inquiries.tsx";
 
+import Login from "./pages/auth/Login.tsx";
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
 import Logout from "./pages/redirect/Logout.tsx";
@@ -61,6 +62,7 @@ export default function App() {
                                 path={"/signupcallback/:oauth_type"}
                                 element={<SignUpCallback />}
                             />
+                            <Route path="/login" element={<Login />} />
                             <Route path={"/logout"} element={<Logout />} />
                             <Route path={"/about"} element={<About />} />
                             <Route
