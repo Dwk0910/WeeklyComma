@@ -55,7 +55,7 @@ public class UserService {
                 if (email == null || email.isBlank() || email.length() > 254 || !email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
                 email = email.trim();
-                password = passwords.encode(password);
+                password = passwords.encode(password, userName, email);
                 if (!userRepository.findAllByEmailIgnoreCase(email).isEmpty()) conflict = true;
             }
 
@@ -93,7 +93,7 @@ public class UserService {
         User user = getUserById(userId);
         if (user.getAuthType() != AuthType.LOCAL || !passwords.matches(currentPassword, user.getPassword()))
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        user.setPassword(passwords.encode(newPassword));
+        user.setPassword(passwords.encode(newPassword, user.getUserName(), user.getEmail()));
         user.setAuthVersion(UUID.randomUUID().toString());
         userRepository.save(user);
         sessions.revokeForUser(userId);

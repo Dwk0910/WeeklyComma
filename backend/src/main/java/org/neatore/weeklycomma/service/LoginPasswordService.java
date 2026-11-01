@@ -7,8 +7,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 
@@ -21,6 +23,8 @@ public class LoginPasswordService {
     private final Semaphore hashing = new Semaphore(4);
     private static final Set<String> EXTRA_COMMON = Set.of("passwordpassword", "passwordpassword123", "123456789012345", "1234567890123456", "qwertyuiopasdfgh", "qwertyuiopasdfghjkl", "iloveyouiloveyou", "weeklycommaweeklycomma");
 
+    private static final Pattern LOWERCASE = Pattern.compile("[a-z]");
+    private static final Pattern ADDITIONAL_CHARACTER = Pattern.compile("[A-Z0-9\\p{P}\\p{S}]");
     private static final Set<String> COMMON = loadCommon();
     private static Set<String> loadCommon() {
         var stream = LoginPasswordService.class.getResourceAsStream("/security/common-passwords.txt");
@@ -38,13 +42,33 @@ public class LoginPasswordService {
                 && password.codePoints().noneMatch(cp -> cp >= 0xD800 && cp <= 0xDFFF);
     }
     public void validateNew(String password) {
-        if (!valid(password) || password.codePointCount(0, password.length()) < 15)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "비밀번호는 15~128자로 입력해 주세요.");
+        if (!valid(password) || password.codePointCount(0, password.length()) < 10)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "비밀번호는 10~128자로 입력해 주세요.");
+        if (!LOWERCASE.matcher(password).find())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "영문 소문자를 포함해 주세요.");
+        if (!ADDITIONAL_CHARACTER.matcher(password).find())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "숫자·영문 대문자·특수문자 중 하나 이상 포함해 주세요.");
         if (COMMON.contains(password.toLowerCase(Locale.ROOT)) || password.codePoints().distinct().count() == 1)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "쉽게 추측할 수 있는 비밀번호는 사용할 수 없습니다.");
     }
     public String encode(String password) {
         validateNew(password);
+        return upgrade(password);
+    }
+    public void validateNew(String password, String userName, String email) {
+        validateNew(password);
+        String normalized = accountComparisonValue(password);
+        String address = accountComparisonValue(email);
+        for (String value : new String[]{accountComparisonValue(userName), address, address.split("@", -1)[0]}) {
+            if (!value.isEmpty() && normalized.contains(value))
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "닉네임이나 이메일의 @ 앞부분을 비밀번호에 포함하지 마세요.");
+        }
+    }
+    private static String accountComparisonValue(String value) {
+        return value == null ? "" : Normalizer.normalize(value, Normalizer.Form.NFKC).strip().toLowerCase(Locale.ROOT);
+    }
+    public String encode(String password, String userName, String email) {
+        validateNew(password, userName, email);
         return upgrade(password);
     }
     // A successful legacy login may upgrade a password that predates the current length policy.

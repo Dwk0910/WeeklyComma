@@ -85,14 +85,14 @@ class AuthenticationServiceTest {
     @AfterEach void close() { if (context != null) context.close(); }
     AuthDto.LoginRequest local(String email, String password) { return new AuthDto.LoginRequest(AuthType.LOCAL, email, password, null, null, null); }
     AuthDto.LoginRequest naver() { return new AuthDto.LoginRequest(AuthType.OAUTH_NAVER, null, null, "test-code", "http://localhost/authcallback/OAUTH_NAVER", "test-state"); }
-    void createLocal() { users.addUser(new UserDto.SignupRequest(AuthType.LOCAL, "독자", "reader@example.test", "correct password", null, null, null)); }
+    void createLocal() { users.addUser(new UserDto.SignupRequest(AuthType.LOCAL, "독자", "reader@example.test", "correct password1", null, null, null)); }
 
     @Test void signupHashesPasswordsAndSuccessfulLoginIssuesMatchingSessionAndCsrf() {
         createLocal();
         User user = users.getUserByEmail("reader@example.test");
-        assertNotEquals("correct password", user.getPassword());
-        assertTrue(passwords.matches("correct password", user.getPassword()));
-        var response = login(local(" reader@example.test ", "correct password"));
+        assertNotEquals("correct password1", user.getPassword());
+        assertTrue(passwords.matches("correct password1", user.getPassword()));
+        var response = login(local(" reader@example.test ", "correct password1"));
         assertEquals(200, response.getStatusCode().value());
         String cookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
         assertNotNull(cookie);
@@ -109,8 +109,8 @@ class AuthenticationServiceTest {
     }
     @Test void wrongPasswordUnknownUserAndSocialAccountAllFailWithoutSession() {
         createLocal();
-        repository.save(new User("social", "social@example.test", "naver-id", passwords.encode("correct password"), User.UserType.GENERAL, AuthType.OAUTH_NAVER));
-        for (var request : new AuthDto.LoginRequest[]{local("reader@example.test", "wrong password"), local("missing@example.test", "correct password"), local("social@example.test", "correct password")}) {
+        repository.save(new User("social", "social@example.test", "naver-id", passwords.encode("correct password1"), User.UserType.GENERAL, AuthType.OAUTH_NAVER));
+        for (var request : new AuthDto.LoginRequest[]{local("reader@example.test", "wrong password"), local("missing@example.test", "correct password1"), local("social@example.test", "correct password1")}) {
             var response = login(request);
             assertEquals(401, response.getStatusCode().value());
             assertNull(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE));
@@ -127,9 +127,9 @@ class AuthenticationServiceTest {
     }
     @Test void passwordUpdateAlsoHashesAndInvalidatesOldPassword() {
         createLocal();
-        users.changePassword(users.getUserByEmail("reader@example.test").getId(), "correct password", "new correct password");
-        assertEquals(401, login(local("reader@example.test", "correct password")).getStatusCode().value());
-        assertEquals(200, login(local("reader@example.test", "new correct password")).getStatusCode().value());
+        users.changePassword(users.getUserByEmail("reader@example.test").getId(), "correct password1", "new correct password1");
+        assertEquals(401, login(local("reader@example.test", "correct password1")).getStatusCode().value());
+        assertEquals(200, login(local("reader@example.test", "new correct password1")).getStatusCode().value());
     }
     @Test void missingProfileOrUnregisteredSocialUserDoesNotIssueCookie() {
         assertEquals(401, login(naver()).getStatusCode().value());
@@ -150,7 +150,7 @@ class AuthenticationServiceTest {
         assertEquals(400, login(new AuthDto.LoginRequest(AuthType.OAUTH_NAVER, null, null, null, null, null)).getStatusCode().value());
     }
     @Test void argon2UsesDistinctSaltsAndAcceptsLongUnicodePassphrasesWithoutTruncation() {
-        String phrase = "가나다라".repeat(16);
+        String phrase = "가나다라".repeat(16) + "a1";
         String first = passwords.encode(phrase), second = passwords.encode(phrase);
         assertTrue(first.startsWith("$argon2id$v=19$m=19456,t=2,p=1$"));
         assertNotEquals(first, second);
@@ -159,6 +159,58 @@ class AuthenticationServiceTest {
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("short"));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("passwordpassword"));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.encode("x".repeat(128)));
+    }
+    @Test void signupAndPasswordChangesAcceptTenCharacterPasswords() {
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> passwords.validateNew("vK8!tL3@r"));
+        assertDoesNotThrow(() -> passwords.validateNew("가📚".repeat(4) + "a1"));
+        assertDoesNotThrow(() -> passwords.validateNew("가📚".repeat(63) + "a1"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> passwords.validateNew("가📚".repeat(63) + "a12"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> passwords.validateNew("1q2w3e4r5t"));
+        users.addUser(new UserDto.SignupRequest(AuthType.LOCAL, "독자", "reader@example.test", "vK8!tL3@rQ", null, null, null));
+        var user = users.authenticateLocal("reader@example.test", "vK8!tL3@rQ");
+        assertNotNull(user);
+        users.changePassword(user.getId(), "vK8!tL3@rQ", "tZ9#qN4!fL");
+        assertNotNull(users.authenticateLocal("reader@example.test", "tZ9#qN4!fL"));
+    }
+    @Test void newPasswordsRequireLowercaseAndOneAdditionalCharacterType() {
+        for (String password : new String[]{"abcdefghijklmno1", "abcdefghijklmnoA", "abcdefghijklmno!", "가나다라마바사아자차카타파하a📚"})
+            assertDoesNotThrow(() -> passwords.validateNew(password));
+        for (String password : new String[]{"abcdefghijklmno", "ABCDEFGHIJKLMN1", "12345678901234567", "가나다라마바사아자차카타파하가", "abcdefghijklmno "})
+            assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> passwords.validateNew(password));
+        // Existing credentials still authenticate without satisfying the new signup rule.
+        String existing = passwords.upgrade("only lowercase password");
+        assertTrue(passwords.matches("only lowercase password", existing));
+    }
+    @Test void newPasswordsExcludeAccountInformationWithCaseAndUnicodeNormalization() {
+        for (String password : new String[]{"Reader-sunrise!482", "reader@example.test!482", "ＲＥＡＤＥＲ-sunrise!482", "독자와읽는책이야기를함께해요a1",
+                java.text.Normalizer.normalize("독자와읽는책이야기를함께해요a1", java.text.Normalizer.Form.NFD)})
+            assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                    () -> passwords.validateNew(password, " 독자 ", " READER@example.test "));
+        assertDoesNotThrow(() -> passwords.validateNew("unrelated-example.test!482", "독자", "reader@example.test"));
+        assertDoesNotThrow(() -> passwords.validateNew("vK8!tL3@rQ7#nB5$", "", null));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> passwords.validateNew("vK8!tL3@rQ7#nB5$", "k", "reader@example.test"));
+    }
+    @Test void signupAndPasswordChangesRejectAccountInformationWithoutChangingCredentials() {
+        for (String password : new String[]{"Reader-sunrise!482", "독자와읽는책이야기를함께해요a1"}) {
+            var error = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                    () -> users.addUser(new UserDto.SignupRequest(AuthType.LOCAL, "독자", "reader@example.test", password, null, null, null)));
+            assertEquals(400, error.getStatusCode().value());
+        }
+        assertNull(users.getUserByEmail("reader@example.test"));
+        createLocal();
+        User user = users.getUserByEmail("reader@example.test");
+        String hash = user.getPassword();
+        var token = jwt.createToken(user, LoginSessionService.MAX_AGE.toMillis());
+        for (String password : new String[]{"Reader-sunrise!482", "독자와읽는책이야기를함께해요a1"})
+            assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                    () -> users.changePassword(user.getId(), "correct password1", password));
+        assertEquals(hash, users.getUserByEmail("reader@example.test").getPassword());
+        assertTrue(jwt.validateToken(token.jwtToken()));
+        assertNotNull(users.authenticateLocal("reader@example.test", "correct password1"));
     }
     @Test void bcryptIsUpgradedOnlyAfterSuccessfulAuthentication() {
         String oldHash = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("older password");
@@ -187,9 +239,9 @@ class AuthenticationServiceTest {
         var first = jwt.createToken(stale, LoginSessionService.MAX_AGE.toMillis());
         var second = jwt.createToken(stale, LoginSessionService.MAX_AGE.toMillis());
         assertThrows(org.springframework.web.server.ResponseStatusException.class,
-                () -> users.changePassword(stale.getId(), "incorrect", "new correct password"));
+                () -> users.changePassword(stale.getId(), "incorrect", "new correct password1"));
         assertTrue(jwt.validateToken(first.jwtToken()));
-        users.changePassword(stale.getId(), "correct password", "new correct password");
+        users.changePassword(stale.getId(), "correct password1", "new correct password1");
         assertFalse(jwt.validateToken(first.jwtToken()));
         assertFalse(jwt.validateToken(second.jwtToken()));
         var racing = jwt.createToken(stale, LoginSessionService.MAX_AGE.toMillis());
@@ -212,13 +264,13 @@ class AuthenticationServiceTest {
         createLocal();
         for (int i = 0; i < 5; i++) assertEquals(401, login(local("reader@example.test", "wrong")).getStatusCode().value());
         var failure = assertThrows(org.neatore.weeklycomma.exception.AuthenticationThrottledException.class,
-                () -> controller.login(local(" READER@example.test ", "correct password"), http("192.0.2.2"), null));
+                () -> controller.login(local(" READER@example.test ", "correct password1"), http("192.0.2.2"), null));
         assertEquals("900", failure.getHeaders().getFirst("Retry-After"));
         // A new service instance still reads the persisted limits.
         var restarted = new LoginThrottleService(context.getBean(org.springframework.jdbc.core.JdbcTemplate.class), clock);
         assertTrue(restarted.reserveLogin("reader@example.test", "192.0.2.3") > 0);
         clock.advance(java.time.Duration.ofMinutes(15));
-        assertEquals(200, login(local("reader@example.test", "correct password")).getStatusCode().value());
+        assertEquals(200, login(local("reader@example.test", "correct password1")).getStatusCode().value());
     }
     @Test void accountEnumerationAndPasswordSprayingCannotBypassLimits() {
         for (int i = 0; i < 5; i++) assertEquals(401, login(local("missing@example.test", "wrong")).getStatusCode().value());
