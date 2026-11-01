@@ -18,6 +18,7 @@ import {
 import type { LoginErrors, LoginFields, OAuthProvider } from "../../lib/loginFlow.ts";
 import PageTitle from "../../component/PageTitle.tsx";
 import ErrorMessage from "./AuthFeedback.tsx";
+import AuthBookmark from "./AuthBookmark.tsx";
 import "./Login.css";
 
 const oauthErrors: Record<string, string> = {
@@ -146,13 +147,7 @@ export default function Login() {
             <PageTitle title="로그인" />
             <div className="login-stage">
                 <section className="login-card" aria-labelledby="login-heading">
-                    <motion.div
-                        className="login-ribbon"
-                        aria-hidden="true"
-                        initial={reduced ? false : { y: -18, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ duration: 0.45, ease: "easeOut" }}
-                    />
+                    <AuthBookmark />
                     <h1 id="login-heading" className="font-batang">
                         머물렀던 페이지로.
                     </h1>

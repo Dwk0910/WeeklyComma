@@ -7,6 +7,7 @@ import { FcGoogle } from "react-icons/fc";
 import { LuArrowLeft, LuArrowRight, LuCheck, LuEye, LuEyeOff, LuMail } from "react-icons/lu";
 import PageTitle from "../../component/PageTitle.tsx";
 import ErrorMessage from "./AuthFeedback.tsx";
+import AuthBookmark from "./AuthBookmark.tsx";
 import PasswordChecklist from "./PasswordChecklist.tsx";
 import PasswordStrength from "./PasswordStrength.tsx";
 import { passwordChecks, passwordConfirmationChecks } from "../../lib/signupPassword.ts";
@@ -33,20 +34,13 @@ function SignupFrame({
     back?: boolean;
     children: ReactNode;
 }) {
-    const reduced = useReducedMotion();
     if (getLSdata()) return <Navigate to={returnTo} replace />;
     return (
         <main className="login-page signup-page mx-5 mt-14 mb-24 min-h-140 font-suite">
             <PageTitle title="회원가입" />
             <div className="login-stage">
                 <section className="login-card" aria-labelledby="signup-heading">
-                    <motion.div
-                        className="login-ribbon"
-                        aria-hidden="true"
-                        initial={reduced ? false : { y: -18, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ duration: 0.45, ease: "easeOut" }}
-                    />
+                    <AuthBookmark />
                     <h1 id="signup-heading" className="font-batang">
                         {title}
                     </h1>

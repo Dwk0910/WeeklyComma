@@ -14,8 +14,7 @@
     right: 0;
     width: 25px;
     height: 45px;
-    background: #292929;
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+    color: #292929;
 }
 .login-card h1 {
     padding-right: 38px;
