@@ -8,6 +8,7 @@ import { LuArrowLeft, LuArrowRight, LuCheck, LuEye, LuEyeOff, LuMail } from "rea
 import PageTitle from "../../component/PageTitle.tsx";
 import ErrorMessage from "./AuthFeedback.tsx";
 import PasswordChecklist from "./PasswordChecklist.tsx";
+import PasswordStrength from "./PasswordStrength.tsx";
 import { passwordChecks, passwordConfirmationChecks } from "../../lib/signupPassword.ts";
 import { getLSdata } from "../../lib/session.ts";
 import { isOAuthProvider, oauthProviders, safeReturnTo, startOAuth } from "../../lib/loginFlow.ts";
@@ -260,12 +261,18 @@ export function SignupEmail() {
                             )}
                         </button>
                     </div>
-                    <PasswordChecklist
-                        id="signup-password-guide"
-                        visible={showPasswordGuide}
-                        checks={passwordChecks(values.password, values)}
-                        success="사용하실 수 있는 비밀번호입니다"
-                    />
+                    <PasswordStrength
+                        password={values.password}
+                        userName={values.userName}
+                        email={values.email}
+                    >
+                        <PasswordChecklist
+                            id="signup-password-guide"
+                            visible={showPasswordGuide}
+                            checks={passwordChecks(values.password, values)}
+                            success="사용하실 수 있는 비밀번호입니다"
+                        />
+                    </PasswordStrength>
                     <ErrorMessage id="signup-password-error" message={errors.password} />
                 </div>
                 <div

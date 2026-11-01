@@ -147,3 +147,55 @@
     height: 18px;
     margin-top: 3px;
 }
+
+.password-strength-reveal {
+    overflow: hidden;
+}
+.password-strength {
+    margin-top: 14px;
+    color: #333333;
+}
+.password-strength-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.password-strength-value {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+}
+.password-strength-value strong {
+    font-size: 16px;
+    font-weight: 600;
+}
+.password-strength-track {
+    position: relative;
+    height: 5px;
+    margin: 8px 0 0;
+    background: #e5e5e5;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.password-strength-fill {
+    height: 100%;
+    border-radius: inherit;
+}
+
+.password-strength-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 3px 0 0;
+    color: #896000;
+    font-size: 12px;
+    line-height: 1.7;
+    word-break: keep-all;
+}
+.password-strength-warning svg {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    margin-top: 3px;
+    color: #b47d00;
+}
