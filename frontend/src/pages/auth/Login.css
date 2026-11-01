@@ -42,11 +42,14 @@
 }
 .login-field label {
     display: block;
+    width: fit-content;
     margin-bottom: 8px;
     font-size: 14px;
     color: #404040;
 }
 .login-field input {
+    appearance: none;
+    outline: none;
     width: 100%;
     height: 48px;
     padding: 0 12px;
@@ -64,15 +67,21 @@
     font-size: 14px;
 }
 .login-field input:focus {
-    outline: 2px solid #737373;
-    outline-offset: 2px;
+    border-color: #737373;
+    box-shadow: inset 0 0 0 1px #737373;
 }
 .login-field input[aria-invalid="true"] {
     border-color: #b43838;
-    box-shadow: 0 0 0 1px #b438381a;
+    box-shadow: none;
 }
 .login-field input[aria-invalid="true"]:focus {
-    outline-color: #b43838;
+    box-shadow: inset 0 0 0 1px #b43838;
+}
+@media (forced-colors: active) {
+    .login-field input:focus {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+    }
 }
 .login-field input[readonly] {
     background: #fafafa;
