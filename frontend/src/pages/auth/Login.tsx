@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { isAxiosError } from "axios";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { LuArrowRight, LuBookmark, LuCircleAlert, LuEye, LuEyeOff } from "react-icons/lu";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { LuArrowRight, LuBookmark, LuEye, LuEyeOff } from "react-icons/lu";
 import { SiNaver } from "react-icons/si";
 import { FcGoogle } from "react-icons/fc";
 import { api } from "../../index.tsx";
@@ -17,6 +17,7 @@ import {
 } from "../../lib/loginFlow.ts";
 import type { LoginErrors, LoginFields, OAuthProvider } from "../../lib/loginFlow.ts";
 import PageTitle from "../../component/PageTitle.tsx";
+import ErrorMessage from "./AuthFeedback.tsx";
 import "./Login.css";
 
 const oauthErrors: Record<string, string> = {
@@ -29,30 +30,6 @@ const oauthErrors: Record<string, string> = {
 };
 
 type Feedback = { kind: "credentials" | "service"; message: string } | null;
-
-function ErrorMessage({ id, message }: { id: string; message?: string }) {
-    const reduced = useReducedMotion();
-    return (
-        <AnimatePresence initial={false}>
-            {message && (
-                <motion.div
-                    key={message}
-                    id={id}
-                    className="login-error-space"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: reduced ? 0 : 0.2 }}
-                >
-                    <p className="login-error" role="alert">
-                        <LuCircleAlert aria-hidden="true" />
-                        <span>{message}</span>
-                    </p>
-                </motion.div>
-            )}
-        </AnimatePresence>
-    );
-}
 
 export default function Login() {
     const [params] = useSearchParams();
@@ -311,9 +288,7 @@ export default function Login() {
                             비밀번호 찾기
                         </button>
                         <span aria-hidden="true" />
-                        <button type="button" disabled aria-label="회원가입 (준비 중)">
-                            회원가입
-                        </button>
+                        <Link to={`/signup?${new URLSearchParams({ returnTo })}`}>회원가입</Link>
                     </div>
                 </section>
                 <p className="login-return">

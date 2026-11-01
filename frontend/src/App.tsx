@@ -26,6 +26,7 @@ import Favorites from "./pages/Favorites.tsx";
 import Inquiries from "./pages/Inquiries.tsx";
 
 import Login from "./pages/auth/Login.tsx";
+import Signup, { SignupEmail, SignupSocial } from "./pages/auth/Signup.tsx";
 import AuthCallback from "./pages/redirect/AuthCallback.tsx";
 import SignUpCallback from "./pages/redirect/SignUpCallback.tsx";
 import Logout from "./pages/redirect/Logout.tsx";
@@ -63,6 +64,9 @@ export default function App() {
                                 element={<SignUpCallback />}
                             />
                             <Route path="/login" element={<Login />} />
+                            <Route path="/signup" element={<Signup />} />
+                            <Route path="/signup/email" element={<SignupEmail />} />
+                            <Route path="/signup/social/:provider" element={<SignupSocial />} />
                             <Route path={"/logout"} element={<Logout />} />
                             <Route path={"/about"} element={<About />} />
                             <Route

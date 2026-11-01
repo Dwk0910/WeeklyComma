@@ -20,7 +20,7 @@ export function safeReturnTo(value: string | null): string {
     }
     if (
         url.origin !== "https://weeklycomma.invalid" ||
-        /^\/(login|logout|authcallback|signupcallback)(\/|$)/i.test(pathname)
+        /^\/(login|signup|logout|authcallback|signupcallback)(\/|$)/i.test(pathname)
     )
         return "/";
     return url.pathname + url.search + url.hash;

@@ -9,6 +9,7 @@ export default function SignUpCallback() {
     const { oauth_type } = useParams();
     const [params] = useSearchParams();
     const navigate = useNavigate();
+    const returnTo = useRef("/");
     const operation = useRef<Promise<string> | null>(null);
     useEffect(() => {
         let active = true;
@@ -18,6 +19,7 @@ export default function SignUpCallback() {
                 let pending;
                 try {
                     pending = consumeOAuth(oauth_type, "signup", params.get("state"));
+                    returnTo.current = pending.returnTo;
                 } catch {
                     throw new Error("expired");
                 }
@@ -60,7 +62,7 @@ export default function SignUpCallback() {
             .catch((error: unknown) => {
                 if (active)
                     navigate(
-                        `/login?${new URLSearchParams({ error: error instanceof Error ? error.message : "signup_unavailable", provider: isOAuthProvider(oauth_type) ? oauth_type : "" })}`,
+                        `/signup?${new URLSearchParams({ error: error instanceof Error ? error.message : "signup_unavailable", provider: isOAuthProvider(oauth_type) ? oauth_type : "", returnTo: returnTo.current })}`,
                         { replace: true }
                     );
             });

@@ -186,11 +186,12 @@
     color: #737373;
     font-size: 13px;
 }
-.login-account-links button {
+.login-account-links button,
+.login-account-links a {
     padding: 8px 0;
     cursor: default;
 }
-.login-account-links button:last-child {
+.login-account-links a:last-child {
     color: #525252;
     font-weight: 500;
 }
@@ -245,4 +246,12 @@
     color: #34734c;
     font-size: 13px;
     line-height: 1.6;
+}
+
+.login-account-links a {
+    cursor: pointer;
+    text-underline-offset: 4px;
+}
+.login-account-links a:hover {
+    text-decoration: underline;
 }
