@@ -26,7 +26,7 @@ export default function TopBar({ admin }: { admin: boolean }) {
             <div className={"w-full flex items-center mt-10"}>
                 <img
                     src={title}
-                    alt={"logo"}
+                    alt={"주간쉼표"}
                     className={"w-75 cursor-pointer"}
                     onClick={() => window.location.assign("/")}
                 />
