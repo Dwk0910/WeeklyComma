@@ -17,8 +17,8 @@ public class AuthRequestGuard extends OncePerRequestFilter {
     private final BrowserOrigins origins;
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         String path = request.getServletPath();
-        if (path.startsWith("/authsessions")) response.setHeader("Cache-Control", "no-store");
-        boolean credentialWrite = (path.equals("/authsessions") || path.equals("/users")) && request.getMethod().equals("POST")
+        if (path.startsWith("/authsessions") || path.startsWith("/users")) response.setHeader("Cache-Control", "no-store");
+        boolean credentialWrite = (path.equals("/authsessions") || path.equals("/users") || path.startsWith("/users/email/")) && request.getMethod().equals("POST")
                 || path.equals("/authsessions/password") && request.getMethod().equals("PUT");
         boolean logout = path.equals("/authsessions") && request.getMethod().equals("DELETE");
         if (credentialWrite || logout) {

@@ -1,4 +1,17 @@
 spring:
+  mail:
+    host: ${SES_SMTP_HOST:localhost}
+    port: ${SES_SMTP_PORT:587}
+    username: ${SES_SMTP_USERNAME:}
+    password: ${SES_SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SES_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${SES_SMTP_TLS:true}
+      mail.smtp.starttls.required: ${SES_SMTP_TLS:true}
+      mail.smtp.ssl.checkserveridentity: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   datasource:
     driver-class-name: org.sqlite.JDBC
     url: jdbc:sqlite:/app/data/weeklycomma.db?busy_timeout=5000
@@ -20,3 +33,9 @@ server:
   tomcat:
     max-part-count: 50
     max-part-header-size: 1024
+
+signup:
+  mail:
+    enabled: ${SIGNUP_MAIL_ENABLED:false}
+    from: ${SIGNUP_MAIL_FROM:}
+    verify-url: ${SIGNUP_VERIFY_URL:http://localhost:5173/signup/email/verify}

@@ -30,6 +30,9 @@ class AuthenticationServiceTest {
     AuthenticationController controller;
     JSONObject profile;
     boolean providerUnavailable;
+    String signupToken;
+    boolean mailUnavailable;
+    EmailSignupService emailSignup;
     MutableClock clock;
     LoginThrottleService throttle;
     LoginSessionService sessions;
@@ -72,8 +75,14 @@ class AuthenticationServiceTest {
             }
         };
         context.registerBean(UserService.class, () -> new UserService(context.getBean(UserRepository.class), oauth, null, null, null, context.getBean(LoginPasswordService.class), context.getBean(LoginSessionService.class)));
+        context.registerBean(SignupMailSender.class, () -> (email, code) -> {
+            if (mailUnavailable) throw new IllegalStateException("mail unavailable");
+            signupToken = code;
+        });
+        context.registerBean(EmailSignupService.class);
         context.registerBean(JwtService.class);
         context.refresh();
+        emailSignup = context.getBean(EmailSignupService.class);
         users = context.getBean(UserService.class);
         repository = context.getBean(UserRepository.class);
         passwords = context.getBean(LoginPasswordService.class);
@@ -341,6 +350,85 @@ class AuthenticationServiceTest {
         assertEquals(409, conflict.getStatusCode().value());
         assertEquals(AuthType.LOCAL, users.getUserByEmail("reader@example.test").getAuthType());
         assertEquals(401, login(google()).getStatusCode().value());
+    }
+
+    @Test void emailSignupCreatesOnlyAfterVerificationAndCannotReplay() {
+        emailSignup.request("  READER@example.test ");
+        String token = signupToken;
+        assertEquals(43, token.length());
+        assertNull(users.getUserByEmail("reader@example.test"));
+        assertEquals("new", emailSignup.inspect(token).status());
+        assertEquals("reader@example.test", emailSignup.inspect(token).email());
+        assertNull(users.getUserByEmail("reader@example.test"));
+        assertEquals("created", emailSignup.complete(token, "독자", "vK8!tL3@rQ").status());
+        assertNotNull(users.authenticateLocal("reader@example.test", "vK8!tL3@rQ"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> emailSignup.complete(token, "other", "vK8!tL3@rQ"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> emailSignup.inspect(token));
+    }
+    @Test void verifiedExistingSocialEmailOnlyReturnsLoginMethodAndNeverLinksOrOverwrites() {
+        var original = repository.save(new User("독자", "reader@example.test", "naver-subject", null, User.UserType.GENERAL, AuthType.OAUTH_NAVER));
+        emailSignup.request("reader@example.test");
+        var result = emailSignup.inspect(signupToken);
+        assertEquals("existing", result.status());
+        assertEquals("OAUTH_NAVER", result.loginMethod());
+        assertEquals("existing", emailSignup.complete(signupToken, "new name", "vK8!tL3@rQ").status());
+        var after = users.getUserByEmail("reader@example.test");
+        assertEquals(original.getId(), after.getId());
+        assertEquals("독자", after.getUserName());
+        assertNull(after.getPassword());
+        assertNull(users.authenticateLocal("reader@example.test", "vK8!tL3@rQ"));
+    }
+    @Test void expiredAndUnknownLinksNeverExposeAccountInformation() {
+        emailSignup.request("reader@example.test");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> emailSignup.inspect("a".repeat(43)));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> emailSignup.inspect("12345678"));
+        clock.advance(java.time.Duration.ofMinutes(15));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> emailSignup.inspect(signupToken));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> emailSignup.complete(signupToken, "독자", "vK8!tL3@rQ"));
+        assertNull(users.getUserByEmail("reader@example.test"));
+    }
+    @Test void passwordValidationFailureDoesNotBurnTheLinkAndNicknameMayRepeat() {
+        repository.save(new User("독자", "other@example.test", "other", null, User.UserType.GENERAL, AuthType.OAUTH_NAVER));
+        emailSignup.request("reader@example.test");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> emailSignup.complete(signupToken, "독자", "short"));
+        assertEquals("new", emailSignup.inspect(signupToken).status());
+        emailSignup.complete(signupToken, "독자", "vK8!tL3@rQ");
+        assertEquals("독자", users.getUserByEmail("reader@example.test").getUserName());
+    }
+    @Test void registrationAfterInspectionRechecksForAnExistingAccount() {
+        emailSignup.request("reader@example.test");
+        assertEquals("new", emailSignup.inspect(signupToken).status());
+        createLocal();
+        assertEquals("existing", emailSignup.complete(signupToken, "other", "vK8!tL3@rQ").status());
+        assertNotNull(users.authenticateLocal("reader@example.test", "correct password1"));
+    }
+    @Test void successfulSignupInvalidatesAllOtherLinksForTheSameEmail() {
+        emailSignup.request("reader@example.test");
+        String first = signupToken;
+        emailSignup.request("reader@example.test");
+        String second = signupToken;
+        assertNotEquals(first, second);
+        var jdbc = context.getBean(org.springframework.jdbc.core.JdbcTemplate.class);
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM email_signup_link WHERE token_hash = ?", Integer.class, second));
+        emailSignup.complete(second, "독자", "vK8!tL3@rQ");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> emailSignup.inspect(first));
+    }
+    @Test void failedDeliveryRemovesLinkAndDoesNotCreateAccount() {
+        mailUnavailable = true;
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> emailSignup.request("reader@example.test"));
+        assertEquals(0, context.getBean(org.springframework.jdbc.core.JdbcTemplate.class)
+                .queryForObject("SELECT COUNT(*) FROM email_signup_link", Integer.class));
+        assertNull(users.getUserByEmail("reader@example.test"));
+    }
+    @Test void signupEmailDeliveryLimitIsIndependentOfAccountExistenceAndCase() {
+        assertEquals(0, throttle.reserveSignupEmail("reader@example.test"));
+        assertEquals(0, throttle.reserveSignupEmail(" READER@example.test "));
+        assertEquals(0, throttle.reserveSignupEmail("reader@example.test"));
+        assertTrue(throttle.reserveSignupEmail("reader@example.test") > 0);
     }
 
 }

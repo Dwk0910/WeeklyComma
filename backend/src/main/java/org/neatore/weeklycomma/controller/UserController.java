@@ -21,13 +21,10 @@ public class UserController {
     private final UserService userService;
     private final org.neatore.weeklycomma.service.LoginThrottleService throttle;
 
-    // Keep unverified local registration closed until the signup/email-verification flow is ready.
-    @org.springframework.beans.factory.annotation.Value("${security.local-signup-enabled:false}")
-    private boolean localSignupEnabled;
-
+    // Local signup is exclusively handled by /users/email/complete after email verification.
     @PostMapping
     public ResponseEntity<Void> signUp(@Valid @RequestBody UserDto.SignupRequest request, jakarta.servlet.http.HttpServletRequest http) {
-        if (request.authType() == org.neatore.weeklycomma.dto.login.AuthType.LOCAL && !localSignupEnabled)
+        if (request.authType() == org.neatore.weeklycomma.dto.login.AuthType.LOCAL)
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
         long retry = throttle.reserveSignup(http.getRemoteAddr());
         if (retry > 0) throw new org.neatore.weeklycomma.exception.AuthenticationThrottledException(retry);

@@ -34,6 +34,10 @@ public class LoginThrottleService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public long reserveSignup(String ip) { return reserve(key("signup-ip", ip), 10); }
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public long reserveSignupEmail(String email) { return reserve(key("signup-email", normalizeEmail(email)), 3); }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public long reserveVerification(String ip) { return reserve(key("signup-verify", ip), 30); }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void succeeded(String email) { jdbc.update("DELETE FROM login_throttle WHERE bucket_key = ?", key("login-account", normalizeEmail(email))); }
 
     private long reserve(String key, int limit) {

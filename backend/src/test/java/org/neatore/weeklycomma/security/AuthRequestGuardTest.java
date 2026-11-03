@@ -41,4 +41,17 @@ class AuthRequestGuardTest {
         var response = new MockHttpServletResponse(); guard.doFilter(me, response, (req, res) -> {});
         assertEquals("no-store", response.getHeader("Cache-Control"));
     }
+    @Test void protectsEmailVerificationEndpointsAndPreventsCaching() throws Exception {
+        for (String path : java.util.List.of("/users/email/request", "/users/email/inspect", "/users/email/complete")) {
+            assertEquals(200, run(request(path)));
+            var missing = request(path); missing.removeHeader("X-Requested-With");
+            assertEquals(403, run(missing));
+            var cross = request(path); cross.removeHeader("Origin"); cross.addHeader("Origin", "https://attacker.test");
+            assertEquals(403, run(cross));
+            var response = new MockHttpServletResponse();
+            guard.doFilter(request(path), response, (req, res) -> {});
+            assertEquals("no-store", response.getHeader("Cache-Control"));
+        }
+    }
+
 }
