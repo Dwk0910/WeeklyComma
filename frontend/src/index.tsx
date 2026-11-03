@@ -1,4 +1,6 @@
-import axios from "axios";
+/* eslint-disable react-refresh/only-export-components -- Entry point keeps legacy API/session exports; new consumers use lib/api and lib/session. */
+import { api } from "./lib/api.ts";
+export { api, BACKEND_ADDRESS } from "./lib/api.ts";
 import { getLSdata } from "./lib/session.ts";
 export { getLSdata } from "./lib/session.ts";
 
@@ -8,27 +10,6 @@ import { CookiesProvider } from "react-cookie";
 
 import App from "./App.tsx";
 import "./index.css";
-
-// API Settings
-export const BACKEND_ADDRESS =
-    (import.meta.env.VITE_BACKEND_PROTOCOL == "ns" ? "http" : "https") +
-    `://${import.meta.env.VITE_BACKEND_ADDRESS}/`;
-
-export const api = axios.create({
-    baseURL: BACKEND_ADDRESS,
-    timeout: 10000,
-    withCredentials: true
-});
-
-api.interceptors.request.use((config) => {
-    if (["post", "put", "patch", "delete"].includes(config.method || "")) {
-        config.headers["X-Requested-With"] = "WeeklyComma";
-    }
-    // The initial session check may populate or refresh this value after startup.
-    const lsdata = getLSdata();
-    if (lsdata && lsdata["csrfToken"]) config.headers["X-CSRF-Token"] = lsdata["csrfToken"];
-    return config;
-});
 
 const root = createRoot(document.getElementById("root")!);
 

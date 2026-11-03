@@ -27,12 +27,41 @@ test("all signup URLs withhold their forms from signed-in sessions", async () =>
     try {
         const {
             default: Signup,
-            SignupEmail,
-            SignupSocial
+            SignupSocial,
+            SignupRegistration
         } = await server.ssrLoadModule("/src/pages/auth/Signup.tsx");
+        const { SignupEmail, SignupEmailVerify } = await server.ssrLoadModule(
+            "/src/pages/auth/EmailSignup.tsx"
+        );
+        const registration = renderToString(
+            createElement(
+                MemoryRouter,
+                null,
+                createElement(SignupRegistration, {
+                    token: "x".repeat(43),
+                    email: "verified@example.test",
+                    onExisting: () => {}
+                })
+            )
+        );
+        assert.match(
+            registration,
+            /<input[^>]*id="signup-email"[^>]*disabled=""[^>]*value="verified@example.test"/
+        );
+        const initial = renderToString(
+            createElement(MemoryRouter, null, createElement(SignupEmail))
+        );
+        assert.ok(!initial.includes('type="password"'));
+        assert.ok(!initial.includes('name="userName"'));
         for (const [path, route, Component, heading] of [
             ["/signup", "/signup", Signup, "책과 만나는 첫 페이지."],
             ["/signup/email", "/signup/email", SignupEmail, "이메일로 시작하기."],
+            [
+                "/signup/email/verify",
+                "/signup/email/verify",
+                SignupEmailVerify,
+                "이메일을 확인하고 있어요."
+            ],
             [
                 "/signup/social/OAUTH_NAVER",
                 "/signup/social/:provider",
