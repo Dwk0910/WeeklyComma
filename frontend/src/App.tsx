@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 
+import { Analytics } from "@vercel/analytics/next";
+
 import { getLSdata } from "./index.tsx";
 
 import PreTopBar from "./component/PreTopBar";
@@ -51,6 +53,7 @@ export default function App() {
 
     return (
         <>
+            <Analytics />
             <div className={"w-full relative flex flex-col"}>
                 <div className={"w-full absolute bg-gray-200 h-10 z-0"} />
                 <div className={"w-300 mx-auto z-10"}>
