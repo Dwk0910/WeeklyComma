@@ -63,7 +63,8 @@ public class RecommendationQueryService {
         if (postId != null && !posts.containsKey(postId)) posts.put(postId, postRepository.getPostById(postId));
         Book book = books.get(isbn);
         Post post = posts.get(postId);
-        return new RecommendationHistoryDto(id, year, month, week, difficulty, isbn, postId,
-                post == null ? null : post.getTitle(), book == null ? null : book.toDto(), current);
+        boolean valid = post != null && post.isRecommendationFor(isbn);
+        return new RecommendationHistoryDto(id, year, month, week, difficulty, isbn, valid ? postId : null,
+                valid ? post.getTitle() : null, book == null ? null : book.toDto(), current);
     }
 }

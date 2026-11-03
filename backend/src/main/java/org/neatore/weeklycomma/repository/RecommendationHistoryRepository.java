@@ -8,6 +8,10 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface RecommendationHistoryRepository extends JpaRepository<RecommendationHistory, Long> {
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE RecommendationHistory h SET h.recommendationPostId = null WHERE h.recommendationPostId = :postId")
+    void unlinkPost(@Param("postId") long postId);
+
     List<RecommendationHistory> findByIsbnInOrderByRecommendationYearDescRecommendationMonthDescRecommendationWeekDescIdDesc(List<String> isbns);
     @Query("""
             SELECT h FROM RecommendationHistory h

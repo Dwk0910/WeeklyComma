@@ -65,10 +65,11 @@ public class RecommendationBoardService {
                     weekStart.getYear(), weekStart.getMonthValue(), (weekStart.getDayOfMonth() - 1) / 7 + 1,
                     AdminSettingService.RECOMMENDATION_COURSES.get(selection.course()), selection.postId(), true));
         }
+        Map<Long, Post> historyPosts = new HashMap<>();
         for (var item : history.findByIsbnInOrderByRecommendationYearDescRecommendationMonthDescRecommendationWeekDescIdDesc(isbns)) {
             designations.computeIfAbsent(item.getIsbn(), key -> new ArrayList<>()).add(new Designation(
                     item.getRecommendationYear(), item.getRecommendationMonth(), item.getRecommendationWeek(),
-                    item.getDifficulty(), item.getRecommendationPostId(), false));
+                    item.getDifficulty(), validHistoryPost(item.getIsbn(), item.getRecommendationPostId(), historyPosts), false));
         }
         var newestFirst = Comparator.comparingInt(Designation::year).thenComparingInt(Designation::month)
                 .thenComparingInt(Designation::week).reversed();
@@ -84,4 +85,11 @@ public class RecommendationBoardService {
         }
         return result;
     }
+    private Long validHistoryPost(String isbn, Long id, Map<Long, Post> cache) {
+        if (id == null) return null;
+        if (!cache.containsKey(id)) cache.put(id, posts.getPostById(id));
+        Post post = cache.get(id);
+        return post != null && post.isRecommendationFor(isbn) ? id : null;
+    }
+
 }

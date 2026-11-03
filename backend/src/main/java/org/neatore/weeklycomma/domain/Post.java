@@ -34,6 +34,11 @@ public class Post extends BaseTimeEntity {
         NOTICE, EVENT, G_RECOMMENDATION, W_RECOMMENDATION
     }
 
+    public boolean isRecommendationFor(String isbn) {
+        return (postType == PostType.G_RECOMMENDATION || postType == PostType.W_RECOMMENDATION)
+                && isbn != null && attribution != null && isbn.equals(attribution.getBookId());
+    }
+
     public PostDto.GetResponse toQueryDto() {
         return new PostDto.GetResponse(
                 this.postType,

@@ -377,6 +377,38 @@ class RecommendationExpirationServiceTest {
         assertEquals("deleted-book", recent.get(0).isbn());
     }
 
+    @Test
+    void recentHistoryRejectsNoticesAndRecommendationsForOtherBooks() {
+        long notice = posts.addPost("공지 제목", "notice", "curator", Post.PostType.NOTICE, null);
+        long otherBookPost = createBookAndPost("other-book", "상급");
+        var archive = context.getBean(RecommendationHistoryService.class);
+        archive.archive(2026, 10, 3, "상급", "book-a", notice);
+        archive.archive(2026, 10, 2, "상급", "book-a", otherBookPost);
+        var entries = queries.getRecent("book-a", null, 12);
+        assertEquals(2, entries.size());
+        for (var entry : entries) {
+            assertNull(entry.recommendationPostTitle());
+            assertNull(entry.recommendationPostId());
+            assertEquals("book-a", entry.isbn());
+        }
+    }
+
+    @Test
+    void deletingArchivedPostPreventsRelinkingEvenWhenIdAndBookAreReused() {
+        long id = createBookAndPost("book-a", "상급");
+        context.getBean(RecommendationHistoryService.class).archive(2026, 10, 3, "상급", "book-a", id);
+        posts.deletePost(id);
+        assertNull(histories.findAll().get(0).getRecommendationPostId());
+        // Reproduce SQLite ID reuse with an unrelated replacement recommendation for the same book.
+        jdbc.update("INSERT INTO post (id,post_type,title,book_id,is_pinned) VALUES (?,?,?,?,false)",
+                id, "G_RECOMMENDATION", "새로운 추천글", "book-a");
+        var entry = queries.getRecent("book-a", null, 12).get(0);
+        assertNull(entry.recommendationPostTitle());
+        assertNull(entry.recommendationPostId());
+        assertEquals(3, entry.recommendationWeek());
+        assertNotNull(entry.book());
+    }
+
     private long createBookAndPost(String isbn, String difficulty) {
         bookRepository.save(new Book(new BookDto.RegisterRequest(isbn, "Book " + isbn, "Subtitle", "Author", "Publisher",
                 Instant.now().getEpochSecond(), "https://example.test/cover.jpg", null, "Description", difficulty, false)));
@@ -464,8 +496,8 @@ class RecommendationExpirationServiceTest {
         }
 
         @Bean
-        PostService postService(PostRepository repository, AdminSettingService settings) {
-            return new PostService(repository, settings);
+        PostService postService(PostRepository repository, AdminSettingService settings, RecommendationHistoryRepository histories) {
+            return new PostService(repository, settings, histories);
         }
 
         @Bean

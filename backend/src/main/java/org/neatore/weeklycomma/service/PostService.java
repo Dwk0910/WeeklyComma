@@ -20,6 +20,7 @@ import java.util.Optional;
 public class PostService {
     private final PostRepository postRepository;
     private final AdminSettingService adminSettingService;
+    private final org.neatore.weeklycomma.repository.RecommendationHistoryRepository histories;
 
     @Transactional
     public long addPost(String title, String content, String author, Post.PostType type, Post.Attribution attr) {
@@ -47,7 +48,9 @@ public class PostService {
         adminSettingService.getAdminSettingsByValue(Long.toString(id)).stream()
                 .filter(setting -> setting.getKey().startsWith("recommend_post_"))
                 .forEach(adminSettingService::deleteAdminSetting);
-        Post post = postRepository.getPostById(id);
+        Post post = getPost(id);
+        // Preserve the book's designation, but never let a reused SQLite ID relink it to a new post.
+        histories.unlinkPost(id);
         postRepository.delete(post);
     }
 
