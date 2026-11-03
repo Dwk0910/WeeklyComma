@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { LuCircleHelp } from "react-icons/lu";
 import { api } from "../../../index.tsx";
 import ServerImg from "../../../component/ServerImg.tsx";
 import {
@@ -20,6 +21,7 @@ export default function RecentRecommendations({
     onSelect?: (book: RecommendationBook, postId: number | null) => void;
     title?: string;
 }) {
+    const helpId = useId();
     const [entries, setEntries] = useState<RecommendationHistory[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -109,9 +111,34 @@ export default function RecentRecommendations({
                                         )}
                                     </div>
                                     <div className="text-xs text-gray-500 mt-1 break-words">
-                                        {entry.recommendationPostTitle
-                                            ? `추천글: ${plainText(entry.recommendationPostTitle)}`
-                                            : "연결된 추천글 없음"}
+                                        {entry.recommendationPostTitle ? (
+                                            `추천글: ${plainText(entry.recommendationPostTitle)}`
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1">
+                                                연결된 추천글 없음
+                                                <span
+                                                    className="group/help relative inline-flex cursor-help items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500"
+                                                    tabIndex={onSelect ? undefined : 0}
+                                                    aria-label="연결된 추천글이 없는 이유"
+                                                    aria-describedby={`${helpId}-${entry.id ?? entry.difficulty}`}
+                                                >
+                                                    <LuCircleHelp
+                                                        size={13}
+                                                        strokeWidth={1.5}
+                                                        aria-hidden="true"
+                                                    />
+                                                    <span
+                                                        id={`${helpId}-${entry.id ?? entry.difficulty}`}
+                                                        role="tooltip"
+                                                        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-56 -translate-x-1/2 rounded-md bg-neutral-800 px-3 py-2 text-left text-xs leading-relaxed font-normal text-white shadow-sm group-hover/help:block group-focus/help:block group-focus-visible/recent:block"
+                                                    >
+                                                        이 책을 추천할 당시 추천글을 연결하지
+                                                        않았거나, 연결했던 추천글이 삭제된
+                                                        경우입니다.
+                                                    </span>
+                                                </span>
+                                            </span>
+                                        )}
                                     </div>
                                     {!book && (
                                         <div className="text-xs text-gray-400 mt-1">
@@ -135,7 +162,7 @@ export default function RecentRecommendations({
                                 type="button"
                                 disabled={!selectable}
                                 onClick={() => book && onSelect(book, entry.recommendationPostId)}
-                                className="w-full flex gap-3 p-3 text-left border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="group/recent w-full flex gap-3 p-3 text-left border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/40 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 {content}
                             </button>
