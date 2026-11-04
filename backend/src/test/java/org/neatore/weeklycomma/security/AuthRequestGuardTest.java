@@ -7,11 +7,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AuthRequestGuardTest {
-    private final AuthRequestGuard guard = new AuthRequestGuard(new BrowserOrigins("https://www.weeklycomma.kro.kr,http://localhost:5173"));
+    private final AuthRequestGuard guard = new AuthRequestGuard(new BrowserOrigins("https://weeklycomma.kro.kr,http://localhost:5173"));
     MockHttpServletRequest request(String path) {
         var r = new MockHttpServletRequest("POST", path); r.setServletPath(path);
         r.setContentType("application/json"); r.addHeader("X-Requested-With", "WeeklyComma");
-        r.addHeader("Origin", "https://www.weeklycomma.kro.kr"); return r;
+        r.addHeader("Origin", "https://weeklycomma.kro.kr"); return r;
     }
     int run(MockHttpServletRequest request) throws Exception {
         var response = new MockHttpServletResponse(); var reached = new AtomicBoolean();
@@ -22,7 +22,7 @@ class AuthRequestGuardTest {
         assertEquals(200, run(request("/authsessions")));
         var cross = request("/authsessions"); cross.removeHeader("Origin"); cross.addHeader("Origin", "https://attacker.test");
         assertEquals(403, run(cross));
-        var suffix = request("/authsessions"); suffix.removeHeader("Origin"); suffix.addHeader("Origin", "https://www.weeklycomma.kro.kr.attacker.test");
+        var suffix = request("/authsessions"); suffix.removeHeader("Origin"); suffix.addHeader("Origin", "https://weeklycomma.kro.kr.attacker.test");
         assertEquals(403, run(suffix));
         var missing = request("/authsessions"); missing.removeHeader("X-Requested-With"); assertEquals(403, run(missing));
         var form = request("/authsessions"); form.setContentType("application/x-www-form-urlencoded"); assertEquals(415, run(form));

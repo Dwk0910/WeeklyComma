@@ -10,7 +10,7 @@
 
 [![Build](https://github.com/Dwk0910/WeeklyComma/actions/workflows/workflow.yml/badge.svg)](https://github.com/Dwk0910/WeeklyComma/actions/workflows/workflow.yml)
 
-[주간쉼표 바로가기](https://www.weeklycomma.kro.kr)
+[주간쉼표 바로가기](https://weeklycomma.kro.kr)
 
 **책 한 권으로 쉬어가는 한 주.**
 
