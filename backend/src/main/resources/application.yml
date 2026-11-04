@@ -38,4 +38,4 @@ signup:
   mail:
     enabled: ${SIGNUP_MAIL_ENABLED:false}
     from: ${SIGNUP_MAIL_FROM:}
-    verify-url: ${SIGNUP_VERIFY_URL:http://localhost:5173/signup/email/verify}
+    verify-url: ${SIGNUP_VERIFY_URL:https://weeklycomma.kro.kr/signup/email/verify}
