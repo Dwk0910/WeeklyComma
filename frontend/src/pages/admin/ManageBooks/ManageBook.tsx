@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { MdCameraAlt } from "react-icons/md";
 
 import { type Book } from "./ManageRecommendation.tsx";
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 
 import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { SubTitle, Title } from "../lib_component/Component.tsx";
@@ -106,7 +106,7 @@ export default function ManageBook({
             formData.append("deleteCustomCover", "true");
         }
 
-        api.post(BACKEND_ADDRESS + "books", formData).then(() => {
+        api.post("books", formData).then(() => {
             alert("정상적으로 등록되었습니다.");
             setSelectedBook((prev) => prev && { ...prev, dbExist: true });
             refreshSearchResult();
@@ -115,7 +115,7 @@ export default function ManageBook({
 
     const removeBook = () => {
         if (confirm("정말 이 책을 삭제하시겠습니까? 등록한 정보가 모두 삭제됩니다.")) {
-            api.delete(BACKEND_ADDRESS + `books?isbn=${book.isbn}`).then(() => {
+            api.delete(`books?isbn=${book.isbn}`).then(() => {
                 setSelectedBook(null);
                 refreshSearchResult();
             });

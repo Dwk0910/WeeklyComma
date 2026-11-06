@@ -2,7 +2,7 @@ import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { MdPause, MdPlayArrow, MdArrowForwardIos, MdArrowBackIosNew } from "react-icons/md";
 import { useCallback, useEffect, useState, useRef } from "react";
 
-import { BACKEND_ADDRESS, api, getLSdata } from "../index.tsx";
+import { api, getLSdata } from "../index.tsx";
 import { isAxiosError } from "axios";
 import BookStarButton, { type BookStarStatus } from "../component/BookStarButton.tsx";
 import ServerImg from "../component/ServerImg.tsx";
@@ -208,17 +208,13 @@ export default function Main() {
             const recommendationIsbn = await fetchAdminSetting(`recommend_isbn_${level}`);
             if (!recommendationIsbn) return;
 
-            const bookRes = await api.get<BookResponse>(
-                `${BACKEND_ADDRESS}books/${recommendationIsbn}`
-            );
+            const bookRes = await api.get<BookResponse>(`books/${recommendationIsbn}`);
             setRecommendationBook(bookRes.data);
 
             const recommendationPostId = await fetchAdminSetting(`recommend_post_${level}`);
             if (!recommendationPostId) return;
 
-            const postRes = await api.get<RecommendationPost>(
-                `${BACKEND_ADDRESS}posts/${recommendationPostId}`
-            );
+            const postRes = await api.get<RecommendationPost>(`posts/${recommendationPostId}`);
             const post = postRes.data;
             setRecommendationPost(post.attributions?.bookId === recommendationIsbn ? post : null);
         } catch (err) {
@@ -232,16 +228,14 @@ export default function Main() {
         const fetch = async () => {
             // latest notice via PostController
             try {
-                const res = await api.get<Post>(`${BACKEND_ADDRESS}posts/latestnotice`);
+                const res = await api.get<Post>(`posts/latestnotice`);
                 if (res.data?.title) setLatestNotice(res.data);
             } catch (err) {
                 console.error("공지 조회 실패:", err);
             }
 
             try {
-                const weekRes = await api.get<CurrentWeekResponse>(
-                    `${BACKEND_ADDRESS}current-week`
-                );
+                const weekRes = await api.get<CurrentWeekResponse>(`current-week`);
                 setCurrentWeek(weekRes.data);
             } catch (err) {
                 console.error("현재 주차 조회 실패:", err);

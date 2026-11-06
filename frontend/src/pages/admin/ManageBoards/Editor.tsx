@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 
 import { useEditor, useEditorState, EditorContent } from "@tiptap/react";
 import { createPostExtensions } from "../../../extensions/postExtensions.ts";
@@ -186,8 +186,8 @@ export default function Editor({
 
         // editingPost 유무에 따라 PUT(수정) 또는 POST(생성) 호출
         const apiCall = editingPost
-            ? api.put(BACKEND_ADDRESS + `posts/${editingPost.id}`, payload)
-            : api.post(BACKEND_ADDRESS + "posts", payload);
+            ? api.put(`posts/${editingPost.id}`, payload)
+            : api.post("posts", payload);
 
         apiCall
             .then(() => {

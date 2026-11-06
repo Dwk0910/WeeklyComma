@@ -1,6 +1,6 @@
 import Component, { Title } from "../lib_component/Component";
 import Editor from "./Editor.tsx";
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 
 import { clsx } from "clsx";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -43,7 +43,7 @@ export default function ManageComponent({
         Promise.all(
             ["high", "mid", "low"].map((level) =>
                 api
-                    .get(`${BACKEND_ADDRESS}adminsettings`, {
+                    .get(`adminsettings`, {
                         params: { key: `recommend_post_${level}` }
                     })
                     .then((res) =>
@@ -65,7 +65,7 @@ export default function ManageComponent({
         const requestId = ++postsRequestId.current;
         setIsLoading(true);
         try {
-            const res = await api.get(BACKEND_ADDRESS + `posts`, {
+            const res = await api.get(`posts`, {
                 params: {
                     ...attributions!,
                     postType
@@ -220,9 +220,7 @@ export default function ManageComponent({
                                 const deletedIds = selectedPosts.map((post) => post.id);
                                 try {
                                     await Promise.all(
-                                        deletedIds.map((postId) =>
-                                            api.delete(BACKEND_ADDRESS + `posts/${postId}`)
-                                        )
+                                        deletedIds.map((postId) => api.delete(`posts/${postId}`))
                                     );
                                     setPosts((prev) =>
                                         prev.filter((post) => !deletedIds.includes(post.id))

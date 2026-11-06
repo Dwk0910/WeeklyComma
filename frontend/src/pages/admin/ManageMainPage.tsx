@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MdOutlineFileUpload, MdCheckCircle, MdCached, MdDelete, MdLink } from "react-icons/md";
 
-import { BACKEND_ADDRESS, api } from "../../index.tsx";
+import { api } from "../../index.tsx";
 import SubmitButton from "./lib_component/SubmitButton.tsx";
 import Component, { Title, SubTitle } from "./lib_component/Component";
 import ServerImg from "../../component/ServerImg.tsx";
@@ -32,7 +32,7 @@ type BannerItem = {
 // eslint-disable-next-line react-refresh/only-export-components
 export const fetchAdminSetting = async (key: string): Promise<string | null> => {
     try {
-        const res = await api.get(`${BACKEND_ADDRESS}adminsettings`, {
+        const res = await api.get(`adminsettings`, {
             params: { key }
         });
         if (res.data === null || res.data === undefined || res.data === "") {
@@ -276,7 +276,7 @@ export default function ManageMainPage() {
             config.params = { prevId };
         }
 
-        const res = await api.post(`${BACKEND_ADDRESS}files`, formData, config);
+        const res = await api.post(`files`, formData, config);
         const locationHeader = res.headers["location"] || res.headers["Location"] || "";
 
         if (locationHeader) {
@@ -308,7 +308,7 @@ export default function ManageMainPage() {
         setIsSaving(true);
         try {
             for (const id of deletedServerIds) {
-                await api.delete(`${BACKEND_ADDRESS}files`, { params: { id } }).catch(() => null);
+                await api.delete(`files`, { params: { id } }).catch(() => null);
             }
 
             const finalLeftPayload = await processBannerList(leftBanners);
@@ -318,34 +318,34 @@ export default function ManageMainPage() {
             await api.put("adminsettings/recommendations", { selections, mainPick: savedMainPick });
 
             if (finalLeftPayload.length > 0) {
-                await api.put(`${BACKEND_ADDRESS}adminsettings`, {
+                await api.put(`adminsettings`, {
                     key: "leftBanner",
                     value: finalLeftPayload.join(",")
                 });
             } else {
-                await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
+                await api.delete(`adminsettings`, {
                     params: { key: "leftBanner" }
                 });
             }
 
             if (finalTopPayload.length > 0) {
-                await api.put(`${BACKEND_ADDRESS}adminsettings`, {
+                await api.put(`adminsettings`, {
                     key: "topRightBanners",
                     value: finalTopPayload.join(",")
                 });
             } else {
-                await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
+                await api.delete(`adminsettings`, {
                     params: { key: "topRightBanners" }
                 });
             }
 
             if (finalBottomPayload.length > 0) {
-                await api.put(`${BACKEND_ADDRESS}adminsettings`, {
+                await api.put(`adminsettings`, {
                     key: "bottomRightBanners",
                     value: finalBottomPayload.join(",")
                 });
             } else {
-                await api.delete(`${BACKEND_ADDRESS}adminsettings`, {
+                await api.delete(`adminsettings`, {
                     params: { key: "bottomRightBanners" }
                 });
             }

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { MdSearch } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
 
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 import Component, { Title, SubTitle } from "../lib_component/Component";
 import ManageBook from "./ManageBook.tsx";
 import ServerImg from "../../../component/ServerImg.tsx";
@@ -50,14 +50,14 @@ export default function ManageRecommendation() {
         if (!searchQuery.trim()) return;
         setIsSearching(true);
         try {
-            const dbBooksResponse = await api.get(BACKEND_ADDRESS + "books", {
+            const dbBooksResponse = await api.get("books", {
                 params: { query: searchQuery }
             });
             setSearchResults_l(
                 (dbBooksResponse.data as Book[]).map((i) => ({ ...i, dbExist: true }))
             );
 
-            const apiBooksResponse = await api.get(BACKEND_ADDRESS + "books/api", {
+            const apiBooksResponse = await api.get("books/api", {
                 params: { query: searchQuery }
             });
             setSearchResults_a(apiBooksResponse.data);

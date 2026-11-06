@@ -16,7 +16,7 @@ public class SesSignupMailSender implements SignupMailSender {
     private final String verifyUrl;
     private final String template;
     public SesSignupMailSender(JavaMailSender sender, @Value("${signup.mail.from:}") String from,
-                               @Value("${signup.mail.verify-url:http://localhost:5173/signup/email/verify}") String verifyUrl) {
+                               @Value("${signup.mail.verify-url}") String verifyUrl) {
         this.sender = sender;
         this.from = from;
         URI uri = URI.create(verifyUrl);

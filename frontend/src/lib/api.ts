@@ -2,9 +2,13 @@ import axios from "axios";
 import { getLSdata } from "./session.ts";
 
 // API Settings
+const protocol = import.meta.env.VITE_BACKEND_PROTOCOL;
+const address = import.meta.env.VITE_BACKEND_ADDRESS?.trim();
+if (!address || !["s", "ns"].includes(protocol)) {
+    throw new Error("API environment variables are missing or invalid");
+}
 export const BACKEND_ADDRESS =
-    (import.meta.env.VITE_BACKEND_PROTOCOL == "ns" ? "http" : "https") +
-    `://${import.meta.env.VITE_BACKEND_ADDRESS}/`;
+    address === "/api" ? "/api/" : `${protocol === "ns" ? "http" : "https"}://${address}/`;
 
 export const api = axios.create({
     baseURL: BACKEND_ADDRESS,
