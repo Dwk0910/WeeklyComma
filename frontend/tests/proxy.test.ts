@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import proxy from "../proxy.ts";
+import { readFileSync } from "node:fs";
+
+test("large attachment uploads bypass routing middleware while API routes precede the SPA", () => {
+    const routing = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+    assert.deepEqual(routing.proxy.matcher, ["/api/authsessions/:path*", "/api/users/:path*"]);
+    assert.equal(routing.rewrites[0].source, "/api/:path*");
+    assert.equal(new URL(routing.rewrites[0].destination).protocol, "https:");
+    assert.equal(routing.rewrites.at(-1).destination, "/index.html");
+});
 
 test("API proxy fixes the upstream and replaces spoofed client headers", () => {
     process.env.BACKEND_ORIGIN = "https://backend.example.test";
