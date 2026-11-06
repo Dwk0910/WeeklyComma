@@ -5,6 +5,7 @@ import { api } from "../../index.tsx";
 import SubmitButton from "./lib_component/SubmitButton.tsx";
 import Component, { Title, SubTitle } from "./lib_component/Component";
 import ServerImg from "../../component/ServerImg.tsx";
+import { optimizeBanner, type BannerPlacement } from "../../lib/bannerImages.ts";
 import { isAxiosError } from "axios";
 import RecommendationPicker from "./recommendations/RecommendationPicker.tsx";
 import {
@@ -248,13 +249,17 @@ export default function ManageMainPage() {
         }
     };
 
-    const processBannerList = async (banners: BannerItem[]): Promise<string[]> => {
+    const processBannerList = async (
+        banners: BannerItem[],
+        placement: BannerPlacement
+    ): Promise<string[]> => {
         const resultItems: string[] = [];
         for (const item of banners) {
             let fileId = item.id;
             if (item.file) {
                 // If there was a previously uploaded file for this banner (item.id), send it as prevId
-                fileId = await uploadSingleFile(item.file, item.id);
+                const optimized = await optimizeBanner(item.file, placement);
+                fileId = await uploadSingleFile(optimized, item.id);
             }
 
             if (fileId) {
@@ -311,9 +316,9 @@ export default function ManageMainPage() {
                 await api.delete(`files`, { params: { id } }).catch(() => null);
             }
 
-            const finalLeftPayload = await processBannerList(leftBanners);
-            const finalTopPayload = await processBannerList(topRightBanners);
-            const finalBottomPayload = await processBannerList(bottomRightBanners);
+            const finalLeftPayload = await processBannerList(leftBanners, "left");
+            const finalTopPayload = await processBannerList(topRightBanners, "top");
+            const finalBottomPayload = await processBannerList(bottomRightBanners, "bottom");
 
             await api.put("adminsettings/recommendations", { selections, mainPick: savedMainPick });
 
@@ -468,13 +473,17 @@ export default function ManageMainPage() {
 
             {/* --- 배너 관리 섹션 --- */}
             <SubTitle>홈페이지 배너 관리</SubTitle>
+            <p className="ml-4 mb-4 text-sm text-gray-500">
+                저장할 때 권장 크기 안으로 비율을 유지해 줄이고 WebP로 최적화합니다. 작은 이미지는
+                확대하지 않습니다.
+            </p>
             <div className="flex flex-col lg:flex-row ml-4 gap-1">
                 {/* 좌측: 메인 배너 리스트 */}
                 <div className="w-full lg:w-1/2">
                     <div className="font-suite text-gray-600 mb-3 font-bold">
                         좌측 메인 배너{" "}
                         <span className="font-normal text-xs text-gray-400 ml-2">
-                            2100x1000 권장
+                            1680×800 권장
                         </span>
                     </div>
                     <label className="w-full py-3 bg-white border border-purple-400 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-purple-50 transition-all mb-3 text-purple-600">
@@ -546,7 +555,7 @@ export default function ManageMainPage() {
                         <div className="font-suite text-gray-600 mb-2 font-bold">
                             우상단 랜덤 배너{" "}
                             <span className="font-normal text-xs text-gray-400 ml-2">
-                                630x750 권장
+                                630×750 권장
                             </span>
                         </div>
                         <label className="w-full py-3 bg-white border border-blue-400 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-blue-50 transition-all mb-3 text-blue-500">
@@ -616,7 +625,7 @@ export default function ManageMainPage() {
                         <div className="font-suite text-gray-600 mb-2 font-bold">
                             우하단 랜덤 배너{" "}
                             <span className="font-normal text-xs text-gray-400 ml-2">
-                                630x300 권장
+                                840×400 권장
                             </span>
                         </div>
                         <label className="w-full py-3 bg-white border border-green-400 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-green-50 transition-all mb-3 text-green-500">

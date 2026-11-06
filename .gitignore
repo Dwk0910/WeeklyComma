@@ -79,3 +79,4 @@ backend/.env
 /.env.production
 
 /backend/.env.production
+/backups/
