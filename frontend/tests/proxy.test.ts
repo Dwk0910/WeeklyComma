@@ -38,6 +38,15 @@ test("API proxy fixes the upstream and replaces spoofed client headers", () => {
         );
         assert.equal(response.headers.get("Cache-Control"), "no-store");
         assert.equal(proxy(new Request("https://site.example.test/api/books")).status, 503);
+        process.env.BACKEND_ORIGIN = "not-a-url";
+        assert.equal(
+            proxy(
+                new Request("https://site.example.test/api/books", {
+                    headers: { "x-real-ip": "198.51.100.1" }
+                })
+            ).status,
+            503
+        );
         process.env.BACKEND_ORIGIN = "http://backend.example.test";
         assert.equal(
             proxy(

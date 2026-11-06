@@ -8,7 +8,12 @@ export default function proxy(request: Request): Response {
     if (!origin || !secret || secret.length < 32 || !client) {
         return new Response("API proxy is not configured", { status: 503 });
     }
-    const destination = new URL(origin);
+    let destination: URL;
+    try {
+        destination = new URL(origin);
+    } catch {
+        return new Response("API proxy is not configured", { status: 503 });
+    }
     if (
         destination.protocol !== "https:" ||
         destination.username ||

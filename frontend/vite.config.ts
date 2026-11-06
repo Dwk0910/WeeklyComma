@@ -12,19 +12,34 @@ export default defineConfig(({ command, mode }) => {
             );
         }
         if (process.env.VERCEL === "1") {
-            const origin = new URL(env.BACKEND_ORIGIN);
+            if (!env.BACKEND_ORIGIN?.trim()) {
+                throw new Error(
+                    "Set BACKEND_ORIGIN in Vercel Environment Variables for this deployment environment"
+                );
+            }
+            let origin: URL;
+            try {
+                origin = new URL(env.BACKEND_ORIGIN);
+            } catch {
+                throw new Error(
+                    "BACKEND_ORIGIN must be a complete HTTPS origin including https://"
+                );
+            }
             if (
                 origin.protocol !== "https:" ||
                 origin.username ||
                 origin.password ||
                 origin.pathname !== "/" ||
                 origin.search ||
-                origin.hash ||
-                !env.BACKEND_PROXY_SECRET ||
-                env.BACKEND_PROXY_SECRET.length < 32
+                origin.hash
             ) {
                 throw new Error(
-                    "Configure an HTTPS BACKEND_ORIGIN and a BACKEND_PROXY_SECRET of at least 32 characters"
+                    "BACKEND_ORIGIN must be an HTTPS origin without credentials, path, query or fragment"
+                );
+            }
+            if (!env.BACKEND_PROXY_SECRET || env.BACKEND_PROXY_SECRET.length < 32) {
+                throw new Error(
+                    "Set BACKEND_PROXY_SECRET to at least 32 characters, matching the backend SECURITY_PROXY_SECRET"
                 );
             }
         }
