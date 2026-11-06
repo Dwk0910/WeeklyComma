@@ -6,7 +6,6 @@ export { getLSdata } from "./lib/session.ts";
 
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { CookiesProvider } from "react-cookie";
 
 import App from "./App.tsx";
 import "./index.css";
@@ -55,11 +54,9 @@ async function checkApiThenRender() {
         );
     else
         root.render(
-            <CookiesProvider>
-                <BrowserRouter>
-                    <App />
-                </BrowserRouter>
-            </CookiesProvider>
+            <BrowserRouter>
+                <App />
+            </BrowserRouter>
         );
 }
 
