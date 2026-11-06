@@ -8,6 +8,11 @@ test("same-origin API paths have exactly one API prefix", async () => {
         root: fileURLToPath(new URL("../", import.meta.url)),
         mode: "production",
         configFile: false,
+        envDir: false,
+        define: {
+            "import.meta.env.VITE_BACKEND_PROTOCOL": JSON.stringify("s"),
+            "import.meta.env.VITE_BACKEND_ADDRESS": JSON.stringify("/api")
+        },
         optimizeDeps: { noDiscovery: true, include: [] },
         server: { middlewareMode: true, hmr: false, ws: false, watch: null }
     });

@@ -16,6 +16,11 @@ test("all signup URLs withhold their forms from signed-in sessions", async () =>
         optimizeDeps: { noDiscovery: true, include: [] },
         root: fileURLToPath(new URL("../", import.meta.url)),
         configFile: false,
+        envDir: false,
+        define: {
+            "import.meta.env.VITE_BACKEND_PROTOCOL": JSON.stringify("s"),
+            "import.meta.env.VITE_BACKEND_ADDRESS": JSON.stringify("/api")
+        },
         server: { middlewareMode: true, hmr: false, ws: false, watch: null }
     });
     let session: string | null = null;
