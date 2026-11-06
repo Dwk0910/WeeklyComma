@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>주간쉼표 이메일 확인</title>
+<style>
+:root { color-scheme: only light; supported-color-schemes: light; }
+@media (prefers-color-scheme: dark) {
+  body, .mail-surround { background-color:#f5f5f2 !important; }
+  .mail-paper { background-color:#ffffff !important; border-top-color:#292929 !important; }
+  .mail-paper h1 { color:#292929 !important; }
+  .mail-paper p, .mail-paper p a, .mail-footer { color:#666663 !important; }
+  .mail-button { background-color:#292929 !important; }
+  .mail-button a { color:#ffffff !important; }
+}
+</style></head>
+<body style="margin:0;padding:0;background:#f5f5f2;color:#292929;font-family:Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">메일 속 버튼을 눌러 주간쉼표 회원가입을 이어가세요. 링크는 15분 동안 유효합니다.</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="mail-surround" style="background:#f5f5f2;"><tr><td align="center" style="padding:36px 16px;">
+<table role="presentation" width="540" cellspacing="0" cellpadding="0" border="0" class="mail-paper" style="width:100%;max-width:540px;background:#ffffff;border-top:4px solid #292929;"><tr><td style="padding:32px 28px;">
+<p style="margin:0 0 26px;"><img src="cid:weeklycomma-logo" alt="주간쉼표" width="180" style="display:block;width:180px;max-width:100%;height:auto;border:0;"></p>
+<p style="margin:0 0 14px;font-size:12px;color:#73736d;letter-spacing:1px;">이메일 확인</p>
+<h1 style="margin:0 0 24px;font-family:Georgia,'Batang',serif;font-size:30px;line-height:1.55;font-weight:400;letter-spacing:-1px;color:#292929;">당신의 책 이야기를<br>시작해 주세요.</h1>
+<p style="margin:0 0 28px;font-size:15px;line-height:1.9;color:#666663;">주간쉼표에 오신 것을 환영합니다.<br>아래 버튼을 눌러 이메일을 확인해 주세요.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td class="mail-button" align="center" bgcolor="#292929" style="border-radius:3px;mso-padding-alt:18px 16px;"><a href="{{VERIFY_URL}}" style="display:block;padding:18px 16px;color:#ffffff;font-size:15px;line-height:1.5;text-decoration:none;text-align:center;">이메일 확인하고 계속하기 →</a></td></tr></table>
+<p style="margin:24px 0;font-size:12px;line-height:1.9;color:#73736d;">이 링크는 <strong>15분 동안</strong> 유효합니다.<br>직접 요청하지 않았다면 이 메일을 무시해 주세요.<br>확인 링크를 다른 사람에게 전달하지 마세요.</p>
+<p style="margin:0 0 26px;font-size:12px;line-height:1.8;color:#73736d;">버튼이 작동하지 않으면 아래 주소를 복사해 브라우저에서 열어주세요.<br><a href="{{VERIFY_URL}}" style="color:#666663;word-break:break-all;overflow-wrap:anywhere;">{{VERIFY_URL}}</a></p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td class="mail-footer" style="padding-top:22px;border-top:1px solid #deded9;font-size:12px;line-height:1.9;color:#73736d;">책 한 권으로 쉬어가는 한 주, 주간쉼표.<br><span style="font-size:11px;">이 메일은 발신 전용입니다.</span></td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</body></html>

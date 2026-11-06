@@ -1,0 +1,114 @@
+.post-rich-text {
+    font-size: 1rem;
+    line-height: 1.95;
+    overflow-wrap: anywhere;
+}
+
+.post-rich-text p {
+    margin: 0 0 1em;
+    min-height: 1.95em;
+}
+
+.post-rich-text h1,
+.post-rich-text h2,
+.post-rich-text h3,
+.post-rich-text h4,
+.post-rich-text h5,
+.post-rich-text h6 {
+    margin: 1.5em 0 0.65em;
+    line-height: 1.5;
+    font-weight: 600;
+}
+
+.post-rich-text h1 {
+    font-size: 1.75em;
+}
+.post-rich-text h2 {
+    font-size: 1.5em;
+}
+.post-rich-text h3 {
+    font-size: 1.25em;
+}
+.post-rich-text h4 {
+    font-size: 1.125em;
+}
+
+.post-rich-text ul,
+.post-rich-text ol {
+    padding-left: 1.6em;
+    margin: 1em 0;
+}
+
+.post-rich-text ul {
+    list-style-type: disc;
+}
+.post-rich-text ol {
+    list-style-type: decimal;
+}
+.post-rich-text li + li {
+    margin-top: 0.4em;
+}
+.post-rich-text li p {
+    margin: 0;
+}
+
+.post-rich-text blockquote {
+    margin: 1.5em 0;
+    padding-left: 1.2em;
+    border-left: 3px solid #d4d4d4;
+    color: #525252;
+}
+
+.post-rich-text pre {
+    max-width: 100%;
+    overflow-x: auto;
+    background: #f5f5f5;
+    border-radius: 4px;
+    padding: 1em 1.25em;
+    margin: 1.5em 0;
+    white-space: pre;
+}
+
+.post-rich-text code {
+    font-family: ui-monospace, monospace;
+}
+.post-rich-text :not(pre) > code {
+    background: #f5f5f5;
+    padding: 0.15em 0.3em;
+}
+.post-rich-text a {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.post-rich-text hr {
+    border: 0;
+    border-top: 1px solid #d4d4d4;
+    margin: 2em 0;
+}
+.post-rich-text .tableWrapper {
+    overflow-x: auto;
+    margin: 1.5em 0;
+}
+.post-rich-text table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+.post-rich-text td,
+.post-rich-text th {
+    min-width: 80px;
+    border: 1px solid #d4d4d4;
+    padding: 0.5em 0.75em;
+    vertical-align: top;
+    text-align: left;
+}
+.post-rich-text th {
+    background: #f5f5f5;
+    font-weight: 600;
+}
+.post-rich-text td p,
+.post-rich-text th p,
+.post-rich-text > :last-child {
+    margin-bottom: 0;
+}

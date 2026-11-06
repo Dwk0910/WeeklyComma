@@ -19,6 +19,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PostService {
     private final PostRepository postRepository;
+    private final AdminSettingService adminSettingService;
+    private final org.neatore.weeklycomma.repository.RecommendationHistoryRepository histories;
 
     @Transactional
     public long addPost(String title, String content, String author, Post.PostType type, Post.Attribution attr) {
@@ -43,10 +45,16 @@ public class PostService {
 
     @Transactional
     public void deletePost(Long id) {
-        Post post = postRepository.getPostById(id);
+        adminSettingService.getAdminSettingsByValue(Long.toString(id)).stream()
+                .filter(setting -> setting.getKey().startsWith("recommend_post_"))
+                .forEach(adminSettingService::deleteAdminSetting);
+        Post post = getPost(id);
+        // Preserve the book's designation, but never let a reused SQLite ID relink it to a new post.
+        histories.unlinkPost(id);
         postRepository.delete(post);
     }
 
+    @Transactional
     public Post getPost(long id) {
         Post p = postRepository.getPostById(id);
         if (p == null) throw new PostNotFoundException(id);
@@ -54,7 +62,8 @@ public class PostService {
     }
 
     public Post getLatestNotice() {
-        return postRepository.getLatestNotice().orElseThrow(() -> new PostNotFoundException(null));
+        return postRepository.findFirstByPostTypeOrderByCreatedAtDescIdDesc(Post.PostType.NOTICE)
+                .orElseThrow(() -> new PostNotFoundException(null));
     }
 
     /**
@@ -66,11 +75,20 @@ public class PostService {
     }
 
     // Insert attribution field for detailed search
+    @Transactional
     public List<Post> getAllPosts(Post.PostType type, @Nullable Post.Attribution attr) {
         final List<Post> posts = postRepository.getPostsByPostType(type);
         if (attr != null) {
-            return posts.stream().filter(post -> Objects.equals(post.getAttribution(), attr)).toList();
+            return posts.stream()
+                    .filter(post -> matchesAttribution(post.getAttribution(), attr))
+                    .toList();
         } else return posts;
+    }
+
+    private boolean matchesAttribution(Post.Attribution postAttr, Post.Attribution requestedAttr) {
+        if (postAttr == null) return false;
+        return requestedAttr.getBookId() == null
+                || Objects.equals(postAttr.getBookId(), requestedAttr.getBookId());
     }
 
     @Transactional

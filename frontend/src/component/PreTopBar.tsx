@@ -1,4 +1,6 @@
 import { clsx } from "clsx";
+import { Link, useLocation } from "react-router-dom";
+import { safeReturnTo } from "../lib/loginFlow.ts";
 
 export default function PreTopBar({ login, name }: { login: boolean; name: string }) {
     return (
@@ -35,6 +37,12 @@ export default function PreTopBar({ login, name }: { login: boolean; name: strin
 }
 
 const LoginInteraction = ({ login }: { login: boolean }) => {
+    const location = useLocation();
+    const returnTo = safeReturnTo(
+        /^\/(login|signup)(\/|$)/.test(location.pathname)
+            ? new URLSearchParams(location.search).get("returnTo")
+            : location.pathname + location.search
+    );
     return login ? (
         <div
             className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
@@ -44,34 +52,18 @@ const LoginInteraction = ({ login }: { login: boolean }) => {
         </div>
     ) : (
         <>
-            <div
-                className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
-                onClick={() => {
-                    const client_id = import.meta.env.VITE_OAUTH_NAVER_CLIENT_ID;
-                    const state = crypto.randomUUID();
-                    window.location.assign(
-                        `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=${window.location.origin + "/authcallback/OAUTH_NAVER"}&state=${state}`
-                    );
-                }}
+            <Link
+                className="text-[.8rem] text-neutral-700 mt-2 ml-4 hover:underline"
+                to={`/login?${new URLSearchParams({ returnTo })}`}
             >
-                유저 로그인
-            </div>
-            <div
-                className={"text-[.8rem] text-neutral-700 mt-2 ml-4 cursor-pointer hover:underline"}
-                onClick={() => {
-                    const client_id = import.meta.env.VITE_OAUTH_NAVER_CLIENT_ID;
-                    const state = crypto.randomUUID();
-
-                    const userName = prompt("Type username") as string;
-                    localStorage.setItem("username", userName.replaceAll(" ", ""));
-
-                    window.location.assign(
-                        `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${client_id}&redirect_uri=${window.location.origin + "/signupcallback/OAUTH_NAVER"}&state=${state}`
-                    );
-                }}
+                로그인
+            </Link>
+            <Link
+                className="text-[.8rem] text-neutral-700 mt-2 ml-4 hover:underline"
+                to={`/signup?${new URLSearchParams({ returnTo })}`}
             >
                 회원가입
-            </div>
+            </Link>
         </>
     );
 };

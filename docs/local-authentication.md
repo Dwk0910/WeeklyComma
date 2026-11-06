@@ -1,0 +1,115 @@
+# 로컬 로그인 보안
+
+OAuth에서는 네이버가 비밀번호 검증을 맡습니다. 로컬 로그인에서는 우리 서버가 비밀번호 저장, 반복 추측 방지, 세션 발급과 폐기를 모두 책임집니다. 비밀번호는 복호화 가능한 암호문이 아닌 **느린 단방향 해시**로 저장하며, 로그인할 때 입력값과 저장된 해시가 일치하는지 확인합니다.
+
+## 적용한 보호 장치
+
+| 영역 | 동작 |
+| --- | --- |
+| 비밀번호 저장 | Argon2id, 메모리 19 MiB, 반복 2회, 병렬도 1, 매번 무작위 16바이트 salt. 같은 비밀번호도 다른 해시로 저장됩니다. |
+| 기존 계정 | bcrypt는 로그인 검증만 지원하며, 비밀번호가 맞으면 Argon2id로 전환합니다. 평문 저장값은 인정하지 않습니다. |
+| 새 비밀번호 | 10~128 Unicode 코드 포인트. 공백·한글·이모지 허용, 붙여넣기 허용, 영문 소문자 필수이며 숫자·영문 대문자·특수문자 중 하나 이상 포함. 잘못된 Unicode, 공백만 있는 값, 반복 단일 문자와 흔한 비밀번호 목록은 거부합니다. 기존 계정 로그인에 최소 10자 정책을 소급하지 않습니다. |
+| 로그인 실패 | 없는 계정·비밀번호 불일치·소셜 계정으로 로컬 로그인 모두 동일한 401 응답. 없는 계정도 더미 해시를 계산합니다. |
+| 반복 시도 | 15분 동안 계정별 최대 5회 예약, IP별 최대 60회. 성공하면 계정 카운터만 초기화합니다. 한도 초과 시 429 + Retry-After. 서로 다른 이메일을 대입해도 IP 한도를 공유합니다. OAuth는 IP 한도만 공유합니다. |
+| 자원 보호 | 동시 해시 계산 최대 4개. 가입 요청은 IP별 15분에 10회. 카운터를 SQLite에 저장하므로 재시작으로 제한을 초기화할 수 없습니다. |
+| 쿠키 | WCA_ACCESS는 HttpOnly·Secure·SameSite=None, host-only, Path=/. JWT를 localStorage에 넣지 않습니다. 기존 프런트/백엔드의 서로 다른 사이트 배치를 지원하기 위해 None을 유지하고 별도 CSRF 검증을 사용합니다. |
+| 세션 | JWT 서명·issuer·만료·계정 인증 버전과 DB 등록 상태를 모두 확인합니다. 최대 12시간, 마지막 인증 사용 후 30분이 지나면 서버에서 만료합니다. DB에는 JWT 자체가 아닌 SHA-256 식별 해시만 저장합니다. |
+| 로그아웃 | DB 세션을 삭제하고 쿠키를 만료합니다. 복사해 둔 JWT도 다시 사용할 수 없습니다. 서버 요청에 실패하면 화면에 재시도를 제공하며, 성공한 척 로그인 상태만 지우지 않습니다. |
+| 비밀번호 변경 | 현재 비밀번호를 다시 검증하고 모든 기기의 세션을 폐기합니다. 계정 인증 버전도 바꿔 변경 전 비밀번호로 진행 중이던 로그인에서 뒤늦게 생성된 토큰을 거부합니다. |
+| 요청 위조 | 인증된 요청은 기존 JWT에 연결된 X-CSRF-Token을 검사합니다. 로그아웃은 세션·CSRF 캐시가 만료되어도 안전하게 처리할 수 있도록 Origin과 전용 헤더로 보호합니다. 로그인·가입·비밀번호 변경은 JSON과 X-Requested-With: WeeklyComma를 요구하고 Origin을 허용 목록과 정확히 비교합니다. 일반 HTML 폼이나 다른 사이트의 스크립트로 로그인시킬 수 없게 합니다. |
+| 화면 | 입력 중/단순 포커스에는 오류를 띄우지 않습니다. 제출 후 오류를 표시하며, 제한에 걸리면 서버가 알려준 대기 시간을 보여줍니다. |
+
+계정 한도는 공격자가 타인의 계정을 일시적으로 제한할 수도 있는 절충안입니다. 영구 잠금 대신 짧은 기간을 사용하며, 실제 사용자 규모와 공격 패턴을 관찰해 조정해야 합니다. 프런트에서 버튼을 비활성화하는 것은 안내용이고, 제한은 서버가 강제합니다.
+
+공개 SecLists 10,001개 목록과 소수의 추가 패턴을 서버 리소스에 포함했습니다. 출처·고정 리비전·체크섬·MIT 라이선스는 `backend/src/main/resources/security/`에 있습니다. 사용자 비밀번호를 외부로 전송하지 않으며, 이 목록이 모든 유출 비밀번호를 포괄하지는 않습니다.
+
+## API
+
+- `POST /authsessions`: 기존 LOCAL/OAUTH_NAVER 로그인. 성공하면 세션 쿠키와 화면용 사용자 정보·CSRF 토큰을 반환합니다.
+- `GET /authsessions/me`: 세션 확인. 쿠키와 `X-CSRF-Token` 필요.
+- `DELETE /authsessions`: 현재 세션 폐기. `X-Requested-With: WeeklyComma`와 허용된 요청 출처 필요. 쿠키가 없거나 만료된 상태에서도 200으로 응답하며 남아 있는 쿠키를 만료합니다.
+- `PUT /authsessions/password`: `{ "currentPassword": "…", "newPassword": "…" }`. 쿠키·CSRF 토큰·JSON·`X-Requested-With: WeeklyComma` 필요. 성공 후 다시 로그인해야 합니다. 화면은 아직 연결하지 않았습니다.
+
+인증 응답은 `Cache-Control: no-store`입니다. CORS에서 `Retry-After`를 노출하므로 프런트가 제한 시간을 읽을 수 있습니다.
+
+## 이메일 인증 회원가입
+
+`/signup/email`은 이메일만 입력받습니다. `POST /users/email/request`는 신규/기존 주소 모두 같은 HTML 인증 메일을 보내고 본문 없는 202를 반환합니다. 메일은 편지형 디자인과 텍스트 대체 본문을 함께 제공하며, 외부 이미지나 추적 코드를 사용하지 않습니다.
+
+링크에는 SecureRandom으로 생성한 256비트 토큰을 넣고 서버에는 SHA-256 해시만 저장합니다. 유효기간은 15분입니다. 목적지는 서버의 `SIGNUP_VERIFY_URL` 설정으로만 정하며 요청의 Host/Origin으로 구성하지 않습니다. 토큰은 URL fragment에 넣어 HTTP 접근 로그와 Referer에서 제외하고, 프런트가 읽은 즉시 주소창에서 제거해 메모리에만 보관합니다. 새로고침으로 메모리를 잃으면 원래 메일의 링크를 다시 열 수 있습니다.
+
+`POST /users/email/inspect`는 유효한 토큰의 소유자에게만 이메일과 기존 계정 여부/로그인 방법을 반환합니다. 링크를 여는 것만으로 가입하거나 토큰을 소모하지 않아 메일 보안 스캐너의 미리 열기에 안전합니다. 신규 주소는 이메일이 채워지고 비활성화된 가입 폼으로, 기존 주소는 별도의 기존 계정 안내 화면으로 연결됩니다.
+
+`POST /users/email/complete`는 token, userName, password를 받습니다. 이메일은 클라이언트 입력을 신뢰하지 않고 토큰의 DB 레코드에서 가져옵니다. 만료·소비 여부와 이메일 중복을 다시 검사하고 비밀번호를 해시한 뒤 계정을 생성합니다. 실패 시 트랜잭션을 롤백하여 입력 수정 후 재시도할 수 있습니다. 기존 계정은 덮어쓰거나 자동 연결하지 않습니다. 닉네임 중복은 허용합니다.
+
+- 발송 제한: IP별 15분에 10회, 이메일별 15분에 3회. 검사/완료 요청은 IP별 15분에 30회.
+- 가입 성공 시 해당 이메일의 모든 남은 링크를 무효화합니다. 동일 링크의 동시 완료는 SQLite 쓰기 직렬화와 조건부 갱신으로 하나만 처리합니다.
+- 발송 실패 시 링크를 제거하며, 만료된 링크와 이전 번호 방식의 잔여 데이터는 주기적으로 정리합니다.
+- `POST /users`의 LOCAL 요청은 항상 차단합니다. 이전 인증번호 API 형식은 더 이상 지원하지 않습니다.
+- 비밀번호 찾기와 로그인 수단 연결은 아직 구현하지 않았습니다.
+
+### Amazon SES SMTP 설정
+
+루트 `.env`에 아래 서버 전용 값을 설정합니다. 프런트의 `VITE_` 변수에는 넣지 않습니다.
+
+```dotenv
+SIGNUP_MAIL_ENABLED=true
+SIGNUP_VERIFY_URL=http://localhost:5173/signup/email/verify
+SIGNUP_MAIL_FROM="주간쉼표 <noreply@소유한-도메인>"
+SES_SMTP_HOST=email-smtp.ap-northeast-2.amazonaws.com
+SES_SMTP_PORT=587
+SES_SMTP_USERNAME=SES에서_발급한_SMTP_사용자명
+SES_SMTP_PASSWORD=SES에서_발급한_SMTP_비밀번호
+```
+
+호스트는 실제 SES 인증 및 SMTP 자격증명을 만든 리전에 맞춰 지정합니다. SMTP 자격증명은 일반 AWS 액세스 키와 다릅니다. 기본적으로 STARTTLS를 필수로 사용하고 서버 인증서를 검증합니다. SES에서 발신 도메인 또는 주소를 인증해야 하며, 샌드박스에서는 수신 주소도 인증해야 합니다. 불특정 사용자에게 발송하려면 프로덕션 액세스 승인이 필요합니다.
+
+설정 전에는 `SIGNUP_MAIL_ENABLED=false`를 유지합니다. 운영에서 `SIGNUP_VERIFY_URL`은 사용자가 접속할 수 있는 실제 HTTPS 프런트 주소여야 합니다. localhost 주소는 개발 중인 컴퓨터의 브라우저에서만 열 수 있습니다. 도메인 변경 후에는 새 도메인을 SES에서 인증하고 `SIGNUP_MAIL_FROM`과 `SIGNUP_VERIFY_URL`을 교체하여 백엔드를 다시 배포합니다. 프런트/API 도메인도 변경한다면 CORS 허용 목록과 OAuth 콜백은 별도로 수정합니다. Docker Compose는 위 환경변수를 백엔드에 전달합니다. 애플리케이션 변경은 이미지 재빌드 후 반영됩니다.
+
+로컬 메일 수신 도구(Mailpit 등)를 사용하려면 해당 SMTP 호스트/포트와 함께 `SES_SMTP_AUTH=false`, `SES_SMTP_TLS=false`를 지정할 수 있습니다. 이 설정은 격리된 로컬 개발에서만 사용하며, SES 운영에서는 기본값 true를 유지합니다. 실제 인증 토큰을 콘솔에 출력하는 우회 기능은 제공하지 않습니다.
+
+AWS 참고: [SMTP 발송](https://docs.aws.amazon.com/ses/latest/dg/send-email-smtp.html), [발신 인증](https://docs.aws.amazon.com/ses/latest/dg/verify-addresses-and-domains.html).
+
+## 배포·운영 설정
+
+1. **운영에서는 프런트와 API 모두 HTTPS**를 사용합니다. Secure 쿠키를 해제해 우회하지 않습니다. TLS 종료 프록시의 HSTS도 배포 환경에서 설정합니다.
+2. `JWT_TOKEN_SECRET`는 별도 비밀 저장소/환경 변수에 보관하는 무작위 값(최소 32바이트)이어야 합니다. 저장소·로그에 넣지 않습니다. 유출 시 교체하고 모든 사용자가 다시 로그인하게 합니다.
+3. `SECURITY_ALLOWED_ORIGINS`는 쉼표로 구분한 정확한 프런트 origin 목록입니다. 기본값은 `http://localhost:5173,https://www.weeklycomma.kro.kr`입니다. 운영에서는 localhost를 제외하고 실제 서비스 origin만 지정합니다. 와일드카드는 허용하지 않습니다.
+4. IP 제한은 **서블릿의 remoteAddr**를 사용합니다. 원시 `X-Forwarded-For`를 믿지 않습니다. 리버스 프록시 뒤에서는 서버의 신뢰할 프록시 목록과 직접 접속 차단을 배포 환경에 맞게 설정해야 합니다. 그렇지 않으면 여러 사용자가 프록시 IP 하나의 한도를 공유할 수 있습니다.
+5. 이번 변경은 `login_session`, `login_throttle`, 사용자 `authVersion` 컬럼을 추가합니다. DB를 백업한 뒤 반영합니다. 기존 JWT는 등록된 서버 세션이 없어 한 번 다시 로그인해야 합니다. 새 세션은 서버 재시작 후에도 유지됩니다.
+6. SQLite는 한 연결로 쓰기를 직렬화합니다. 다중 서버나 사용자 증가 시 세션·로그인 제한 저장소를 공유 DB/Redis로 옮기는 것이 적합합니다. 로그인 실패율·429·서버 오류를 관찰하되 비밀번호·JWT·CSRF 토큰·OAuth 코드는 기록하지 않습니다.
+
+## 확인 방법
+
+- 백엔드: `cd backend && ./gradlew test bootJar`
+- 프런트: `cd frontend && npm run build && npm run lint && node --test tests/*.test.ts`
+- 인증 테스트는 임시 SQLite에서 비밀번호 해시·Unicode·bcrypt 전환·동시 요청 제한·영속 카운터·만료·로그아웃 재사용·비밀번호 변경 경합을 검증합니다.
+- HTTP 검증에서는 실제 서버의 쿠키/CSRF, 로그인 요청 출처, 429와 Retry-After, 비밀번호 변경과 로그아웃 후 토큰 거부를 확인합니다. 브라우저용 HTTP 프록시의 쿠키 속성 변경은 격리 테스트에서만 사용하며 프로젝트 설정에는 반영하지 않습니다.
+
+## 근거
+
+- [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [OWASP Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+- [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+- [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
+- [Spring Security Password Storage](https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html)
+
+## Google OAuth 추가
+
+- 서버는 루트 `.env`의 `OAUTH_GOOGLE_CLI_ID`, `OAUTH_GOOGLE_CLI_KEY`를 사용합니다. 프런트의 `VITE_OAUTH_GOOGLE_CLIENT_ID`는 같은 Client ID이며, Client Secret은 프런트에 넣지 않습니다. Docker Compose는 두 서버 변수를 컨테이너로 전달합니다.
+- 승인된 리디렉션 URI는 프런트 origin 뒤의 `/authcallback/OAUTH_GOOGLE`(로그인), `/signupcallback/OAUTH_GOOGLE`(가입)입니다. 로컬 origin은 `http://localhost:5173`, 현재 운영 설정은 `https://www.weeklycomma.kro.kr`입니다. 실제 요청과 등록 URI가 정확히 일치해야 합니다.
+- 기존처럼 회원가입과 로그인을 분리합니다. 상단 `회원가입`에서 네이버 또는 Google을 선택하고 닉네임을 입력합니다. 가입 완료 후 해당 제공자로 로그인합니다. 회원가입 페이지에는 소셜 가입 선택과 이메일 가입 폼이 있습니다. 소셜 가입은 닉네임 입력 화면을 거쳐 기존 OAuth로 연결하며, 이메일 가입은 화면·입력 검증까지만 제공합니다. 비밀번호 찾기는 준비 중입니다.
+- 프런트는 제공자·가입/로그인 목적별로 state를 분리하고 15분 안에 한 번만 소비합니다. Google은 S256 PKCE와 nonce를 함께 사용합니다. 서버는 공식 Google Java SDK로 ID 토큰의 서명·issuer·audience·시간을 확인하고 nonce·authorized party·이메일 인증 여부를 추가 검증합니다. 토큰 교환 시 Secret은 HTTPS POST 본문에만 보냅니다.
+- 계정 조회는 제공자와 고유 subject를 함께 사용합니다. 기존 네이버 ID는 유지하고 Google ID는 `OAUTH_GOOGLE:` 접두사로 저장하여 기존 DB의 고유 제약에서도 충돌하지 않게 합니다. 이메일이 같더라도 기존 계정에 자동 연결하지 않으며, 중복 가입은 409와 기존 로그인 방법 안내로 처리합니다. 신규 소셜 계정의 권한은 GENERAL입니다.
+- 인증 코드를 재사용하거나 잘못된 서명·audience·nonce로 로그인할 수 없습니다. 제공자 오류 응답 원문이나 토큰은 사용자에게 전달하지 않습니다. 실제 Google 동의/로그인 완료는 본인 계정으로 확인해야 합니다.
+
+근거: [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect), [Google Discovery](https://accounts.google.com/.well-known/openid-configuration).
+
+기존 SQLite의 `user.auth_type` CHECK 제약은 Hibernate가 자동으로 확장하지 못하므로 `OAuthProviderMigration`이 시작 시 갱신합니다. 테이블 재구성은 트랜잭션 안에서 수행하며 기존 값·인덱스·트리거를 보존합니다. 부모 테이블 교체 중 연쇄 삭제를 막고 외래 키 무결성을 확인한 뒤 커밋합니다. 반영 전 DB 백업이 필요합니다.
+
+## 가입 화면의 비밀번호 안내
+
+- 최소 10자와 최대 128자, 기존 차단 목록은 유지합니다. 새 비밀번호에는 영문 소문자와 숫자·영문 대문자·특수문자 중 하나 이상을 요구합니다. 강도 점수 자체로는 가입을 제한하지 않습니다. 체크리스트는 길이·영문 소문자·추가 문자 조합·닉네임 및 이메일 제외를 네 줄로 표시하며, 확인란은 일치 여부만 확인합니다. 펼침·닫힘에 높이 애니메이션을 적용하고, 모든 조건을 충족하면 마지막 체크가 그려진 뒤 하나의 완료 메시지로 모입니다. 조건이 다시 미충족되면 네 줄로 펼쳐집니다. 닉네임 전체와 이메일 전체 및 @ 앞부분의 포함 여부를 NFKC 정규화·대소문자 무시로 비교하며, 빈 비교값은 건너뜁니다. 한 글자 닉네임도 검사하고 이메일 도메인만으로는 차단하지 않습니다. 비교에만 정규화를 사용하고 실제 비밀번호는 변경하지 않습니다. 닉네임·이메일이 비어 있거나 이메일 형식이 미완성이면 회색 대기 상태와 대시 아이콘을 표시하고, 모든 입력이 준비된 뒤 충족/미충족을 판정합니다. 로컬 가입과 비밀번호 변경은 서버에서도 같은 검사를 수행하며 기존 로그인에는 소급 적용하지 않습니다. 미충족 항목은 빨간 문구·그림자와 중립색 체크로 표시하고, 충족 시 제자리에서 초록색 체크가 그려집니다.
+- `zxcvbn-ts`가 공통·영어·한국어 사전, 한국어 이름·순서 패턴과 입력한 닉네임/이메일을 브라우저의 Worker에서 평가합니다. 한국어 단어의 두벌식 영문 자판 표현을 사전에 추가하며, 원문·NFKC 정규화·두벌식 변환 결과 중 더 낮은 추정치를 사용합니다. 흔한 비밀번호 상위 2,000개·영단어 상위 1,000개·일부 한국어 문구·사용자 정보에는 편집 거리 1의 유사어 검사도 적용합니다. 변환 후보는 256 UTF-16 코드 단위까지 분석하고 실제 비밀번호는 변경하지 않습니다. 이 보강은 한글 및 모든 개인적 문맥을 완전히 이해하는 모델은 아닙니다. 비밀번호나 분석 결과를 서버·외부 서비스에 전송하거나 저장하지 않습니다. 최초 계산 전에는 강도를 숨기고, 재입력 중에는 마지막 완료 결과를 유지합니다. 지연 응답은 무시하고, 새 입력이 들어오면 진행 중인 오래된 계산은 Worker 종료로 취소해 작업이 쌓이지 않게 합니다.
+- 0~100 표시값은 추측 횟수의 로그값(`guessesLog10`)을 변환한 참고용 지표(12 이하는 기존처럼 ×5, 12~18은 60~100으로 선형 변환, 범위 밖은 0~100으로 제한)이고 칸 구분 없는 둥근 게이지로 표시합니다. 안전 확률이나 크래킹 시간 보장이 아닙니다. 한글 사전·문맥 평가에는 한계가 있습니다. 화면은 강도 이름·점수·5px 둥근 게이지를 표시합니다. 현재 입력의 가입 조건을 충족하되 완료된 강도 점수가 60 미만이면 체크리스트 아래에 감지한 반복·연속 패턴·키보드 배열·흔한 단어 네 종류의 원인에 맞는 짧은 황색 경고만 표시합니다. 날짜·계정 정보는 강도 계산에는 반영하지만 별도 경고를 표시하지 않습니다. 계정 정보 매치를 흔한 단어 경고로 바꿔 표시하지도 않습니다. 체크리스트와 서버의 닉네임·이메일 포함 금지는 유지합니다. 수정 제안이나 일반 조언은 표시하지 않으며, 뚜렷한 경고 원인이 없으면 점수가 낮아도 하단 문구를 생략합니다. 100점 기준은 로그값 20에서 18로 낮추되 60점 미만 점수와 경고 기준은 유지합니다.
+- 평가는 마지막 입력 450ms 후 실행하고 128자를 초과한 값은 계산하지 않습니다. Worker 오류가 나더라도 가입 조건 검증은 계속 작동합니다. 사전 묶음은 최초 비밀번호 입력 때 불러옵니다.

@@ -1,27 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import { MdSearch } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
 
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 import Component, { Title, SubTitle } from "../lib_component/Component";
 import ManageBook from "./ManageBook.tsx";
 import ServerImg from "../../../component/ServerImg.tsx";
+import RecentRecommendations from "../recommendations/RecentRecommendations.tsx";
+import type { RecommendationBook } from "../recommendations/types.ts";
 
-export type Book = {
-    title: string;
-    subtitle: string;
-    description: string;
-    author: string;
-    publisher: string;
-    isbn: string;
-    pubDate: number;
-    coverImg: string;
-    customCoverImg: string | null;
-    adult: boolean;
-    difficulty: "초급" | "중급" | "상급" | null;
-    dbExist: boolean;
-};
+export type Book = RecommendationBook & { dbExist: boolean };
 
 export default function ManageRecommendation() {
     const [searchQuery, setSearchQuery] = useState<string>("");
@@ -31,13 +20,17 @@ export default function ManageRecommendation() {
     const [exclude, setExclude] = useState<boolean>(false);
     const [selectedBook, setSelectedBook] = useState<Book | null>(null);
 
-    useEffect(() => {
-        // TODO: 페이지가 처음 로드될 때 최근 작성한 추천글 5개를 불러오는 API 호출
-    }, []);
+    // HTML Entity decoding utility
+    const decodeHtml = (html: string | undefined | null) => {
+        if (!html) return "";
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        return doc.documentElement.textContent || "";
+    };
 
     const highlightText = (text: string, query: string) => {
-        if (!query.trim()) return text;
-        const parts = text.split(new RegExp(`(${query})`, "gi"));
+        const decoded = decodeHtml(text);
+        if (!query.trim()) return decoded;
+        const parts = decoded.split(new RegExp(`(${query})`, "gi"));
         return (
             <span>
                 {parts.map((part, i) =>
@@ -57,14 +50,14 @@ export default function ManageRecommendation() {
         if (!searchQuery.trim()) return;
         setIsSearching(true);
         try {
-            const dbBooksResponse = await api.get(BACKEND_ADDRESS + "books", {
+            const dbBooksResponse = await api.get("books", {
                 params: { query: searchQuery }
             });
             setSearchResults_l(
                 (dbBooksResponse.data as Book[]).map((i) => ({ ...i, dbExist: true }))
             );
 
-            const apiBooksResponse = await api.get(BACKEND_ADDRESS + "books/api", {
+            const apiBooksResponse = await api.get("books/api", {
                 params: { query: searchQuery }
             });
             setSearchResults_a(apiBooksResponse.data);
@@ -108,9 +101,13 @@ export default function ManageRecommendation() {
                         </span>
                     </div>
                     <div className="flex items-center text-sm text-gray-500 mt-1">
-                        <span className="font-semibold text-gray-600 mr-2">{item.author}</span>
+                        <span className="font-semibold text-gray-600 mr-2">
+                            {decodeHtml(item.author)}
+                        </span>
                         <span className="mr-3">|</span>
-                        <span className="font-semibold text-gray-600 mr-3">{item.publisher}</span>
+                        <span className="font-semibold text-gray-600 mr-3">
+                            {decodeHtml(item.publisher)}
+                        </span>
                         <span className="mr-3">|</span>
                         {(() => {
                             const date = new Date(item.pubDate * 1000);
@@ -129,6 +126,11 @@ export default function ManageRecommendation() {
     return selectedBook == null ? (
         <Component>
             <Title>추천 책 관리</Title>
+            <div className="mx-4 mt-2 mb-6 max-h-80 overflow-y-auto rounded-lg border border-gray-200 p-4">
+                <RecentRecommendations
+                    onSelect={(book) => setSelectedBook({ ...book, dbExist: true })}
+                />
+            </div>
             <SubTitle description="책의 이름을 검색하여 새로운 추천 글을 작성하거나 작성한 글을 수정할 수 있습니다.">
                 책 검색
             </SubTitle>

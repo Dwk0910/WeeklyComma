@@ -1,0 +1,275 @@
+.signup-page .login-card h1 {
+    padding-right: 0;
+}
+.signup-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 23px;
+    margin-top: 32px;
+}
+.signup-methods > .login-error-space {
+    margin-top: -14px;
+}
+.signup-login-link {
+    margin-top: 28px;
+    text-align: center;
+    color: #737373;
+    font-size: 13px;
+}
+.signup-login-link a {
+    margin-left: 8px;
+    color: #404040;
+    text-underline-offset: 4px;
+}
+.signup-login-link a:hover {
+    text-decoration: underline;
+}
+.signup-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 24px;
+    font-size: 13px;
+    color: #737373;
+}
+.signup-back:hover {
+    color: #262626;
+}
+.signup-back svg {
+    width: 14px;
+    height: 14px;
+}
+.signup-preview-note {
+    margin-top: 20px;
+    color: #737373;
+    font-size: 13px;
+    line-height: 1.7;
+    word-break: keep-all;
+}
+.signup-checked {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    color: #34734c;
+    font-size: 13px;
+    line-height: 1.7;
+    word-break: keep-all;
+}
+.signup-checked svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+}
+
+.password-guide {
+    overflow: hidden;
+    margin-left: -28px;
+    padding-left: 28px;
+    font-size: 13px;
+    line-height: 24px;
+}
+.password-guide-content {
+    position: relative;
+    padding: 14px 0 6px;
+    color: #333333;
+}
+.password-guide-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.password-guide-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    min-height: 24px;
+    position: relative;
+    isolation: isolate;
+    color: #a33434;
+    transition: color 0.18s;
+}
+.password-guide-row[data-passed="true"] {
+    color: #333333;
+}
+.password-guide-row[data-pending="true"] {
+    color: #737373;
+}
+.password-guide-row svg {
+    color: #929995;
+}
+.password-guide-check {
+    color: #166044;
+}
+.password-guide-text {
+    min-height: 24px;
+    flex: 1;
+}
+.password-guide-row::before,
+.password-guide-row::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    inset: -4px 0 -4px -28px;
+    mask-image: linear-gradient(to right, transparent, #000 14%, #000 80%, transparent);
+    transition: opacity 0.3s ease;
+}
+.password-guide-row::before {
+    background: radial-gradient(ellipse at 24% 50%, rgb(163 52 52 / 7%), transparent 72%);
+}
+.password-guide-row[data-passed="true"]::before {
+    opacity: 0;
+}
+.password-guide-row[data-pending="true"]::before {
+    opacity: 0;
+}
+.password-guide-row::after {
+    opacity: 0;
+    background: radial-gradient(
+        ellipse at 24% 50%,
+        rgb(22 96 68 / 15%),
+        rgb(22 96 68 / 5%) 45%,
+        transparent 74%
+    );
+}
+.password-guide-row[data-passed="true"]::after {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+    .password-guide-row,
+    .password-guide-row::before,
+    .password-guide-row::after {
+        transition: none;
+    }
+}
+.password-guide svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+}
+
+.password-strength-reveal {
+    overflow: hidden;
+}
+.password-strength {
+    margin-top: 14px;
+    color: #333333;
+}
+.password-strength-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.password-strength-value {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+}
+.password-strength-value strong {
+    font-size: 16px;
+    font-weight: 600;
+}
+.password-strength-track {
+    position: relative;
+    height: 5px;
+    margin: 8px 0 0;
+    background: #e5e5e5;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.password-strength-fill {
+    height: 100%;
+    border-radius: inherit;
+}
+
+.password-strength-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 3px 0 0;
+    color: #896000;
+    font-size: 12px;
+    line-height: 1.7;
+    word-break: keep-all;
+}
+.password-strength-warning svg {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    margin-top: 3px;
+    color: #b47d00;
+}
+
+.signup-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 23px;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+}
+
+.signup-mail-sent {
+    margin-top: 32px;
+}
+.signup-address {
+    color: #292929;
+    font-size: 16px;
+    overflow-wrap: anywhere;
+}
+.signup-mail-help {
+    margin: 34px 0 24px;
+    color: #737373;
+    font-size: 13px;
+    line-height: 1.9;
+    word-break: keep-all;
+}
+.signup-mail-feedback {
+    margin-top: 18px;
+    color: #666;
+    font-size: 13px;
+}
+.signup-existing .login-card h1 {
+    font-family: inherit;
+    font-size: 29px;
+    line-height: 1.5;
+    border-bottom: 2px solid #292929;
+    padding-bottom: 22px;
+}
+.signup-existing .login-card {
+    width: min(100%, 440px);
+}
+.signup-existing .signup-login-link {
+    display: none;
+}
+.signup-account-info {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 20px 0;
+    margin: 28px 0;
+    border-top: 1px solid #deded9;
+    border-bottom: 1px solid #deded9;
+    font-size: 13px;
+    color: #737373;
+}
+.signup-fields input:disabled {
+    background: #f5f5f2;
+    color: #737373;
+}
+
+.signup-linking-note {
+    margin-top: 24px;
+    color: #737373;
+    font-size: 13px;
+    line-height: 1.9;
+    word-break: keep-all;
+}
+.signup-linking-note strong {
+    color: #404040;
+    font-weight: 500;
+}

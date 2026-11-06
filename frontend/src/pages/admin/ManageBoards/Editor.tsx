@@ -1,18 +1,12 @@
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 
 import { useEditor, useEditorState, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { TextStyle } from "@tiptap/extension-text-style";
-import { FontFamily } from "@tiptap/extension-font-family";
-import { Color } from "@tiptap/extension-color";
-import Highlight from "@tiptap/extension-highlight";
-import { FontSize } from "../../../extensions/FontSize.ts";
+import { createPostExtensions } from "../../../extensions/postExtensions.ts";
 import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { FONTS } from "../../../assets/fonts/FONTS.def.ts";
-import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { AnimatePresence, motion } from "framer-motion";
 import { clsx } from "clsx";
 
@@ -37,18 +31,7 @@ import {
 import { type IconType } from "react-icons";
 import { type Post } from "./ManageComponent.tsx"; // Post 타입 임포트
 
-const extensions = [
-    StarterKit,
-    TextStyle,
-    FontFamily,
-    Color,
-    Highlight.configure({ multicolor: true }),
-    FontSize,
-    Table.configure({ resizable: true }),
-    TableRow,
-    TableCell,
-    TableHeader
-];
+const extensions = createPostExtensions(true);
 
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, callback: () => void) {
     useEffect(() => {
@@ -203,24 +186,31 @@ export default function Editor({
 
         // editingPost 유무에 따라 PUT(수정) 또는 POST(생성) 호출
         const apiCall = editingPost
-            ? api.put(BACKEND_ADDRESS + `posts/${editingPost.id}`, payload)
-            : api.post(BACKEND_ADDRESS + "posts", payload);
+            ? api.put(`posts/${editingPost.id}`, payload)
+            : api.post("posts", payload);
 
-        apiCall.then(() => {
-            alert(
-                editingPost ? "글이 성공적으로 수정되었습니다." : "글이 성공적으로 게시되었습니다."
-            );
-            if (!refreshAction) window.location.reload();
-            else refreshAction();
+        apiCall
+            .then(() => {
+                alert(
+                    editingPost
+                        ? "글이 성공적으로 수정되었습니다."
+                        : "글이 성공적으로 게시되었습니다."
+                );
+                if (!refreshAction) window.location.reload();
+                else refreshAction();
 
-            if (closeAction) {
-                editor.commands.clearContent();
-                setTitle("");
-                setFontSizeState(16);
-                setFontDropdownOpen(false);
-                closeAction();
-            }
-        });
+                if (closeAction) {
+                    editor.commands.clearContent();
+                    setTitle("");
+                    setFontSizeState(16);
+                    setFontDropdownOpen(false);
+                    closeAction();
+                }
+            })
+            .catch((err) => {
+                console.error("글 저장 실패:", err);
+                alert("글 저장에 실패했습니다.");
+            });
     };
 
     return (

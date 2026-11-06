@@ -16,21 +16,27 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@lombok.RequiredArgsConstructor
 public class WebSecurityConfig {
+    private final org.neatore.weeklycomma.security.BrowserOrigins origins;
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(CsrfConfigurer::disable);
+                .csrf(CsrfConfigurer::disable)
+                .httpBasic(org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer::disable)
+                .formLogin(org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer::disable)
+                .logout(org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS));
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "https://www.weeklycomma.kro.kr"));
+        config.setAllowedOrigins(origins.all());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
-        config.setExposedHeaders(List.of("Content-Type", "Content-Disposition", "Location"));
+        config.setExposedHeaders(List.of("Content-Type", "Content-Disposition", "Location", "Retry-After"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 

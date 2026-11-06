@@ -1,27 +1,17 @@
 import Component, { Title } from "../lib_component/Component";
 import Editor from "./Editor.tsx";
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 
 import { clsx } from "clsx";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { BsPinAngle } from "react-icons/bs";
 import { LuX, LuPencil } from "react-icons/lu";
 import loading_gif from "../../../assets/loading.gif";
+import { type Post, type PostType } from "../../../types/post.ts";
 
-export type PostType = "NOTICE" | "EVENT" | "G_RECOMMENDATION" | "W_RECOMMENDATION";
-
-export type Post = {
-    id: number;
-    title: string;
-    author: string;
-    createdAt: number;
-    updatedAt: number;
-    isPinned: boolean;
-    type: PostType;
-    content: string;
-};
+export type { Post, PostType } from "../../../types/post.ts";
 
 export default function ManageComponent({
     postType,
@@ -36,32 +26,68 @@ export default function ManageComponent({
     const [postEditorVisible, setPostEditorVisible] = useState<boolean>(false);
     const [posts, setPosts] = useState<Array<Post>>([]);
     const [selectedPosts, setSelectedPosts] = useState<Array<Post>>([]);
+    const isRecommendation = postType === "G_RECOMMENDATION" || postType === "W_RECOMMENDATION";
+    const [pinPending, setPinPending] = useState(false);
+    const [pinError, setPinError] = useState("");
 
     // 조회 모달용 게시글 상태
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     // 수정 시 전달할 게시글 상태
     const [editingPost, setEditingPost] = useState<Post | null>(null);
+    const postsRequestId = useRef(0);
+    const [selectedRecommendationPostIds, setSelectedRecommendationPostIds] = useState<string[]>(
+        []
+    );
+
+    useEffect(() => {
+        Promise.all(
+            ["high", "mid", "low"].map((level) =>
+                api
+                    .get(`adminsettings`, {
+                        params: { key: `recommend_post_${level}` }
+                    })
+                    .then((res) =>
+                        res.data === null || res.data === undefined || res.data === ""
+                            ? null
+                            : String(res.data)
+                    )
+            )
+        )
+            .then((postIds) =>
+                setSelectedRecommendationPostIds(
+                    postIds.filter((postId): postId is string => postId !== null)
+                )
+            )
+            .catch((err) => console.error("메인 추천글 지정 상태 조회 실패:", err));
+    }, []);
 
     const getPosts: () => Promise<void> = useCallback(async () => {
+        const requestId = ++postsRequestId.current;
         setIsLoading(true);
-        return api
-            .get(BACKEND_ADDRESS + `posts`, {
+        try {
+            const res = await api.get(`posts`, {
                 params: {
                     ...attributions!,
                     postType
                 }
-            })
-            .then((res) => {
-                const postList: Post[] = res.data;
-                setSelectedPosts([]);
-                setPosts(() =>
-                    postList.sort((a, b) => {
-                        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-                        return b.createdAt - a.createdAt;
-                    })
-                );
-                setIsLoading(false);
             });
+            if (requestId !== postsRequestId.current) return;
+
+            const postList: Post[] = res.data;
+            setSelectedPosts([]);
+            setPosts(
+                postList.sort((a, b) => {
+                    if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+                    return b.createdAt - a.createdAt;
+                })
+            );
+        } catch (err) {
+            console.error("글 목록 조회 실패:", err);
+        } finally {
+            if (requestId === postsRequestId.current) {
+                setIsLoading(false);
+            }
+        }
     }, [postType, attributions]);
 
     useEffect(() => {
@@ -98,9 +124,43 @@ export default function ManageComponent({
         setPostEditorVisible(true); // 에디터 열기
     };
 
+    const updatePins = async (pin: boolean, targets = selectedPosts) => {
+        if (pinPending || targets.length === 0) return;
+        setPinPending(true);
+        setPinError("");
+        try {
+            const results = await Promise.allSettled(
+                targets
+                    .filter((post) => post.isPinned !== pin)
+                    .map((post) => api.patch(`posts/${post.id}`, null, { params: { pin } }))
+            );
+            if (results.some((result) => result.status === "rejected")) {
+                setPinError(
+                    `${isRecommendation ? "픽 표시" : "고정"} 설정을 일부 저장하지 못했습니다. 다시 시도해 주세요.`
+                );
+            } else if (viewingPost && targets.some((post) => post.id === viewingPost.id)) {
+                setViewingPost({ ...viewingPost, isPinned: pin });
+            }
+            await getPosts();
+        } finally {
+            setPinPending(false);
+        }
+    };
+
     return (
         <Component>
             <Title>{title}</Title>
+            {isRecommendation && (
+                <p className="mb-4 font-suite text-sm text-gray-500">
+                    픽에 표시한 글은 일반추천 페이지 상단의 ‘쉼표지기의 픽’에 노출됩니다. 정기추천
+                    선정과는 별도로 관리됩니다.
+                </p>
+            )}
+            {pinError && !viewingPost && (
+                <p role="alert" className="mb-3 text-sm text-red-600">
+                    {pinError}
+                </p>
+            )}
             <div className={"mr-4"}>
                 <Editor
                     postType={postType}
@@ -140,46 +200,43 @@ export default function ManageComponent({
                     </button>
                     <button
                         className={menuBtnStyle(true, "bg-blue-500", "bg-neutral-400")}
-                        onClick={async () => {
-                            selectedPosts
-                                .filter((i) => !i.isPinned)
-                                .map((i) => {
-                                    api.patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
-                                        params: { pin: true }
-                                    }).then(async () => {
-                                        await getPosts();
-                                    });
-                                });
-                        }}
+                        disabled={pinPending || selectedPosts.length === 0}
+                        onClick={() => void updatePins(true)}
                     >
-                        선택 고정
+                        {isRecommendation ? "픽에 표시" : "선택 고정"}
                     </button>
                     <button
                         className={menuBtnStyle(true, "bg-blue-500", "bg-neutral-400")}
                         style={{ width: "120px" }}
-                        onClick={async () => {
-                            selectedPosts
-                                .filter((i) => i.isPinned)
-                                .map((i) => {
-                                    api.patch(BACKEND_ADDRESS + `posts/${i.id}`, null, {
-                                        params: { pin: false }
-                                    }).then(async () => {
-                                        await getPosts();
-                                    });
-                                });
-                        }}
+                        disabled={pinPending || selectedPosts.length === 0}
+                        onClick={() => void updatePins(false)}
                     >
-                        선택 고정 해제
+                        {isRecommendation ? "픽에서 제외" : "선택 고정 해제"}
                     </button>
                     <button
                         className={menuBtnStyle(true, "bg-red-400", "bg-neutral-400")}
                         onClick={async () => {
                             if (confirm("정말 선택한 글들을 삭제하시겠습니까?")) {
-                                selectedPosts.forEach((i) => {
-                                    api.delete(BACKEND_ADDRESS + `posts/${i.id}`).then(
-                                        async () => await getPosts()
+                                const deletedIds = selectedPosts.map((post) => post.id);
+                                try {
+                                    await Promise.all(
+                                        deletedIds.map((postId) => api.delete(`posts/${postId}`))
                                     );
-                                });
+                                    setPosts((prev) =>
+                                        prev.filter((post) => !deletedIds.includes(post.id))
+                                    );
+                                    if (editingPost && deletedIds.includes(editingPost.id)) {
+                                        setEditingPost(null);
+                                        setPostEditorVisible(false);
+                                    }
+                                    setViewingPost(null);
+                                    setSelectedPosts([]);
+                                    await getPosts();
+                                } catch (err) {
+                                    console.error("글 삭제 실패:", err);
+                                    alert("글 삭제에 실패했습니다.");
+                                    await getPosts();
+                                }
                             }
                         }}
                     >
@@ -223,13 +280,15 @@ export default function ManageComponent({
                                 <div
                                     className={clsx(
                                         "w-full flex border-b py-1",
-                                        item.isPinned && "bg-red-500/8"
+                                        item.isPinned &&
+                                            (isRecommendation ? "bg-green-50" : "bg-red-500/8")
                                     )}
                                     key={`post-list-button-${item.id}`}
                                 >
                                     <div className={"w-15 flex justify-center"}>
                                         <input
                                             type={"checkbox"}
+                                            aria-label={`${item.title} 선택`}
                                             checked={selectedPosts
                                                 .map((i) => i.id)
                                                 .includes(item.id)}
@@ -252,9 +311,22 @@ export default function ManageComponent({
                                         onClick={() => setViewingPost(item)} // 글 조회 모달 오픈
                                     >
                                         {item.title}
-                                        {item.isPinned && (
-                                            <BsPinAngle className={"text-gray-500 ml-1"} />
+                                        {selectedRecommendationPostIds.includes(
+                                            String(item.id)
+                                        ) && (
+                                            <span className="ml-2 text-xs text-gray-400 no-underline">
+                                                (이주의 도서 선정)
+                                            </span>
                                         )}
+                                        {item.isPinned &&
+                                            (isRecommendation ? (
+                                                <span className="ml-2 inline-flex shrink-0 items-center gap-1 rounded bg-green-50 px-2 py-1 text-xs text-green-700">
+                                                    <BsPinAngle aria-hidden="true" />
+                                                    쉼표지기 픽
+                                                </span>
+                                            ) : (
+                                                <BsPinAngle className={"text-gray-500 ml-1"} />
+                                            ))}
                                     </div>
                                     {(() => {
                                         const createdAtDate: Date = new Date(item.createdAt * 1000);
@@ -308,9 +380,14 @@ export default function ManageComponent({
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     {viewingPost.title}
-                                    {viewingPost.isPinned && (
-                                        <BsPinAngle className="text-red-500 text-sm" />
-                                    )}
+                                    {viewingPost.isPinned &&
+                                        (isRecommendation ? (
+                                            <span className="shrink-0 text-xs text-green-700">
+                                                쉼표지기 픽
+                                            </span>
+                                        ) : (
+                                            <BsPinAngle className="text-red-500 text-sm" />
+                                        ))}
                                 </h2>
                                 <button
                                     onClick={() => setViewingPost(null)}
@@ -342,7 +419,23 @@ export default function ManageComponent({
                             </div>
 
                             {/* Footer Actions */}
+                            {pinError && (
+                                <p role="alert" className="px-6 py-2 text-sm text-red-600">
+                                    {pinError}
+                                </p>
+                            )}
                             <div className="flex justify-end gap-2 px-6 py-3 border-t border-gray-200 bg-gray-50">
+                                {isRecommendation && (
+                                    <button
+                                        disabled={pinPending}
+                                        onClick={() =>
+                                            void updatePins(!viewingPost.isPinned, [viewingPost])
+                                        }
+                                        className="mr-auto rounded border border-green-600 px-3 py-2 font-suite text-sm text-green-700 disabled:opacity-50"
+                                    >
+                                        {viewingPost.isPinned ? "픽에서 제외" : "픽에 표시"}
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => handleStartEdit(viewingPost)}
                                     className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors cursor-pointer font-suite"

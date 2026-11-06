@@ -1,14 +1,21 @@
 import title from "../assets/title.png";
-import megaphone from "../assets/megaphone.png";
 
 import { clsx } from "clsx";
 
 // import { TbTriangleFilled } from "react-icons/tb";
 import { IoCloseCircleOutline } from "react-icons/io5";
 import { HiMagnifyingGlass } from "react-icons/hi2";
-import { CiStar } from "react-icons/ci";
+import { LuBookmark, LuMegaphone } from "react-icons/lu";
 
 import { useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+
+const menuLinkClassName = ({ isActive }: { isActive: boolean }) =>
+    isActive ? "underline underline-offset-8" : "";
+
+const headerIconClassName =
+    "inline-flex size-10 shrink-0 items-center justify-center rounded-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500";
+const headerIconProps = { size: 32, strokeWidth: 1.5, "aria-hidden": true } as const;
 
 export default function TopBar({ admin }: { admin: boolean }) {
     const [searchQuery, setSearchQuery] = useState("");
@@ -19,9 +26,9 @@ export default function TopBar({ admin }: { admin: boolean }) {
             <div className={"w-full flex items-center mt-10"}>
                 <img
                     src={title}
-                    alt={"logo"}
+                    alt={"주간쉼표"}
                     className={"w-75 cursor-pointer"}
-                    onClick={() => window.location.assign(".")}
+                    onClick={() => window.location.assign("/")}
                 />
                 <div
                     className={
@@ -52,73 +59,94 @@ export default function TopBar({ admin }: { admin: boolean }) {
                         <HiMagnifyingGlass />
                     </div>
                 </div>
-                <div className={"flex items-center w-70 pl-10"}>
-                    <span className={"text-5xl cursor-pointer"}>
-                        <img src={megaphone} alt={"공지"} className={"w-8"} />
-                    </span>
-                    <span className={"text-4xl ml-3 cursor-pointer w-8"}>
-                        <CiStar />
-                    </span>
-                    <div
-                        className={
-                            "flex flex-col items-end text-3xl ml-4 w-7.5 cursor-pointer group/menu-icon"
-                        }
-                        onClick={() => {
-                            setMenuOpen((prev) => !prev);
-                        }}
+                <div className="ml-8 flex shrink-0 items-center gap-2">
+                    <Link to="/notices" aria-label="공지 목록 보기" className={headerIconClassName}>
+                        <LuMegaphone {...headerIconProps} />
+                    </Link>
+                    <Link
+                        to="/favorites"
+                        aria-label="내 책갈피 보기"
+                        className={headerIconClassName}
                     >
-                        <div
-                            className={clsx(
-                                "w-6.25 h-0.75 border border-neutral-700 bg-neutral-700 rounded-full",
-                                "transition-all duration-200",
-                                isMenuOpened && "rotate-45 translate-y-2.5 w-7.5"
-                            )}
-                        />
-                        <div
-                            className={clsx(
-                                "w-6.25 h-0.75 border border-neutral-700 bg-neutral-700 rounded-full",
-                                "mt-1.75",
-                                "group-hover/menu-icon:w-4 transition:all duration-200 ease-in-out",
-                                isMenuOpened && "opacity-0"
-                            )}
-                        />
-                        <div
-                            className={clsx(
-                                "w-6.25 h-0.75 border border-neutral-700 bg-neutral-700 rounded-full",
-                                "mt-1.75 transition-all duration-200",
-                                isMenuOpened && "-rotate-45 -translate-y-2.5 w-7.5"
-                            )}
-                        />
-                    </div>
+                        <LuBookmark {...headerIconProps} />
+                    </Link>
+                    <button
+                        type="button"
+                        aria-label={isMenuOpened ? "메뉴 닫기" : "메뉴 열기"}
+                        className={`${headerIconClassName} group/menu-icon cursor-pointer`}
+                        onClick={() => setMenuOpen((prev) => !prev)}
+                    >
+                        <span aria-hidden="true" className="relative block size-8">
+                            <span
+                                className={clsx(
+                                    "absolute top-[7px] h-0.5 rounded-full bg-current transition-all duration-200 ease-in-out",
+                                    isMenuOpened
+                                        ? "right-0.5 w-7 translate-y-2 rotate-45"
+                                        : "right-1 w-6"
+                                )}
+                            />
+                            <span
+                                className={clsx(
+                                    "absolute top-[15px] right-1 h-0.5 w-6 rounded-full bg-current transition-all duration-200 ease-in-out group-hover/menu-icon:w-4",
+                                    isMenuOpened && "opacity-0"
+                                )}
+                            />
+                            <span
+                                className={clsx(
+                                    "absolute top-[23px] h-0.5 rounded-full bg-current transition-all duration-200 ease-in-out",
+                                    isMenuOpened
+                                        ? "right-0.5 w-7 -translate-y-2 -rotate-45"
+                                        : "right-1 w-6"
+                                )}
+                            />
+                        </span>
+                    </button>
                 </div>
             </div>
             <style>
                 {`
-                .menucontainer > span {
+                .menucontainer > span, .menucontainer > a {
                     margin-left: 2.5rem;
                     transition: color .06s ease-in-out;
                     cursor: pointer;
                 }
                 
-                .menucontainer > span:hover {
+                .menucontainer > span:hover, .menucontainer > a:hover {
                     color: #4b5563;
                 }
                `}
             </style>
-            <div className={"w-full flex mx-15 font-suite text-xl menucontainer"}>
-                <span onClick={() => window.location.assign("/about")}>소개</span>
-                <span>공지</span>
-                <span>이벤트</span>
-                <span>정기추천</span>
-                <span>일반추천</span>
-                <span>즐겨찾기</span>
-                <span>To. 쉼표지기</span>
+            <nav
+                aria-label="주 메뉴"
+                className={"w-full flex mx-15 font-suite text-xl menucontainer"}
+            >
+                <NavLink to="/about" className={menuLinkClassName}>
+                    소개
+                </NavLink>
+                <NavLink to="/notices" className={menuLinkClassName}>
+                    공지
+                </NavLink>
+                <NavLink to="/events" className={menuLinkClassName}>
+                    이벤트
+                </NavLink>
+                <NavLink to="/weekly-recommendations" className={menuLinkClassName}>
+                    정기추천
+                </NavLink>
+                <NavLink to="/recommendations" className={menuLinkClassName}>
+                    일반추천
+                </NavLink>
+                <NavLink to="/favorites" className={menuLinkClassName}>
+                    내 책갈피
+                </NavLink>
+                <NavLink to="/to-curator" className={menuLinkClassName}>
+                    To. 쉼표지기
+                </NavLink>
                 {admin && (
-                    <span className={"ml-10"} onClick={() => window.location.assign("/management")}>
+                    <NavLink to="/management" className={menuLinkClassName}>
                         관리
-                    </span>
+                    </NavLink>
                 )}
-            </div>
+            </nav>
         </>
     );
 }

@@ -2,12 +2,13 @@ import React, { useState, useRef } from "react";
 import { MdCameraAlt } from "react-icons/md";
 
 import { type Book } from "./ManageRecommendation.tsx";
-import { BACKEND_ADDRESS, api } from "../../../index.tsx";
+import { api } from "../../../index.tsx";
 
 import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { SubTitle, Title } from "../lib_component/Component.tsx";
 import ManageComponent from "../ManageBoards/ManageComponent.tsx";
 import ServerImg from "../../../component/ServerImg.tsx";
+import RecentRecommendations from "../recommendations/RecentRecommendations.tsx";
 
 // HTML Entity 해시 및 태그 제거용 유틸 함수 (렌더링 최적화)
 const decodeHtml = (html: string | undefined | null) => {
@@ -105,7 +106,7 @@ export default function ManageBook({
             formData.append("deleteCustomCover", "true");
         }
 
-        api.post(BACKEND_ADDRESS + "books", formData).then(() => {
+        api.post("books", formData).then(() => {
             alert("정상적으로 등록되었습니다.");
             setSelectedBook((prev) => prev && { ...prev, dbExist: true });
             refreshSearchResult();
@@ -114,7 +115,7 @@ export default function ManageBook({
 
     const removeBook = () => {
         if (confirm("정말 이 책을 삭제하시겠습니까? 등록한 정보가 모두 삭제됩니다.")) {
-            api.delete(BACKEND_ADDRESS + `books?isbn=${book.isbn}`).then(() => {
+            api.delete(`books?isbn=${book.isbn}`).then(() => {
                 setSelectedBook(null);
                 refreshSearchResult();
             });
@@ -299,6 +300,9 @@ export default function ManageBook({
                 </button>
             </div>
 
+            <div className="my-6 mr-4 max-h-72 overflow-y-auto rounded-lg border border-gray-200 p-4">
+                <RecentRecommendations isbn={book.isbn} title="이 책의 최근 추천 이력" />
+            </div>
             <div className="mt-2">
                 {book.dbExist ? (
                     <ManageComponent

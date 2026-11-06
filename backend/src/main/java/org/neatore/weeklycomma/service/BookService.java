@@ -12,6 +12,7 @@ import org.json.JSONObject;
 import org.neatore.weeklycomma.domain.Book;
 import org.neatore.weeklycomma.dto.BookDto;
 import org.neatore.weeklycomma.repository.BookRepository;
+import org.neatore.weeklycomma.repository.BookStarRepository;
 
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,7 @@ public class BookService {
     private final BookRepository bookRepository;
     private final DBFileService dbFileService;
     private final APIService apiService;
+    private final BookStarRepository bookStarRepository;
 
     public List<BookDto.BookResponse> searchBooks(String title) {
         List<BookDto.BookResponse> result = new ArrayList<>();
@@ -106,6 +108,7 @@ public class BookService {
 
         this.adminSettingService.getAdminSettingsByValue(isbn)
                 .forEach(this.adminSettingService::deleteAdminSetting);
+        if (b != null) bookStarRepository.deleteForBook(b);
         bookRepository.deleteBookByIsbn(isbn);
     }
 }

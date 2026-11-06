@@ -1,5 +1,5 @@
 import { type ComponentPropsWithoutRef, useEffect, useState, useRef } from "react";
-import { BACKEND_ADDRESS, api } from "../index.tsx";
+import { api } from "../index.tsx";
 
 interface ServerImgProps extends ComponentPropsWithoutRef<"img"> {
     fileId: string;
@@ -16,7 +16,7 @@ export default function ServerImg({ fileId, alt, onLoadFileName, ...props }: Ser
 
         const fetchImage = async () => {
             try {
-                const response = await api.get(BACKEND_ADDRESS + `files/${fileId}`, {
+                const response = await api.get(`files/${fileId}`, {
                     responseType: "blob"
                 });
 

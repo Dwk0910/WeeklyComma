@@ -3,7 +3,6 @@ package org.neatore.weeklycomma.repository;
 import org.neatore.weeklycomma.domain.Post;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,8 +14,8 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> searchByContent(String content);
 
     List<Post> getPostsByPostType(Post.PostType type);
+    List<Post> findByPostTypeInOrderByCreatedAtDescIdDesc(List<Post.PostType> types);
     Post getPostById(long postId);
 
-    @Query("SELECT p FROM Post p WHERE p.postType = org.neatore.weeklycomma.domain.Post.PostType.NOTICE ORDER BY p.createdAt DESC")
-    Optional<Post> getLatestNotice();
+    Optional<Post> findFirstByPostTypeOrderByCreatedAtDescIdDesc(Post.PostType type);
 }

@@ -9,6 +9,10 @@ import org.neatore.weeklycomma.dto.login.AuthType;
 import org.neatore.weeklycomma.domain.User;
 
 import org.neatore.weeklycomma.service.JwtService;
+import org.neatore.weeklycomma.service.LoginThrottleService;
+import org.neatore.weeklycomma.service.LoginSessionService;
+import org.neatore.weeklycomma.exception.AuthenticationThrottledException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.neatore.weeklycomma.service.OAuthService;
 import org.neatore.weeklycomma.service.UserService;
 
@@ -39,8 +43,11 @@ public class AuthenticationController {
     private final OAuthService oAuthService;
     private final UserService userService;
     private final JwtService jwtService;
+    private final org.neatore.weeklycomma.service.LoginPasswordService passwords;
 
-    private final Duration EXPIRATION_DURATION = Duration.ofDays(30);
+    private final LoginThrottleService throttle;
+
+    private final Duration EXPIRATION_DURATION = LoginSessionService.MAX_AGE;
 
     private String getLSData(JwtService.JwtToken jwtToken) {
         User user = this.jwtService.getUser(jwtToken.jwtToken());
@@ -56,59 +63,71 @@ public class AuthenticationController {
     @GetMapping("/me")
     @RequiresAuthentication
     public ResponseEntity<String> me(@CookieValue("WCA_ACCESS") String accessToken, @RequestHeader("X-Csrf-Token") String csrfToken) {
-        if (!jwtService.validateToken(accessToken)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         return ResponseEntity.ok(this.getLSData(new JwtService.JwtToken(accessToken, csrfToken)));
     }
 
     @PostMapping
-    public ResponseEntity<String> login(@Valid @RequestBody AuthDto.LoginRequest request) {
+    public ResponseEntity<String> login(@Valid @RequestBody AuthDto.LoginRequest request, HttpServletRequest http,
+            @CookieValue(value = "WCA_ACCESS", required = false) String previousToken) {
+        User user;
         if (request.authType() == AuthType.LOCAL) {
-            User user = userService.getUserByEmail(request.email());
-            if (user != null) {
-                // TODO: 비밀번호 검증
-            }
+            if (request.email() == null || request.email().isBlank() || request.email().length() > 254
+                    || !passwords.valid(request.password()))
+                return ResponseEntity.badRequest().build();
+            long retry = throttle.reserveLogin(request.email(), http.getRemoteAddr());
+            if (retry > 0) throw new AuthenticationThrottledException(retry);
+            user = userService.authenticateLocal(request.email(), request.password());
+            if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throttle.succeeded(request.email());
         } else {
-            // OAUTH(소셜) 로그인
-
-            String oauthId = switch (request.authType()) {
-                case OAUTH_NAVER -> oAuthService.getUserProfileNaver(request.auth_code(), request.redirect_uri(), request.state()).optString("id");
-                default -> null;
-            };
-
-            User user = userService.getUserByOauthId(oauthId);
-
-            // Generate cookie
-            if (user != null) {
-                JwtService.JwtToken jwtToken = this.jwtService.createToken(user, EXPIRATION_DURATION.toMillis());
-
-                ResponseCookie jwtCookie = ResponseCookie.from("WCA_ACCESS", jwtToken.jwtToken())
-                        .httpOnly(true)
-                        .secure(true)
-                        .path("/")
-                        .domain(null)
-                        .maxAge(EXPIRATION_DURATION)
-                        .sameSite("none")
-                        .build();
-
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                        .body(this.getLSData(jwtToken));
+            if (request.auth_code() == null || request.auth_code().isBlank() || request.auth_code().length() > 2048
+                    || request.state() == null || request.state().isBlank() || request.state().length() > 512
+                    || request.redirect_uri() == null || request.redirect_uri().isBlank() || request.redirect_uri().length() > 2048)
+                return ResponseEntity.badRequest().build();
+            long retry = throttle.reserveOAuth(http.getRemoteAddr());
+            if (retry > 0) throw new AuthenticationThrottledException(retry);
+            JSONObject profile;
+            try {
+                profile = oAuthService.getUserProfile(request.authType(), request.auth_code(), request.redirect_uri(), request.state(), request.code_verifier(), request.nonce());
+            } catch (org.springframework.web.client.RestClientException ex) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
             }
+            if (profile == null || profile.optString("id").isBlank())
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            user = userService.getUserByOauthId(request.authType(), profile.optString("id"));
+            if (user == null || user.getAuthType() != request.authType())
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        jwtService.revokeToken(previousToken);
+        JwtService.JwtToken jwtToken = jwtService.createToken(user, EXPIRATION_DURATION.toMillis());
+        ResponseCookie cookie = ResponseCookie.from("WCA_ACCESS", jwtToken.jwtToken())
+                .httpOnly(true).secure(true).path("/").maxAge(EXPIRATION_DURATION).sameSite("None").build();
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(getLSData(jwtToken));
     }
 
-    @DeleteMapping
+    @org.springframework.web.bind.annotation.PutMapping("/password")
     @RequiresAuthentication
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> changePassword(@CookieValue("WCA_ACCESS") String token,
+            @Valid @RequestBody AuthDto.PasswordChangeRequest request, HttpServletRequest http) {
+        User user = jwtService.getUser(token);
+        long retry = throttle.reserveLogin(user.getEmail(), http.getRemoteAddr());
+        if (retry > 0) throw new AuthenticationThrottledException(retry);
+        userService.changePassword(user.getId(), request.currentPassword(), request.newPassword());
+        throttle.succeeded(user.getEmail());
+        return logout(token);
+    }
+
+    // Origin + custom-header guard protects this idempotent endpoint, even when the session/CSRF cache has expired.
+    @DeleteMapping
+    public ResponseEntity<Void> logout(@CookieValue(value = "WCA_ACCESS", required = false) String token) {
+        jwtService.revokeToken(token);
         // 말소 쿠키 작성
         ResponseCookie ac = ResponseCookie.from("WCA_ACCESS")
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
                 .maxAge(0)
-                .sameSite("none")
+                .sameSite("None")
                 .build();
 
         return ResponseEntity.ok()

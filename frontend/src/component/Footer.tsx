@@ -3,7 +3,7 @@ import logo from "../assets/title.png";
 export default function Footer() {
     return (
         <div className={"w-full m-5 pb-10"}>
-            <img src={logo} alt={"logo"} className={"w-60"} />
+            <img src={logo} alt={"주간쉼표"} className={"w-60"} />
             <div className={"flex flex-col ml-4 font-suite -mt-2"}>
                 <span className={"text-2xl font-bold"}>주간쉼표</span>
                 <span className={"text-xl text-gray-500"}>WeeklyComma</span>

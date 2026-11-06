@@ -22,6 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JwtService {
     private final UserService userService;
+    private final LoginSessionService sessions;
 
     @Value("${JWT_TOKEN_SECRET}")
     private String SECRET_KEY;
@@ -37,15 +38,12 @@ public class JwtService {
 
     public boolean validateToken(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(this.secretKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-
-            User user = this.userService.getUserById(UUID.fromString(claims.getSubject()));
-            return user != null;
-        } catch (Exception e) {
+            Claims claims = getPayload(token);
+            UUID userId = UUID.fromString(claims.getSubject());
+            User user = userService.getUserById(userId);
+            return user != null && java.util.Objects.equals(user.getAuthVersion(), claims.get("auth_version", String.class))
+                    && sessions.isActive(token, userId);
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException | org.neatore.weeklycomma.exception.UserNotFoundException e) {
             return false;
         }
     }
@@ -53,30 +51,29 @@ public class JwtService {
     private Claims getPayload(String token) {
         return Jwts.parser()
                 .verifyWith(this.secretKey)
+                .requireIssuer("weeklycomma")
+                .clock(() -> new Date(sessions.now()))
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
     public JwtToken createToken(User user, long exp) {
-        return this.createToken(user.getId(), user.getUserType().toString(), exp);
-    }
-
-    public JwtToken createToken(UUID userId, String role, long exp) {
         UUID csrfToken = UUID.randomUUID();
 
-        return new JwtToken(
-                Jwts.builder()
-                        .subject(userId.toString())
-                        .claim("role", role)
-                        .claim("csrf_token", csrfToken.toString())
-                        .issuedAt(new Date())
-                        .expiration(new Date(System.currentTimeMillis() + exp))
-                        .signWith(this.secretKey)
-                        .compact(),
-                csrfToken.toString()
-        );
+        long now = sessions.now();
+        long expiresAt = now + Math.min(exp, LoginSessionService.MAX_AGE.toMillis());
+        String token = Jwts.builder()
+                .issuer("weeklycomma").id(UUID.randomUUID().toString())
+                .subject(user.getId().toString()).claim("role", user.getUserType().name()).claim("csrf_token", csrfToken.toString())
+                .claim("auth_version", user.getAuthVersion())
+                .issuedAt(new Date(now)).expiration(new Date(expiresAt))
+                .signWith(secretKey).compact();
+        sessions.register(token, user.getId(), expiresAt);
+        return new JwtToken(token, csrfToken.toString());
     }
+
+    public void revokeToken(String token) { sessions.revoke(token); }
 
     public String getCsrfToken(String token) {
         return this.getPayload(token).get("csrf_token").toString();

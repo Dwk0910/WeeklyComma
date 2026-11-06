@@ -8,11 +8,24 @@ services:
     networks:
       - weeklycommma_network
     environment:
+      SECURITY_PROXY_SECRET: ${SECURITY_PROXY_SECRET:-}
+      SECURITY_ALLOWED_ORIGINS: ${SECURITY_ALLOWED_ORIGINS:-http://localhost:5173,https://weeklycomma.kro.kr}
       JWT_TOKEN_SECRET: ${JWT_TOKEN_SECRET:?}
       DB_FILESAVE_DIR: ${DB_FILESAVE_DIR:?}
       ALADIN_API_KEY: ${ALADIN_API_KEY:?}
       OAUTH_NAVER_CLI_ID: ${OAUTH_NAVER_CLI_ID:?}
       OAUTH_NAVER_CLI_KEY: ${OAUTH_NAVER_CLI_KEY:?}
+      OAUTH_GOOGLE_CLI_ID: ${OAUTH_GOOGLE_CLI_ID:-}
+      OAUTH_GOOGLE_CLI_KEY: ${OAUTH_GOOGLE_CLI_KEY:-}
+      SIGNUP_MAIL_ENABLED: ${SIGNUP_MAIL_ENABLED:-false}
+      SIGNUP_VERIFY_URL: ${SIGNUP_VERIFY_URL:-https://weeklycomma.kro.kr/signup/email/verify}
+      SIGNUP_MAIL_FROM: ${SIGNUP_MAIL_FROM:-}
+      SES_SMTP_HOST: ${SES_SMTP_HOST:-localhost}
+      SES_SMTP_PORT: ${SES_SMTP_PORT:-587}
+      SES_SMTP_USERNAME: ${SES_SMTP_USERNAME:-}
+      SES_SMTP_PASSWORD: ${SES_SMTP_PASSWORD:-}
+      SES_SMTP_AUTH: ${SES_SMTP_AUTH:-true}
+      SES_SMTP_TLS: ${SES_SMTP_TLS:-true}
     volumes:
       - ./data:/app/data
 
