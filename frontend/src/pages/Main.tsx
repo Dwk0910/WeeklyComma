@@ -8,6 +8,14 @@ import { isAxiosError } from "axios";
 import BookStarButton, { type BookStarStatus } from "../component/BookStarButton.tsx";
 import ServerImg from "../component/ServerImg.tsx";
 import HomeBanner, { BannerSkeleton } from "../component/HomeBanner.tsx";
+import {
+    initialCourse,
+    registeredCourses,
+    recommendationCourses,
+    type HomeCourse,
+    type HomeSelection,
+    type HomeSelections
+} from "../lib/homeRecommendations.ts";
 
 import clsx from "clsx";
 import { Link } from "react-router-dom";
@@ -52,12 +60,6 @@ type PopularBook = Pick<BookResponse, "isbn" | "title" | "coverImg" | "customCov
     starCount: number;
 };
 
-const RECOMMENDATION_LEVELS = [
-    { key: "low", label: "초급" },
-    { key: "mid", label: "중급" },
-    { key: "high", label: "상급" }
-];
-
 type BannerStatus = "loading" | "ready" | "error";
 
 async function readHomeSetting(key: string, signal?: AbortSignal): Promise<string | null> {
@@ -83,7 +85,12 @@ const decodeHtml = (value: string | null | undefined) => {
 export default function Main() {
     const [latestNotice, setLatestNotice] = useState<Pick<Post, "id" | "title"> | null>(null);
     const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
-    const [selectedRecommendationLevel, setSelectedRecommendationLevel] = useState<string>("high");
+    const [selectedRecommendationLevel, setSelectedRecommendationLevel] =
+        useState<HomeCourse | null>(null);
+    const [selections, setSelections] = useState<HomeSelections>({});
+    const recommendationRequest = useRef(0);
+    const nextRecommendationRequest = useCallback(() => ++recommendationRequest.current, []);
+    const availableCourses = registeredCourses(selections);
     const [recommendationBook, setRecommendationBook] = useState<BookResponse | null>(null);
     const [recommendationPost, setRecommendationPost] = useState<RecommendationPost | null>(null);
     const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
@@ -223,30 +230,32 @@ export default function Main() {
             });
     };
 
-    const loadRecommendation = useCallback(async (level: string) => {
-        setIsRecommendationLoading(true);
-        setRecommendationBook(null);
-        setRecommendationPost(null);
-
-        try {
-            const recommendationIsbn = await readHomeSetting(`recommend_isbn_${level}`);
-            if (!recommendationIsbn) return;
-
-            const bookRes = await api.get<BookResponse>(`books/${recommendationIsbn}`);
-            setRecommendationBook(bookRes.data);
-
-            const recommendationPostId = await readHomeSetting(`recommend_post_${level}`);
-            if (!recommendationPostId) return;
-
-            const postRes = await api.get<RecommendationPost>(`posts/${recommendationPostId}`);
-            const post = postRes.data;
-            setRecommendationPost(post.attributions?.bookId === recommendationIsbn ? post : null);
-        } catch (err) {
-            console.error(`추천 도서 또는 추천글 조회 실패 [level: ${level}]:`, err);
-        } finally {
+    const loadRecommendation = useCallback(
+        async (selection: HomeSelection, signal?: AbortSignal) => {
+            const request = nextRecommendationRequest();
+            setIsRecommendationLoading(true);
+            setRecommendationBook(null);
+            setRecommendationPost(null);
+            const [book, post] = await Promise.allSettled([
+                api.get<BookResponse>(`books/${encodeURIComponent(selection.isbn)}`, { signal }),
+                selection.postId
+                    ? api.get<RecommendationPost>(`posts/${encodeURIComponent(selection.postId)}`, {
+                          signal
+                      })
+                    : Promise.resolve(null)
+            ]);
+            if (signal?.aborted || request !== recommendationRequest.current) return;
+            if (book.status === "fulfilled") setRecommendationBook(book.value.data);
+            if (
+                post.status === "fulfilled" &&
+                post.value?.data.attributions?.bookId === selection.isbn
+            ) {
+                setRecommendationPost(post.value.data);
+            }
             setIsRecommendationLoading(false);
-        }
-    }, []);
+        },
+        [nextRecommendationRequest]
+    );
 
     useEffect(() => {
         const controller = new AbortController();
@@ -287,22 +296,51 @@ export default function Main() {
                 });
         }
 
-        void readHomeSetting("mainPick", signal)
-            .then(async (mainPick) => {
+        void (async () => {
+            try {
+                const [mainPick, courses] = await Promise.all([
+                    readHomeSetting("mainPick", signal),
+                    Promise.all(
+                        recommendationCourses.map(async ({ key }) => {
+                            const [isbn, postId] = await Promise.all([
+                                readHomeSetting(`recommend_isbn_${key}`, signal),
+                                readHomeSetting(`recommend_post_${key}`, signal)
+                            ]);
+                            return [
+                                key,
+                                isbn?.trim() ? { isbn: isbn.trim(), postId } : undefined
+                            ] as const;
+                        })
+                    )
+                ]);
                 if (signal.aborted) return;
-                const level = mainPick || "high";
-                setSelectedRecommendationLevel(level);
-                await loadRecommendation(level);
-            })
-            .catch(() => {
-                if (!signal.aborted) setIsRecommendationLoading(false);
-            });
-        return () => controller.abort();
-    }, [loadRecommendation]);
+                const nextSelections: HomeSelections = Object.fromEntries(courses);
+                const selected = initialCourse(nextSelections, mainPick);
+                setSelections(nextSelections);
+                setSelectedRecommendationLevel(selected);
+                if (selected && nextSelections[selected]) {
+                    await loadRecommendation(nextSelections[selected], signal);
+                } else {
+                    setIsRecommendationLoading(false);
+                }
+            } catch (error) {
+                if (!signal.aborted) {
+                    console.error("추천 설정 조회 실패:", error);
+                    setIsRecommendationLoading(false);
+                }
+            }
+        })();
+        return () => {
+            controller.abort();
+            nextRecommendationRequest();
+        };
+    }, [loadRecommendation, nextRecommendationRequest]);
 
-    const handleRecommendationLevelChange = async (level: string) => {
+    const handleRecommendationLevelChange = (level: HomeCourse) => {
+        const selection = selections[level];
+        if (!selection || level === selectedRecommendationLevel) return;
         setSelectedRecommendationLevel(level);
-        await loadRecommendation(level);
+        void loadRecommendation(selection);
     };
 
     // autoplay
@@ -515,26 +553,30 @@ export default function Main() {
                         <span>이주의 책</span>
                     </span>
                 </div>
-                <div className={"mt-1"}>
-                    <span className={"text-gray-500 font-suite"}>다른 코스 책 보기</span>
-                    <div className={"flex items-center gap-2 mt-2 font-suite text-sm"}>
-                        {RECOMMENDATION_LEVELS.map((level) => (
+                {availableCourses.length > 0 && (
+                    <div
+                        role="group"
+                        aria-label="이주의 책 코스"
+                        className="mt-5 flex w-fit items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 p-1 font-suite text-sm"
+                    >
+                        {availableCourses.map((level) => (
                             <button
                                 key={level.key}
                                 type="button"
-                                onClick={() => void handleRecommendationLevelChange(level.key)}
+                                aria-pressed={selectedRecommendationLevel === level.key}
+                                onClick={() => handleRecommendationLevelChange(level.key)}
                                 className={
-                                    "px-3 py-1 rounded border transition-colors " +
+                                    "rounded-full px-6 py-2 font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 motion-reduce:transition-none " +
                                     (selectedRecommendationLevel === level.key
-                                        ? "bg-green-600 border-green-600 text-white"
-                                        : "border-gray-300 text-gray-500 hover:border-green-500 hover:text-green-600")
+                                        ? "bg-neutral-800 text-white shadow-sm"
+                                        : "text-neutral-500 hover:bg-white hover:text-neutral-800")
                                 }
                             >
                                 {level.label}
                             </button>
                         ))}
                     </div>
-                </div>
+                )}
             </div>
 
             {isRecommendationLoading ? (
