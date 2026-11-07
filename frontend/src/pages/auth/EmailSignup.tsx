@@ -267,7 +267,7 @@ export function SignupEmailVerify() {
             returnTo="/"
         >
             {error && (
-                <Link className="login-submit" to="/signup/email">
+                <Link className="login-submit mt-6" to="/signup/email">
                     인증 메일 다시 받기
                     <LuArrowRight aria-hidden="true" />
                 </Link>

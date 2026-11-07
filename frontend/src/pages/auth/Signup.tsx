@@ -27,12 +27,14 @@ export function SignupFrame({
     description,
     returnTo,
     back,
+    completed,
     children
 }: {
     title: string;
     description: string;
     returnTo: string;
     back?: boolean;
+    completed?: boolean;
     children: ReactNode;
 }) {
     if (getLSdata()) return <Navigate to={returnTo} replace />;
@@ -46,14 +48,23 @@ export function SignupFrame({
                     </h1>
                     <p className="login-intro">{description}</p>
                     {children}
-                    {back && (
-                        <Link className="signup-back" to={signupUrl("/signup", returnTo)}>
-                            <LuArrowLeft aria-hidden="true" /> 다른 방법으로 가입하기
+                    {completed ? (
+                        <Link className="login-submit mt-6" to={signupUrl("/login", returnTo)}>
+                            로그인 <LuArrowRight aria-hidden="true" />
                         </Link>
+                    ) : (
+                        <>
+                            {back && (
+                                <Link className="signup-back" to={signupUrl("/signup", returnTo)}>
+                                    <LuArrowLeft aria-hidden="true" /> 다른 방법으로 가입하기
+                                </Link>
+                            )}
+                            <div className="signup-login-link">
+                                이미 계정이 있나요?{" "}
+                                <Link to={signupUrl("/login", returnTo)}>로그인</Link>
+                            </div>
+                        </>
                     )}
-                    <div className="signup-login-link">
-                        이미 계정이 있나요? <Link to={signupUrl("/login", returnTo)}>로그인</Link>
-                    </div>
                 </section>
             </div>
         </main>
@@ -207,7 +218,8 @@ export function SignupRegistration({
                     : "이메일을 확인했어요. 나머지 정보를 입력해 주세요."
             }
             returnTo={returnTo}
-            back
+            back={!result}
+            completed={!!result}
         >
             {result ? (
                 <div className="signup-checked" role="status">

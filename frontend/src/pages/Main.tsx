@@ -2,11 +2,20 @@ import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { MdPause, MdPlayArrow, MdArrowForwardIos, MdArrowBackIosNew } from "react-icons/md";
 import { useCallback, useEffect, useState, useRef } from "react";
 
-import { api, getLSdata } from "../index.tsx";
+import { api } from "../lib/api.ts";
+import { getLSdata } from "../lib/session.ts";
 import { isAxiosError } from "axios";
 import BookStarButton, { type BookStarStatus } from "../component/BookStarButton.tsx";
 import ServerImg from "../component/ServerImg.tsx";
-import { fetchAdminSetting } from "./admin/ManageMainPage.tsx";
+import HomeBanner, { BannerSkeleton } from "../component/HomeBanner.tsx";
+import {
+    initialCourse,
+    registeredCourses,
+    recommendationCourses,
+    type HomeCourse,
+    type HomeSelection,
+    type HomeSelections
+} from "../lib/homeRecommendations.ts";
 
 import clsx from "clsx";
 import { Link } from "react-router-dom";
@@ -51,11 +60,22 @@ type PopularBook = Pick<BookResponse, "isbn" | "title" | "coverImg" | "customCov
     starCount: number;
 };
 
-const RECOMMENDATION_LEVELS = [
-    { key: "low", label: "초급" },
-    { key: "mid", label: "중급" },
-    { key: "high", label: "상급" }
-];
+type BannerStatus = "loading" | "ready" | "error";
+
+async function readHomeSetting(key: string, signal?: AbortSignal): Promise<string | null> {
+    const response = await api.get("adminsettings", { params: { key }, signal });
+    return response.data == null || response.data === "" ? null : String(response.data);
+}
+
+function BannerPlaceholder({ status, emptyText }: { status: BannerStatus; emptyText: string }) {
+    return status === "loading" ? (
+        <BannerSkeleton />
+    ) : (
+        <div className="flex h-full w-full items-center justify-center text-sm text-neutral-400">
+            {status === "error" ? "배너를 불러오지 못했습니다." : emptyText}
+        </div>
+    );
+}
 
 const decodeHtml = (value: string | null | undefined) => {
     if (!value) return "";
@@ -65,7 +85,12 @@ const decodeHtml = (value: string | null | undefined) => {
 export default function Main() {
     const [latestNotice, setLatestNotice] = useState<Pick<Post, "id" | "title"> | null>(null);
     const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
-    const [selectedRecommendationLevel, setSelectedRecommendationLevel] = useState<string>("high");
+    const [selectedRecommendationLevel, setSelectedRecommendationLevel] =
+        useState<HomeCourse | null>(null);
+    const [selections, setSelections] = useState<HomeSelections>({});
+    const recommendationRequest = useRef(0);
+    const nextRecommendationRequest = useCallback(() => ++recommendationRequest.current, []);
+    const availableCourses = registeredCourses(selections);
     const [recommendationBook, setRecommendationBook] = useState<BookResponse | null>(null);
     const [recommendationPost, setRecommendationPost] = useState<RecommendationPost | null>(null);
     const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
@@ -184,6 +209,12 @@ export default function Main() {
     const [topRightBanners, setTopRightBanners] = useState<BannerItem[]>([]);
     const [bottomRightBanners, setBottomRightBanners] = useState<BannerItem[]>([]);
 
+    const [bannerStatuses, setBannerStatuses] = useState<Record<string, BannerStatus>>({
+        leftBanner: "loading",
+        topRightBanners: "loading",
+        bottomRightBanners: "loading"
+    });
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const intervalRef = useRef<number | null>(null);
@@ -192,83 +223,124 @@ export default function Main() {
         if (!rawString) return [];
         return rawString
             .split(",")
-            .filter(Boolean)
+            .filter((item) => item.split("|")[0].trim())
             .map((item) => {
                 const [id, linkUrl] = item.split("|");
                 return { id, linkUrl: linkUrl || "" };
             });
     };
 
-    const loadRecommendation = useCallback(async (level: string) => {
-        setIsRecommendationLoading(true);
-        setRecommendationBook(null);
-        setRecommendationPost(null);
-
-        try {
-            const recommendationIsbn = await fetchAdminSetting(`recommend_isbn_${level}`);
-            if (!recommendationIsbn) return;
-
-            const bookRes = await api.get<BookResponse>(`books/${recommendationIsbn}`);
-            setRecommendationBook(bookRes.data);
-
-            const recommendationPostId = await fetchAdminSetting(`recommend_post_${level}`);
-            if (!recommendationPostId) return;
-
-            const postRes = await api.get<RecommendationPost>(`posts/${recommendationPostId}`);
-            const post = postRes.data;
-            setRecommendationPost(post.attributions?.bookId === recommendationIsbn ? post : null);
-        } catch (err) {
-            console.error(`추천 도서 또는 추천글 조회 실패 [level: ${level}]:`, err);
-        } finally {
+    const loadRecommendation = useCallback(
+        async (selection: HomeSelection, signal?: AbortSignal) => {
+            const request = nextRecommendationRequest();
+            setIsRecommendationLoading(true);
+            setRecommendationBook(null);
+            setRecommendationPost(null);
+            const [book, post] = await Promise.allSettled([
+                api.get<BookResponse>(`books/${encodeURIComponent(selection.isbn)}`, { signal }),
+                selection.postId
+                    ? api.get<RecommendationPost>(`posts/${encodeURIComponent(selection.postId)}`, {
+                          signal
+                      })
+                    : Promise.resolve(null)
+            ]);
+            if (signal?.aborted || request !== recommendationRequest.current) return;
+            if (book.status === "fulfilled") setRecommendationBook(book.value.data);
+            if (
+                post.status === "fulfilled" &&
+                post.value?.data.attributions?.bookId === selection.isbn
+            ) {
+                setRecommendationPost(post.value.data);
+            }
             setIsRecommendationLoading(false);
-        }
-    }, []);
+        },
+        [nextRecommendationRequest]
+    );
 
     useEffect(() => {
-        const fetch = async () => {
-            // latest notice via PostController
+        const controller = new AbortController();
+        const { signal } = controller;
+        void api
+            .get<Post>("posts/latestnotice", { signal })
+            .then((response) => {
+                if (!signal.aborted && response.data?.title) setLatestNotice(response.data);
+            })
+            .catch(() => {});
+        void api
+            .get<CurrentWeekResponse>("current-week", { signal })
+            .then((response) => {
+                if (!signal.aborted) setCurrentWeek(response.data);
+            })
+            .catch(() => {});
+
+        const bannerSlots = [
+            { key: "leftBanner", set: setMainBanners, random: false },
+            { key: "topRightBanners", set: setTopRightBanners, random: true },
+            { key: "bottomRightBanners", set: setBottomRightBanners, random: true }
+        ];
+        for (const slot of bannerSlots) {
+            void readHomeSetting(slot.key, signal)
+                .then((value) => {
+                    if (signal.aborted) return;
+                    const banners = parseBannerData(value);
+                    slot.set(
+                        slot.random && banners.length
+                            ? [banners[Math.floor(Math.random() * banners.length)]]
+                            : banners
+                    );
+                    setBannerStatuses((previous) => ({ ...previous, [slot.key]: "ready" }));
+                })
+                .catch(() => {
+                    if (!signal.aborted)
+                        setBannerStatuses((previous) => ({ ...previous, [slot.key]: "error" }));
+                });
+        }
+
+        void (async () => {
             try {
-                const res = await api.get<Post>(`posts/latestnotice`);
-                if (res.data?.title) setLatestNotice(res.data);
-            } catch (err) {
-                console.error("공지 조회 실패:", err);
+                const [mainPick, courses] = await Promise.all([
+                    readHomeSetting("mainPick", signal),
+                    Promise.all(
+                        recommendationCourses.map(async ({ key }) => {
+                            const [isbn, postId] = await Promise.all([
+                                readHomeSetting(`recommend_isbn_${key}`, signal),
+                                readHomeSetting(`recommend_post_${key}`, signal)
+                            ]);
+                            return [
+                                key,
+                                isbn?.trim() ? { isbn: isbn.trim(), postId } : undefined
+                            ] as const;
+                        })
+                    )
+                ]);
+                if (signal.aborted) return;
+                const nextSelections: HomeSelections = Object.fromEntries(courses);
+                const selected = initialCourse(nextSelections, mainPick);
+                setSelections(nextSelections);
+                setSelectedRecommendationLevel(selected);
+                if (selected && nextSelections[selected]) {
+                    await loadRecommendation(nextSelections[selected], signal);
+                } else {
+                    setIsRecommendationLoading(false);
+                }
+            } catch (error) {
+                if (!signal.aborted) {
+                    console.error("추천 설정 조회 실패:", error);
+                    setIsRecommendationLoading(false);
+                }
             }
-
-            try {
-                const weekRes = await api.get<CurrentWeekResponse>(`current-week`);
-                setCurrentWeek(weekRes.data);
-            } catch (err) {
-                console.error("현재 주차 조회 실패:", err);
-            }
-
-            const leftVal = await fetchAdminSetting("leftBanner");
-            const topVal = await fetchAdminSetting("topRightBanners");
-            const bottomVal = await fetchAdminSetting("bottomRightBanners");
-            const mainPick = (await fetchAdminSetting("mainPick")) || "high";
-            setSelectedRecommendationLevel(mainPick);
-            await loadRecommendation(mainPick);
-
-            const main = parseBannerData(leftVal);
-            const tops = parseBannerData(topVal);
-            const bots = parseBannerData(bottomVal);
-
-            setMainBanners(main);
-
-            // Randomize top/right banners: pick one per slot on each page load
-            setTopRightBanners(
-                tops.length > 0 ? [tops[Math.floor(Math.random() * tops.length)]] : []
-            );
-            setBottomRightBanners(
-                bots.length > 0 ? [bots[Math.floor(Math.random() * bots.length)]] : []
-            );
+        })();
+        return () => {
+            controller.abort();
+            nextRecommendationRequest();
         };
+    }, [loadRecommendation, nextRecommendationRequest]);
 
-        void fetch();
-    }, [loadRecommendation]);
-
-    const handleRecommendationLevelChange = async (level: string) => {
+    const handleRecommendationLevelChange = (level: HomeCourse) => {
+        const selection = selections[level];
+        if (!selection || level === selectedRecommendationLevel) return;
         setSelectedRecommendationLevel(level);
-        await loadRecommendation(level);
+        void loadRecommendation(selection);
     };
 
     // autoplay
@@ -324,13 +396,10 @@ export default function Main() {
                         {/* Carousel rendered inside original-sized container */}
                         <div className={"relative w-full h-full"}>
                             {mainBanners.length === 0 ? (
-                                <div
-                                    className={
-                                        "w-full h-full flex items-center justify-center text-gray-400"
-                                    }
-                                >
-                                    배너가 없습니다.
-                                </div>
+                                <BannerPlaceholder
+                                    status={bannerStatuses.leftBanner}
+                                    emptyText="배너가 없습니다."
+                                />
                             ) : (
                                 mainBanners.map((b, i) => (
                                     <a
@@ -339,11 +408,7 @@ export default function Main() {
                                         className={`absolute inset-0 transition-opacity duration-500 ${i === currentIndex ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                                     >
                                         {b.id ? (
-                                            <ServerImg
-                                                fileId={b.id}
-                                                alt={`main-banner-${i}`}
-                                                className={"w-full h-full object-cover"}
-                                            />
+                                            <HomeBanner fileId={b.id} alt={`main-banner-${i}`} />
                                         ) : (
                                             <div
                                                 className={
@@ -358,36 +423,38 @@ export default function Main() {
                             )}
 
                             {/* Controls (오른쪽 아래) */}
-                            <div
-                                className={
-                                    "absolute bottom-3 right-3 flex items-center gap-2 bg-black/30 rounded-md p-1"
-                                }
-                            >
-                                <button
-                                    onClick={() => setIsPlaying((p) => !p)}
-                                    className={"text-white p-1 rounded hover:bg-white/10"}
-                                    title={isPlaying ? "일시정지" : "재생"}
+                            {mainBanners.length > 1 && (
+                                <div
+                                    className={
+                                        "absolute bottom-3 right-3 flex items-center gap-2 bg-black/30 rounded-md p-1"
+                                    }
                                 >
-                                    {isPlaying ? <MdPause /> : <MdPlayArrow />}
-                                </button>
-                                <button
-                                    onClick={goPrev}
-                                    className={"text-white p-1 rounded hover:bg-white/10"}
-                                    title="이전"
-                                >
-                                    <MdArrowBackIosNew />
-                                </button>
-                                <button
-                                    onClick={goNext}
-                                    className={"text-white p-1 rounded hover:bg-white/10"}
-                                    title="다음"
-                                >
-                                    <MdArrowForwardIos />
-                                </button>
-                            </div>
+                                    <button
+                                        onClick={() => setIsPlaying((p) => !p)}
+                                        className={"text-white p-1 rounded hover:bg-white/10"}
+                                        title={isPlaying ? "일시정지" : "재생"}
+                                    >
+                                        {isPlaying ? <MdPause /> : <MdPlayArrow />}
+                                    </button>
+                                    <button
+                                        onClick={goPrev}
+                                        className={"text-white p-1 rounded hover:bg-white/10"}
+                                        title="이전"
+                                    >
+                                        <MdArrowBackIosNew />
+                                    </button>
+                                    <button
+                                        onClick={goNext}
+                                        className={"text-white p-1 rounded hover:bg-white/10"}
+                                        title="다음"
+                                    >
+                                        <MdArrowForwardIos />
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Indicators (bottom center) */}
-                            {mainBanners.length > 0 && (
+                            {mainBanners.length > 1 && (
                                 <div
                                     className={
                                         "absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1"
@@ -414,13 +481,10 @@ export default function Main() {
                 <div className={"flex flex-col ml-6"}>
                     <div className={"rounded-lg w-67 h-75 overflow-hidden"}>
                         {topRightBanners.length === 0 ? (
-                            <div
-                                className={
-                                    "w-full h-full flex items-center justify-center text-gray-400"
-                                }
-                            >
-                                광고 없음
-                            </div>
+                            <BannerPlaceholder
+                                status={bannerStatuses.topRightBanners}
+                                emptyText="광고 없음"
+                            />
                         ) : (
                             topRightBanners.map((b, i) => (
                                 <a
@@ -429,11 +493,7 @@ export default function Main() {
                                     className={"block w-full h-full"}
                                 >
                                     {b.id ? (
-                                        <ServerImg
-                                            fileId={b.id!}
-                                            alt={`top-right-${i}`}
-                                            className={"w-full h-full object-cover"}
-                                        />
+                                        <HomeBanner fileId={b.id!} alt={`top-right-${i}`} />
                                     ) : (
                                         <div
                                             className={
@@ -453,13 +513,10 @@ export default function Main() {
                         }
                     >
                         {bottomRightBanners.length === 0 ? (
-                            <div
-                                className={
-                                    "w-full h-full flex items-center justify-center text-gray-400"
-                                }
-                            >
-                                광고 없음
-                            </div>
+                            <BannerPlaceholder
+                                status={bannerStatuses.bottomRightBanners}
+                                emptyText="광고 없음"
+                            />
                         ) : (
                             bottomRightBanners.map((b, i) => (
                                 <a
@@ -468,11 +525,7 @@ export default function Main() {
                                     className={"block w-full h-full"}
                                 >
                                     {b.id ? (
-                                        <ServerImg
-                                            fileId={b.id!}
-                                            alt={`bottom-right-${i}`}
-                                            className={"w-full h-full object-cover"}
-                                        />
+                                        <HomeBanner fileId={b.id!} alt={`bottom-right-${i}`} />
                                     ) : (
                                         <div
                                             className={
@@ -500,26 +553,30 @@ export default function Main() {
                         <span>이주의 책</span>
                     </span>
                 </div>
-                <div className={"mt-1"}>
-                    <span className={"text-gray-500 font-suite"}>다른 코스 책 보기</span>
-                    <div className={"flex items-center gap-2 mt-2 font-suite text-sm"}>
-                        {RECOMMENDATION_LEVELS.map((level) => (
+                {availableCourses.length > 0 && (
+                    <div
+                        role="group"
+                        aria-label="이주의 책 코스"
+                        className="mt-5 flex w-fit items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 p-1 font-suite text-sm"
+                    >
+                        {availableCourses.map((level) => (
                             <button
                                 key={level.key}
                                 type="button"
-                                onClick={() => void handleRecommendationLevelChange(level.key)}
+                                aria-pressed={selectedRecommendationLevel === level.key}
+                                onClick={() => handleRecommendationLevelChange(level.key)}
                                 className={
-                                    "px-3 py-1 rounded border transition-colors " +
+                                    "rounded-full px-6 py-2 font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 motion-reduce:transition-none " +
                                     (selectedRecommendationLevel === level.key
-                                        ? "bg-green-600 border-green-600 text-white"
-                                        : "border-gray-300 text-gray-500 hover:border-green-500 hover:text-green-600")
+                                        ? "bg-neutral-800 text-white shadow-sm"
+                                        : "text-neutral-500 hover:bg-white hover:text-neutral-800")
                                 }
                             >
                                 {level.label}
                             </button>
                         ))}
                     </div>
-                </div>
+                )}
             </div>
 
             {isRecommendationLoading ? (

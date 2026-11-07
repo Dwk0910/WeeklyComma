@@ -33,11 +33,30 @@ test("all signup URLs withhold their forms from signed-in sessions", async () =>
         const {
             default: Signup,
             SignupSocial,
-            SignupRegistration
+            SignupRegistration,
+            SignupFrame
         } = await server.ssrLoadModule("/src/pages/auth/Signup.tsx");
         const { SignupEmail, SignupEmailVerify } = await server.ssrLoadModule(
             "/src/pages/auth/EmailSignup.tsx"
         );
+        const completed = renderToString(
+            createElement(
+                MemoryRouter,
+                null,
+                createElement(SignupFrame, {
+                    title: "가입이 완료되었습니다.",
+                    description: "완료",
+                    returnTo: "/favorites",
+                    completed: true,
+                    back: true,
+                    children: ""
+                })
+            )
+        );
+        assert.equal([...completed.matchAll(/<a /g)].length, 1);
+        assert.ok(completed.includes("/login?returnTo=%2Ffavorites"));
+        assert.ok(!completed.includes("다른 방법으로 가입하기"));
+        assert.ok(!completed.includes("이미 계정이 있나요"));
         const registration = renderToString(
             createElement(
                 MemoryRouter,
