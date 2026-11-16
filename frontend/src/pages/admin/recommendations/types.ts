@@ -1,3 +1,5 @@
+import type { BookMetadata } from "../../../types/book.ts";
+
 export type Course = "low" | "mid" | "high";
 
 export const COURSE_LABELS: Record<Course, string> = {
@@ -6,14 +8,14 @@ export const COURSE_LABELS: Record<Course, string> = {
     high: "상급"
 };
 
-export type RecommendationBook = {
+export type RecommendationBook = BookMetadata & {
     title: string;
     subtitle: string;
     description: string;
     author: string;
     publisher: string;
     isbn: string;
-    pubDate: number;
+    pubDate: number | null;
     coverImg: string;
     customCoverImg: string | null;
     adult: boolean;

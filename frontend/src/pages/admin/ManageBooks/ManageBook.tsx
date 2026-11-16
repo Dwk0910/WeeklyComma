@@ -1,13 +1,13 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { MdCameraAlt } from "react-icons/md";
 
 import { type Book } from "./ManageRecommendation.tsx";
-import { api } from "../../../index.tsx";
+import { api } from "../../../lib/api.ts";
 
 import FontStyle from "../../../assets/fonts/fonts.tsx";
 import { SubTitle, Title } from "../lib_component/Component.tsx";
 import ManageComponent from "../ManageBoards/ManageComponent.tsx";
-import ServerImg from "../../../component/ServerImg.tsx";
+import BookCoverImage from "../../../component/BookCoverImage.tsx";
 import RecentRecommendations from "../recommendations/RecentRecommendations.tsx";
 
 // HTML Entity 해시 및 태그 제거용 유틸 함수 (렌더링 최적화)
@@ -27,8 +27,16 @@ export default function ManageBook({
     refreshSearchResult: () => void;
 }) {
     // 미리보기 이미지: customCoverImg가 있으면 그걸 쓰고, 없으면 coverImg
-    const [previewImg, setPreviewImg] = useState<string>(book.customCoverImg || book.coverImg);
+    const [previewImg, setPreviewImg] = useState<string>(
+        book.customCoverImg || book.coverImg || ""
+    );
     const [uploadFile, setUploadFile] = useState<File | null>(null);
+    useEffect(
+        () => () => {
+            if (previewImg.startsWith("blob:")) URL.revokeObjectURL(previewImg);
+        },
+        [previewImg]
+    );
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -37,8 +45,10 @@ export default function ManageBook({
 
         // Unix Timestamp(초) 단위 변환
         if (name === "pubDate") {
-            const timestampInSeconds = value ? Math.floor(new Date(value).getTime() / 1000) : 0;
-            setSelectedBook((prev) => prev && { ...prev, [name]: timestampInSeconds });
+            const timestampInSeconds = value ? Math.floor(new Date(value).getTime() / 1000) : null;
+            setSelectedBook(
+                (prev) => prev && { ...prev, [name]: timestampInSeconds, publicationDate: value }
+            );
             return;
         }
 
@@ -56,25 +66,17 @@ export default function ManageBook({
         }
     };
 
-    // 커스텀 표지를 제거하고 기본 알라딘 표지로 되돌리는 함수
+    // 커스텀 표지를 제거하고 제공된 표지로 되돌리는 함수
     const handleResetCoverImg = () => {
         setUploadFile(null);
-        setPreviewImg(book.coverImg);
+        setPreviewImg(book.coverImg || "");
         setSelectedBook((prev) => prev && { ...prev, customCoverImg: null });
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
     };
 
-    const requiredFields = [
-        "title",
-        "isbn",
-        "author",
-        "publisher",
-        "coverImg",
-        "description",
-        "difficulty"
-    ];
+    const requiredFields = ["title", "isbn", "author", "publisher", "difficulty"];
 
     const serverUpload = () => {
         // 필수 값 검증
@@ -92,7 +94,7 @@ export default function ManageBook({
 
         // book 객체의 키-값들을 append (null이나 undefined, customCoverImg는 걸러냄)
         Object.entries(book).forEach(([key, value]) => {
-            if (key === "customCoverImg") return; // 파일 처리는 별도로 진행
+            if (key === "customCoverImg" || key === "dbExist") return; // 파일 처리는 별도로 진행
             if (value !== null && value !== undefined) {
                 formData.append(key, String(value));
             }
@@ -106,11 +108,15 @@ export default function ManageBook({
             formData.append("deleteCustomCover", "true");
         }
 
-        api.post("books", formData).then(() => {
-            alert("정상적으로 등록되었습니다.");
-            setSelectedBook((prev) => prev && { ...prev, dbExist: true });
-            refreshSearchResult();
-        });
+        api.post("books", formData)
+            .then(() => {
+                alert("정상적으로 등록되었습니다.");
+                setSelectedBook((prev) => prev && { ...prev, dbExist: true });
+                refreshSearchResult();
+            })
+            .catch(() => {
+                alert("책 정보를 저장하지 못했습니다. 필수 정보와 연결 상태를 확인해 주세요.");
+            });
     };
 
     const removeBook = () => {
@@ -144,24 +150,15 @@ export default function ManageBook({
             <div className="flex">
                 <div className="flex flex-col items-center shrink-0">
                     <div className="relative">
-                        {/*
-                           새 파일(uploadFile)이 들어온 상태면 Blob 미리보기 img 태그 사용
-                           새 파일이 없고 기존 customCoverImg가 존재하면 <ServerImg />
-                           둘 다 아니면 기본 알라딘 coverImg 사용
-                        */}
-                        {!uploadFile && book.customCoverImg ? (
-                            <ServerImg
-                                fileId={previewImg}
-                                alt="cover"
-                                className="w-60 h-90 border border-gray-500"
-                            />
-                        ) : (
-                            <img
-                                src={previewImg}
-                                alt="cover"
-                                className="w-60 h-90 border border-gray-500"
-                            />
-                        )}
+                        <BookCoverImage
+                            book={{
+                                ...book,
+                                coverImg: previewImg,
+                                customCoverImg: uploadFile ? null : book.customCoverImg
+                            }}
+                            className="w-60 h-90 border border-gray-200 object-cover"
+                            loading="eager"
+                        />
 
                         <div
                             className="absolute w-full h-90 inset-0 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 cursor-pointer"
@@ -241,11 +238,21 @@ export default function ManageBook({
                             <input
                                 type="date"
                                 name="pubDate"
-                                value={formatTimestampToDate(book.pubDate)}
+                                value={
+                                    book.publicationDate && book.publicationDate.length < 10
+                                        ? ""
+                                        : formatTimestampToDate(book.pubDate)
+                                }
                                 onChange={handleChange}
                                 className={`${inputStyle} font-bold cursor-pointer`}
                             />
                         </div>
+
+                        {book.publicationDate && book.publicationDate.length < 10 && (
+                            <p className="my-1 text-xs font-suite text-stone-500">
+                                제공된 출간 정보: {book.publicationDate} · 정확한 날짜는 미상
+                            </p>
+                        )}
 
                         <div className="flex items-center gap-6 mt-3">
                             <span className="text-gray-700 font-bold w-30 shrink-0 font-suite">
@@ -272,12 +279,48 @@ export default function ManageBook({
                         </div>
                     </div>
 
+                    <details className="mt-5 border-y border-stone-200 py-4 font-suite">
+                        <summary className="cursor-pointer text-sm text-stone-600">
+                            추가 도서 정보
+                        </summary>
+                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {[
+                                ["쪽수", "pageCount", "예: 320 p."],
+                                ["판형", "bookSize", "예: 21 cm"],
+                                ["시리즈", "seriesTitle", "시리즈 이름"],
+                                ["판 정보", "edition", "예: 개정판"]
+                            ].map(([label, name, placeholder]) => (
+                                <label key={name} className="text-xs text-stone-500">
+                                    {label}
+                                    <input
+                                        name={name}
+                                        value={String(book[name as keyof Book] ?? "")}
+                                        onChange={handleChange}
+                                        placeholder={placeholder}
+                                        className={`${inputStyle} mt-1 text-sm text-stone-700`}
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                        <label className="mt-4 block text-xs text-stone-500">
+                            목차
+                            <textarea
+                                name="tableOfContents"
+                                value={decodeHtml(book.tableOfContents)}
+                                onChange={handleChange}
+                                rows={5}
+                                placeholder="제공된 목차가 없으면 직접 입력할 수 있습니다."
+                                className="mt-2 w-full resize-y rounded border border-stone-200 bg-transparent p-3 text-sm leading-relaxed outline-none focus:border-stone-500"
+                            />
+                        </label>
+                    </details>
                     <span className="text-gray-700 font-suite font-bold mt-3">책 설명</span>
                     <textarea
                         name="description"
                         value={decodeHtml(book.description)}
                         onChange={handleChange}
                         rows={6}
+                        placeholder="책 소개가 제공되지 않았다면 직접 작성해 주세요."
                         className="mt-2 font-[HCRBatang] mr-4 p-2 bg-gray-50/50 border border-gray-200 rounded-sm outline-none focus:border-blue-400 transition-all resize-none overflow-y-auto leading-relaxed"
                     />
                 </div>

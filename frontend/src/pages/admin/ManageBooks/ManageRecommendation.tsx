@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { MdSearch } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
 
-import { api } from "../../../index.tsx";
+import { searchBookSources, type ManagedBook } from "../../../lib/bookSearch.ts";
 import Component, { Title, SubTitle } from "../lib_component/Component";
 import ManageBook from "./ManageBook.tsx";
-import ServerImg from "../../../component/ServerImg.tsx";
+import BookCoverImage from "../../../component/BookCoverImage.tsx";
+import { bookPublicationDate, comparableIsbn } from "../../../lib/bookDetails.ts";
 import RecentRecommendations from "../recommendations/RecentRecommendations.tsx";
-import type { RecommendationBook } from "../recommendations/types.ts";
 
-export type Book = RecommendationBook & { dbExist: boolean };
+export type Book = ManagedBook;
 
 export default function ManageRecommendation() {
     const [searchQuery, setSearchQuery] = useState<string>("");
@@ -19,6 +19,14 @@ export default function ManageRecommendation() {
     const [isSearching, setIsSearching] = useState<boolean>(false);
     const [exclude, setExclude] = useState<boolean>(false);
     const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+    const [searchedQuery, setSearchedQuery] = useState("");
+    const [searchErrors, setSearchErrors] = useState<{
+        registered: string | null;
+        external: string | null;
+    }>({ registered: null, external: null });
+    const searchController = useRef<AbortController | null>(null);
+
+    useEffect(() => () => searchController.current?.abort(), []);
 
     // HTML Entity decoding utility
     const decodeHtml = (html: string | undefined | null) => {
@@ -30,7 +38,8 @@ export default function ManageRecommendation() {
     const highlightText = (text: string, query: string) => {
         const decoded = decodeHtml(text);
         if (!query.trim()) return decoded;
-        const parts = decoded.split(new RegExp(`(${query})`, "gi"));
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const parts = decoded.split(new RegExp(`(${escaped})`, "gi"));
         return (
             <span>
                 {parts.map((part, i) =>
@@ -47,25 +56,22 @@ export default function ManageRecommendation() {
     };
 
     const handleSearch = async () => {
-        if (!searchQuery.trim()) return;
+        const query = searchQuery.trim();
+        if (!query) return;
+        searchController.current?.abort();
+        const controller = new AbortController();
+        searchController.current = controller;
+        setSearchedQuery(query);
         setIsSearching(true);
-        try {
-            const dbBooksResponse = await api.get("books", {
-                params: { query: searchQuery }
-            });
-            setSearchResults_l(
-                (dbBooksResponse.data as Book[]).map((i) => ({ ...i, dbExist: true }))
-            );
-
-            const apiBooksResponse = await api.get("books/api", {
-                params: { query: searchQuery }
-            });
-            setSearchResults_a(apiBooksResponse.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsSearching(false);
-        }
+        setSearchResults_l([]);
+        setSearchResults_a([]);
+        setSearchErrors({ registered: null, external: null });
+        const result = await searchBookSources(query, controller.signal);
+        if (controller.signal.aborted) return;
+        setSearchResults_l(result.registered);
+        setSearchResults_a(result.external);
+        setSearchErrors(result.errors);
+        setIsSearching(false);
     };
 
     const renderSearchResults = (list: Book[]) => {
@@ -79,28 +85,16 @@ export default function ManageRecommendation() {
             >
                 {/* customCoverImg 유무에 따른 이미지 컴포넌트 분기 */}
                 <div className="w-15 h-20 overflow-hidden bg-blue-50 rounded flex items-center justify-center mr-4 shrink-0 border border-gray-200">
-                    {item.customCoverImg ? (
-                        <ServerImg
-                            fileId={item.customCoverImg}
-                            alt="bookcover"
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <img
-                            alt="bookcover"
-                            src={item.coverImg}
-                            className="w-full h-full object-cover"
-                        />
-                    )}
+                    <BookCoverImage book={item} className="w-full h-full object-cover" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-900 truncate">
-                            {highlightText(item.title, searchQuery)}
+                            {highlightText(item.title, searchedQuery)}
                         </span>
                     </div>
-                    <div className="flex items-center text-sm text-gray-500 mt-1">
+                    <div className="flex flex-wrap items-center gap-y-1 text-sm text-gray-500 mt-1">
                         <span className="font-semibold text-gray-600 mr-2">
                             {decodeHtml(item.author)}
                         </span>
@@ -109,15 +103,23 @@ export default function ManageRecommendation() {
                             {decodeHtml(item.publisher)}
                         </span>
                         <span className="mr-3">|</span>
-                        {(() => {
-                            const date = new Date(item.pubDate * 1000);
-                            return (
-                                <span>{`${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.`}</span>
-                            );
-                        })()}
+                        <span>{bookPublicationDate(item) || "출간일 미상"}</span>
                         <span className="mx-3">|</span>
                         <span>{item.isbn}</span>
                     </div>
+                    {[item.pageCount, item.bookSize, item.edition, item.seriesTitle].some(
+                        Boolean
+                    ) && (
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-stone-600">
+                            {[item.pageCount, item.bookSize, item.edition, item.seriesTitle]
+                                .filter(Boolean)
+                                .map((value, index) => (
+                                    <span key={index} className="rounded bg-stone-100 px-2 py-1">
+                                        {decodeHtml(value)}
+                                    </span>
+                                ))}
+                        </div>
+                    )}
                 </div>
             </div>
         ));
@@ -131,7 +133,7 @@ export default function ManageRecommendation() {
                     onSelect={(book) => setSelectedBook({ ...book, dbExist: true })}
                 />
             </div>
-            <SubTitle description="책의 이름을 검색하여 새로운 추천 글을 작성하거나 작성한 글을 수정할 수 있습니다.">
+            <SubTitle description="책 제목 또는 ISBN으로 검색하고, 책 정보를 등록한 뒤 추천글을 작성할 수 있습니다.">
                 책 검색
             </SubTitle>
 
@@ -142,7 +144,7 @@ export default function ManageRecommendation() {
                         <input
                             type="text"
                             className="w-full h-12 pl-12 pr-4 border border-gray-300 rounded-full font-suite outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                            placeholder="키워드로 검색 (저자, 도서 이름 등)"
+                            placeholder="책 제목 또는 ISBN"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -176,10 +178,19 @@ export default function ManageRecommendation() {
                 </div>
             </div>
 
-            <div className="ml-4 my-4 space-y-3 mr-4">
+            {(searchErrors.registered || searchErrors.external) && (
+                <div
+                    role="alert"
+                    className="mx-4 my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 font-suite text-sm text-amber-900"
+                >
+                    {searchErrors.registered && <p>등록된 책 검색: {searchErrors.registered}</p>}
+                    {searchErrors.external && <p>국립중앙도서관 검색: {searchErrors.external}</p>}
+                </div>
+            )}
+            <div aria-busy={isSearching} className="ml-4 my-4 space-y-3 mr-4">
                 {searchResults_l.length > 0 || searchResults_a.length > 0 ? (
                     <>
-                        {!exclude && (
+                        {!exclude && !searchErrors.registered && (
                             <>
                                 <div className="w-full text-[0.9rem] font-suite pl-2 mt-3">
                                     등록된 책{searchResults_l.length > 0 ? "" : "이 없습니다"}
@@ -188,13 +199,22 @@ export default function ManageRecommendation() {
                             </>
                         )}
 
-                        <div className="w-full text-[0.9rem] font-suite pl-2 mt-3">
-                            등록되지 않은 책
-                        </div>
-                        {renderSearchResults(
-                            searchResults_a.filter(
-                                (item) => !searchResults_l.some((il) => il.isbn === item.isbn)
-                            )
+                        {!searchErrors.external && (
+                            <>
+                                <div className="w-full text-[0.9rem] font-suite pl-2 mt-3">
+                                    국립중앙도서관 검색 결과
+                                </div>
+                                {renderSearchResults(
+                                    searchResults_a.filter(
+                                        (item) =>
+                                            !searchResults_l.some(
+                                                (il) =>
+                                                    comparableIsbn(il.isbn) ===
+                                                    comparableIsbn(item.isbn)
+                                            )
+                                    )
+                                )}
+                            </>
                         )}
                     </>
                 ) : (
@@ -204,7 +224,11 @@ export default function ManageRecommendation() {
                             <p className="text-gray-400 font-suite">
                                 {isSearching
                                     ? "검색 중..."
-                                    : "검색 결과가 없습니다. 책 이름을 정확히 입력해주세요."}
+                                    : searchErrors.registered || searchErrors.external
+                                      ? "검색을 완료하지 못했습니다. 위 안내를 확인해 주세요."
+                                      : searchedQuery
+                                        ? "검색 결과가 없습니다. 책 이름을 정확히 입력해주세요."
+                                        : "책 제목 또는 ISBN을 입력하고 검색해 주세요."}
                             </p>
                         </div>
                     </div>
