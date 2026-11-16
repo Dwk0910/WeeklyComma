@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { LuArrowLeft } from "react-icons/lu";
 import { api } from "../../index.tsx";
 import PageTitle from "../../component/PageTitle.tsx";
+import BookDetails from "../../component/BookDetails.tsx";
 import PostContent from "../../component/PostContent.tsx";
 import { BoardFeedback } from "../boards/BoardShared.tsx";
 import {
@@ -104,6 +105,7 @@ function Detail({ id, weekly }: { id: string; weekly: boolean }) {
                             >
                                 <BookCover item={item} />
                                 <BookInfo item={item} />
+                                <BookDetails book={item.book} />
                                 <RecommendationStars item={item} stars={stars} />
                                 {item.recommendations.length > 0 && (
                                     <details className="recommendation-history">
