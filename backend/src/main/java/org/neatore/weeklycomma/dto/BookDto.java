@@ -1,7 +1,6 @@
 package org.neatore.weeklycomma.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,24 +18,37 @@ public class BookDto {
             String customCoverImg,
             String description,
             String difficulty,
-            Boolean adult
+            Boolean adult,
+            String pageCount,
+            String bookSize,
+            String seriesTitle,
+            String edition,
+            String tableOfContents,
+            String publicationDate
     ) {}
 
     public record RegisterRequest(
             @NotBlank String isbn,
             @NotBlank String title,
-            @NotBlank String subtitle,
+            String subtitle,
             @NotBlank String author,
             @NotBlank String publisher,
-            @NotNull Long pubDate,
-            @NotBlank String coverImg,
+            Long pubDate,
+            String coverImg,
             MultipartFile customCoverImg,
             String description,
             String difficulty,
-            Boolean adult
+            Boolean adult,
+            String pageCount,
+            String bookSize,
+            String seriesTitle,
+            String edition,
+            String tableOfContents,
+            String publicationDate,
+            Boolean deleteCustomCover
     ) {
         public Instant getPubDateAsInstant() {
-            return Instant.ofEpochSecond(pubDate);
+            return pubDate == null ? null : Instant.ofEpochSecond(pubDate);
         }
     }
 }
