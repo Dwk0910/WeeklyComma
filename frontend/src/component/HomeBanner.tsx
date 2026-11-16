@@ -6,10 +6,8 @@ export function BannerSkeleton() {
         <div
             role="status"
             aria-label="배너를 불러오는 중"
-            className="h-full w-full animate-pulse bg-neutral-100 motion-reduce:animate-none"
-        >
-            <div className="h-full w-full bg-gradient-to-br from-neutral-100 via-neutral-200/60 to-neutral-100" />
-        </div>
+            className="banner-skeleton h-full w-full"
+        />
     );
 }
 

@@ -22,15 +22,7 @@ import java.time.Instant;
 public class Book {
     public Book(BookDto.RegisterRequest book) {
         this.isbn = book.isbn();
-        this.title = book.title();
-        this.subTitle = book.subtitle();
-        this.author = book.author();
-        this.publisher = book.publisher();
-        this.pubDate = book.getPubDateAsInstant();
-        this.coverImg = book.coverImg();
-        this.description = book.description();
-        this.difficulty = book.difficulty();
-        this.adult = book.adult();
+        updateFrom(book);
     }
 
     @Id
@@ -53,6 +45,14 @@ public class Book {
     @Setter
     private String customCoverImg;
 
+    private String pageCount;
+    private String bookSize;
+    private String seriesTitle;
+    private String edition;
+    @Column(columnDefinition = "TEXT")
+    private String tableOfContents;
+    private String publicationDate;
+
     public void updateFrom(BookDto.RegisterRequest from) {
         this.title = from.title();
         this.subTitle = from.subtitle();
@@ -63,9 +63,17 @@ public class Book {
         this.coverImg = from.coverImg();
         this.adult = from.adult();
         this.difficulty = from.difficulty();
+        this.pageCount = from.pageCount();
+        this.bookSize = from.bookSize();
+        this.seriesTitle = from.seriesTitle();
+        this.edition = from.edition();
+        this.tableOfContents = from.tableOfContents();
+        this.publicationDate = from.publicationDate();
     }
 
     public BookDto.BookResponse toDto() {
-        return new BookDto.BookResponse(title, subTitle, author, publisher, isbn, pubDate.getEpochSecond(), coverImg, customCoverImg, description, difficulty, adult);
+        return new BookDto.BookResponse(title, subTitle, author, publisher, isbn, pubDate == null ? null : pubDate.getEpochSecond(),
+                coverImg, customCoverImg, description, difficulty, adult, pageCount, bookSize, seriesTitle,
+                edition, tableOfContents, publicationDate);
     }
 }

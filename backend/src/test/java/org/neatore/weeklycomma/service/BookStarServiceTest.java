@@ -242,9 +242,33 @@ class BookStarServiceTest {
         assertTrue(stars.getStarredBooks(second).isEmpty());
     }
 
+    @Test
+    void isbn13UpdatesLegacyBookWithoutLosingItsCoverOrCreatingAnotherBook() {
+        Book original = book("8937480255");
+        original.setCustomCoverImg("existing-cover-id");
+        books.save(original);
+        var service = context.getBean(BookService.class);
+        service.upsertBook(new BookDto.RegisterRequest("9788937480256", "데미안", "", "헤르만 헤세", "민음사",
+                null, "", null, "", "중급", false, "239 p.", "23 cm", "세계문학전집", "개정판",
+                "첫 장\n두 번째 장", "2026", false));
+
+        assertEquals(1, books.count());
+        var updated = service.getBookByIsbn("9788937480256").toDto();
+        assertEquals("8937480255", updated.isbn());
+        assertEquals("existing-cover-id", updated.customCoverImg());
+        assertEquals("239 p.", updated.pageCount());
+        assertEquals("23 cm", updated.bookSize());
+        assertEquals("세계문학전집", updated.seriesTitle());
+        assertEquals("개정판", updated.edition());
+        assertEquals("첫 장\n두 번째 장", updated.tableOfContents());
+        assertEquals("2026", updated.publicationDate());
+        assertNull(updated.pubDate());
+        assertEquals("8937480255", service.searchBooks("9788937480256").get(0).isbn());
+    }
+
     private Book book(String isbn) {
         return books.save(new Book(new BookDto.RegisterRequest(isbn, "Title " + isbn, "Subtitle", "Author", "Publisher",
-                1767225600L, "https://example.test/cover.jpg", null, "Description", "상급", false)));
+                1767225600L, "https://example.test/cover.jpg", null, "Description", "상급", false, null, null, null, null, null, null, false)));
     }
 
     private User user(int number) {

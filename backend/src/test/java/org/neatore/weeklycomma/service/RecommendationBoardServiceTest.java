@@ -135,7 +135,7 @@ class RecommendationBoardServiceTest {
 
     private void book(String isbn) {
         books.save(new Book(new BookDto.RegisterRequest(isbn, "Book " + isbn, "Subtitle", "Author", "Publisher",
-                1767225600L, "https://example.test/cover.jpg", null, "Description", "상급", false)));
+                1767225600L, "https://example.test/cover.jpg", null, "Description", "상급", false, null, null, null, null, null, null, false)));
     }
     private long post(String isbn, Post.PostType type) {
         return posts.addPost("Post " + isbn, "<p>Subtitle</p><p>Content</p>", "Curator", type, new Post.Attribution(isbn));

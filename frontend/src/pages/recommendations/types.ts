@@ -1,4 +1,5 @@
 import { type Post } from "../../types/post.ts";
+import type { BookMetadata } from "../../types/book.ts";
 
 export type Designation = {
     year: number;
@@ -11,7 +12,7 @@ export type Designation = {
 
 export type Recommendation = {
     post: Post;
-    book: {
+    book: BookMetadata & {
         isbn: string;
         title: string;
         subtitle: string;

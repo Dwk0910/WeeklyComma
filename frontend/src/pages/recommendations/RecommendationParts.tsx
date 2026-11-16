@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import ServerImg from "../../component/ServerImg.tsx";
+import BookCoverImage from "../../component/BookCoverImage.tsx";
 import BookStarButton from "../../component/BookStarButton.tsx";
 import { PostDate } from "../boards/BoardShared.tsx";
 import {
@@ -15,19 +15,11 @@ import { type useBookStars } from "./useBookStars.ts";
 export type Stars = ReturnType<typeof useBookStars>;
 
 export function BookCover({ item, className = "" }: { item: Recommendation; className?: string }) {
-    const props = {
-        alt: `${plainText(item.book.title)} 표지`,
-        className: `recommendation-cover ${className}`,
-        loading: "lazy" as const
-    };
-    return item.book.customCoverImg ? (
-        <ServerImg fileId={item.book.customCoverImg} {...props} />
-    ) : item.book.coverImg ? (
-        <img src={item.book.coverImg} {...props} />
-    ) : (
-        <div className={props.className} role="img" aria-label={props.alt}>
-            {plainText(item.book.title)}
-        </div>
+    return (
+        <BookCoverImage
+            book={{ ...item.book, title: plainText(item.book.title) }}
+            className={`recommendation-cover ${className}`}
+        />
     );
 }
 

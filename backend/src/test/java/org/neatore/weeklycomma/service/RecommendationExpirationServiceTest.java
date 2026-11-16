@@ -411,7 +411,8 @@ class RecommendationExpirationServiceTest {
 
     private long createBookAndPost(String isbn, String difficulty) {
         bookRepository.save(new Book(new BookDto.RegisterRequest(isbn, "Book " + isbn, "Subtitle", "Author", "Publisher",
-                Instant.now().getEpochSecond(), "https://example.test/cover.jpg", null, "Description", difficulty, false)));
+                Instant.now().getEpochSecond(), "https://example.test/cover.jpg", null, "Description", difficulty, false,
+                null, null, null, null, null, null, false)));
         return posts.addPost("Post " + isbn, "Content " + isbn, "Curator", Post.PostType.G_RECOMMENDATION,
                 new Post.Attribution(isbn));
     }

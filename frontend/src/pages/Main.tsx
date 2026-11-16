@@ -6,7 +6,7 @@ import { api } from "../lib/api.ts";
 import { getLSdata } from "../lib/session.ts";
 import { isAxiosError } from "axios";
 import BookStarButton, { type BookStarStatus } from "../component/BookStarButton.tsx";
-import ServerImg from "../component/ServerImg.tsx";
+import BookCoverImage from "../component/BookCoverImage.tsx";
 import HomeBanner, { BannerSkeleton } from "../component/HomeBanner.tsx";
 import {
     initialCourse,
@@ -599,19 +599,10 @@ export default function Main() {
                 <div className={"flex mt-5"}>
                     <div className="flex flex-col">
                         <div className={"w-60 h-90 border border-gray-500 overflow-hidden"}>
-                            {recommendationBook.customCoverImg ? (
-                                <ServerImg
-                                    fileId={recommendationBook.customCoverImg}
-                                    alt={recommendationBook.title}
-                                    className={"w-full h-full object-cover"}
-                                />
-                            ) : (
-                                <img
-                                    src={recommendationBook.coverImg}
-                                    alt={recommendationBook.title}
-                                    className={"w-full h-full object-cover"}
-                                />
-                            )}
+                            <BookCoverImage
+                                book={recommendationBook}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         <BookStarButton
                             className="mt-2"
@@ -754,19 +745,10 @@ export default function Main() {
                                         "w-40 shrink-0 h-60 border border-black overflow-hidden"
                                     }
                                 >
-                                    {book.customCoverImg ? (
-                                        <ServerImg
-                                            fileId={book.customCoverImg}
-                                            alt={decodeHtml(book.title)}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <img
-                                            src={book.coverImg}
-                                            alt={decodeHtml(book.title)}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    )}
+                                    <BookCoverImage
+                                        book={book}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
                                 <BookStarButton
                                     className="mt-1"

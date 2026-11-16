@@ -1,13 +1,7 @@
 package org.neatore.weeklycomma.service;
 
-import static org.neatore.weeklycomma.WeeklyComma.LOGGER;
-
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import org.neatore.weeklycomma.domain.Book;
 import org.neatore.weeklycomma.dto.BookDto;
@@ -16,87 +10,56 @@ import org.neatore.weeklycomma.repository.BookStarRepository;
 
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.neatore.weeklycomma.util.BookIsbn;
 
 @Service
 @RequiredArgsConstructor
 public class BookService {
     private final BookRepository bookRepository;
     private final DBFileService dbFileService;
-    private final APIService apiService;
+    private final NationalLibraryBookClient bookClient;
     private final BookStarRepository bookStarRepository;
 
-    public List<BookDto.BookResponse> searchBooks(String title) {
-        List<BookDto.BookResponse> result = new ArrayList<>();
-        bookRepository.searchBooksByTitleContaining(title).forEach(book -> result.add(book.toDto()));
-        return result;
+    public List<BookDto.BookResponse> searchBooks(String query) {
+        if (BookIsbn.canonical(query) != null)
+            return bookRepository.findByIsbnIn(BookIsbn.aliases(query)).stream().map(Book::toDto).toList();
+        return bookRepository.searchBooksByTitleContaining(query).stream().map(Book::toDto).toList();
     }
 
-    public List<BookDto.BookResponse> searchBooksAPI(String name) {
-        List<BookDto.BookResponse> result = new ArrayList<>();
-        try {
-            JSONArray apiResult = apiService.searchBooks(name, "TITLE").optJSONArray("item", new JSONArray());
-
-            for (int i = 0; i < apiResult.length(); i++) {
-                JSONObject obj = apiResult.getJSONObject(i);
-
-                String originalTitle = obj.getString("title");
-                String title = originalTitle.split("-")[0].trim();
-                String subtitle = null;
-                try {
-                    subtitle = Arrays.stream(originalTitle.split("-")).toList().get(1);
-                } catch (ArrayIndexOutOfBoundsException ignored) {}
-
-                    result.add(new BookDto.BookResponse(
-                            title,
-                            subtitle,
-                            obj.getString("author"),
-                            obj.getString("publisher"),
-                            obj.getString("isbn"),
-                            LocalDate.parse(obj.getString("pubDate")).atStartOfDay().toEpochSecond(ZoneOffset.ofHours(0)),
-                            obj.getString("cover"),
-                            null,
-                            obj.getString("description"),
-                            null,
-                            obj.getBoolean("adult")
-                    ));
-            }
-        } catch (JSONException e) {
-            LOGGER.error("apiSearchBookByName: JSON parsing error ", e);
-        }
-
-        return result;
+    public List<BookDto.BookResponse> searchBooksAPI(String query) {
+        var results = bookClient.searchBooks(query);
+        if (results.isEmpty()) return results;
+        var identifiers = results.stream().flatMap(book -> BookIsbn.aliases(book.isbn()).stream()).distinct().toList();
+        var saved = bookRepository.findByIsbnIn(identifiers).stream().collect(Collectors.toMap(
+                book -> BookIsbn.canonical(book.getIsbn()), Function.identity(), (first, ignored) -> first));
+        return results.stream().map(book -> {
+            // Old Aladin records used ISBN-10. Keep their existing identifiers and history links.
+            Book existing = saved.get(BookIsbn.canonical(book.isbn()));
+            return existing == null ? book : existing.toDto();
+        }).toList();
     }
 
     public Book getBookByIsbn(String isbn) {
-        return bookRepository.getBookByIsbn(isbn);
+        Book exact = bookRepository.getBookByIsbn(isbn);
+        if (exact != null) return exact;
+        return bookRepository.findByIsbnIn(BookIsbn.aliases(isbn)).stream().findFirst().orElse(null);
     }
 
     @Transactional
     public void upsertBook(BookDto.RegisterRequest request) {
-        AtomicReference<Book> book = new AtomicReference<>(this.getBookByIsbn(request.isbn()));
-        Optional.ofNullable(book.get())
-                .ifPresentOrElse(
-                        b -> b.updateFrom(request),
-                        () -> {
-                            book.set(new Book(request));
-                            bookRepository.save(book.get());
-                        }
-                );
+        Book book = getBookByIsbn(request.isbn());
+        if (book == null) book = bookRepository.save(new Book(request));
+        else book.updateFrom(request);
 
-        if (book.get().getCustomCoverImg() != null) this.dbFileService.delete(book.get().getCustomCoverImg());
-
-        if (request.customCoverImg() != null)
-            book.get().setCustomCoverImg(
-                    this.dbFileService.save(request.customCoverImg()).toString()
-            );
-        else book.get().setCustomCoverImg(null);
+        boolean hasUpload = request.customCoverImg() != null && !request.customCoverImg().isEmpty();
+        if (hasUpload || Boolean.TRUE.equals(request.deleteCustomCover())) {
+            String previous = book.getCustomCoverImg();
+            book.setCustomCoverImg(hasUpload ? dbFileService.save(request.customCoverImg()).toString() : null);
+            if (previous != null) dbFileService.delete(previous);
+        }
     }
 
     private final AdminSettingService adminSettingService;
@@ -104,11 +67,12 @@ public class BookService {
     @Transactional
     public void deleteBook(String isbn) {
         Book b = this.getBookByIsbn(isbn);
+        String storedIsbn = b == null ? isbn : b.getIsbn();
         if (b != null && b.getCustomCoverImg() != null) this.dbFileService.delete(b.getCustomCoverImg());
 
-        this.adminSettingService.getAdminSettingsByValue(isbn)
+        this.adminSettingService.getAdminSettingsByValue(storedIsbn)
                 .forEach(this.adminSettingService::deleteAdminSetting);
         if (b != null) bookStarRepository.deleteForBook(b);
-        bookRepository.deleteBookByIsbn(isbn);
+        bookRepository.deleteBookByIsbn(storedIsbn);
     }
 }

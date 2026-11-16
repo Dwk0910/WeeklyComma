@@ -56,6 +56,9 @@
     box-shadow: 2px 3px 8px #00000012;
     overflow: hidden;
 }
+.recommendation-cover[role="img"] {
+    display: flex;
+}
 .recommendation-row-copy {
     min-width: 0;
 }
