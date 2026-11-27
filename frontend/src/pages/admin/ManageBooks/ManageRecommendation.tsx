@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { api } from "../../../lib/api.ts";
 import { MEDIA_LABELS, type MediaType } from "../../../types/book.ts";
-import { MdSearch } from "react-icons/md";
+import { MdSearch, MdExpandMore } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
 
 import { searchBookSources, type ManagedBook } from "../../../lib/bookSearch.ts";
@@ -256,12 +256,6 @@ export default function ManageRecommendation() {
                     </select>
                 )}
             </div>
-            {mediaType === "MUSIC" && (
-                <p className="mx-auto mb-4 w-[80%] font-suite text-sm text-stone-500">
-                    앨범·싱글 제목으로 검색합니다. 아티스트명을 함께 입력하면 판본을 구분하기
-                    쉽습니다.
-                </p>
-            )}
             {selecting && (
                 <p role="status" className="mx-4 font-suite">
                     상세 정보를 가져오는 중…
@@ -297,40 +291,62 @@ export default function ManageRecommendation() {
                     </button>
                 </div>
 
-                {(mediaType === "BOOK" || mediaType === "MUSIC") && (
-                    <div className="mt-3 w-[80%]">
-                        <label className="font-suite text-sm text-gray-600">
-                            {mediaType === "MUSIC" ? "아티스트" : "저자명"}{" "}
-                            <span className="text-gray-400">(선택)</span>
+                <details className="group mt-4 w-[80%] border-t border-stone-200 font-suite">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 py-3 text-sm text-stone-600 [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500">
+                        <MdExpandMore
+                            className="transition-transform duration-200 group-open:rotate-180"
+                            size={20}
+                            aria-hidden="true"
+                        />
+                        상세 검색
+                        {(authorQuery.trim() || exclude) && (
+                            <span className="ml-auto text-xs text-stone-500">
+                                {[
+                                    (mediaType === "BOOK" || mediaType === "MUSIC") &&
+                                    authorQuery.trim()
+                                        ? `${mediaType === "MUSIC" ? "아티스트" : "저자"}: ${authorQuery.trim()}`
+                                        : "",
+                                    exclude ? "외부 결과만" : ""
+                                ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                            </span>
+                        )}
+                    </summary>
+                    <div className="space-y-4 pb-4 pt-1 text-sm text-stone-600">
+                        {(mediaType === "BOOK" || mediaType === "MUSIC") && (
+                            <label className="flex flex-wrap items-center gap-3">
+                                {mediaType === "MUSIC" ? "아티스트" : "저자명"}
+                                <input
+                                    value={authorQuery}
+                                    onChange={(e) => setAuthorQuery(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                                    placeholder={
+                                        mediaType === "MUSIC"
+                                            ? "예: 아이유 (선택)"
+                                            : "예: 백은별 (선택)"
+                                    }
+                                    maxLength={200}
+                                    className="min-w-0 rounded-lg border border-stone-200 bg-transparent px-3 py-2 outline-none focus:border-stone-600"
+                                />
+                            </label>
+                        )}
+                        {mediaType === "MUSIC" && (
+                            <p className="text-xs text-stone-500">
+                                음악은 앨범·싱글 제목으로 검색합니다.
+                            </p>
+                        )}
+                        <label className="flex cursor-pointer items-center gap-2">
                             <input
-                                value={authorQuery}
-                                onChange={(e) => setAuthorQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                                placeholder={mediaType === "MUSIC" ? "예: 아이유" : "예: 백은별"}
-                                maxLength={200}
-                                className="ml-3 rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-700"
+                                type="checkbox"
+                                checked={exclude}
+                                onChange={() => setExclude(!exclude)}
+                                className="accent-stone-700"
                             />
+                            외부 검색 결과만 보기
                         </label>
-                        <p className="mt-2 font-suite text-xs text-gray-500">
-                            제목과 창작자명을 나누어 입력하면 동명 작품을 쉽게 찾을 수 있습니다.
-                        </p>
                     </div>
-                )}
-
-                <div className="flex items-center ml-5 mt-2 w-[80%]">
-                    <input
-                        type="checkbox"
-                        id="excludeCheckbox"
-                        checked={exclude}
-                        onChange={() => setExclude(!exclude)}
-                    />
-                    <label
-                        htmlFor="excludeCheckbox"
-                        className="ml-2 font-suite text-sm text-gray-500 cursor-pointer"
-                    >
-                        외부 검색 결과만 보기
-                    </label>
-                </div>
+                </details>
             </div>
 
             {(searchErrors.registered || searchErrors.external) && (
