@@ -1,4 +1,5 @@
 import { isAxiosError } from "axios";
+import type { MediaType } from "../types/book.ts";
 import { api } from "./api.ts";
 import type { RecommendationBook } from "../pages/admin/recommendations/types.ts";
 
@@ -9,7 +10,7 @@ function searchFailure(error: unknown) {
         if (error.response?.status === 401) return "로그인이 만료되었습니다. 다시 로그인해 주세요.";
         if (error.response?.status === 403) return "책을 검색할 수 있는 관리 권한을 확인해 주세요.";
         const message = error.response?.data?.message;
-        if ([502, 503].includes(error.response?.status ?? 0) && typeof message === "string") {
+        if ([429, 502, 503].includes(error.response?.status ?? 0) && typeof message === "string") {
             return message;
         }
     }
@@ -19,7 +20,7 @@ function searchFailure(error: unknown) {
 export async function searchBookSources(
     query: string,
     signal?: AbortSignal,
-    options?: { author: string; page: number }
+    options?: { author: string; page: number; mediaType?: MediaType; provider?: string }
 ) {
     const [registered, external] = await Promise.allSettled([
         api.get<RecommendationBook[]>("books", { params: { query }, signal }),
@@ -29,7 +30,10 @@ export async function searchBookSources(
                   page: number;
                   total: number;
                   hasMore: boolean;
-              }>("books/api/search", { params: { query, ...options }, signal })
+              }>(options.mediaType ? "books/api/catalog" : "books/api/search", {
+                  params: { query, ...options },
+                  signal
+              })
             : api.get<RecommendationBook[]>("books/api", { params: { query }, signal })
     ]);
     const externalData = external.status === "fulfilled" ? external.value.data : [];
@@ -41,6 +45,11 @@ export async function searchBookSources(
         registered:
             registered.status === "fulfilled"
                 ? registered.value.data
+                      .filter(
+                          (book) =>
+                              !options?.mediaType ||
+                              (book.mediaType ?? "BOOK") === options.mediaType
+                      )
                       .filter(
                           (book) =>
                               !options?.author.trim() ||

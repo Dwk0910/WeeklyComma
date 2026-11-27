@@ -75,8 +75,8 @@ export default function RecommendationList({ weekly = false }: { weekly?: boolea
                     <h1>{title}</h1>
                     <p>
                         {weekly
-                            ? "한 주의 쉼표가 되었던 책과 추천글을 만나보세요."
-                            : "책을 읽은 저마다의 시선과 추천을 만나보세요."}
+                            ? "한 주의 쉼표가 되었던 작품과 추천글을 만나보세요."
+                            : "작품을 만난 저마다의 시선과 추천을 만나보세요."}
                     </p>
                 </div>
             </header>
@@ -146,7 +146,7 @@ export default function RecommendationList({ weekly = false }: { weekly?: boolea
                                     >
                                         {weekly && index === 1 && (
                                             <h2 className="recommendation-continuation">
-                                                이어지는 책 이야기
+                                                이어지는 이야기
                                             </h2>
                                         )}
                                         <RecommendationRow

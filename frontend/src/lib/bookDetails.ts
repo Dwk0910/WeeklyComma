@@ -11,6 +11,7 @@ export function bookPublicationDate(book: BookMetadata) {
 
 // Compare the provider's ISBN-13 with books previously saved under ISBN-10.
 export function comparableIsbn(value: string) {
+    if (/^(tmdb-|musicbrainz-|google-books-)/.test(value)) return value;
     const isbn = value.replace(/[-\s]/g, "").toUpperCase();
     if (!/^\d{9}[\dX]$/.test(isbn)) return isbn;
     const prefix = `978${isbn.slice(0, 9)}`;

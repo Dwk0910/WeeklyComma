@@ -132,7 +132,7 @@ export default function RecentRecommendations({
                                                         role="tooltip"
                                                         className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-56 -translate-x-1/2 rounded-md bg-neutral-800 px-3 py-2 text-left text-xs leading-relaxed font-normal text-white shadow-sm group-hover/help:block group-focus/help:block group-focus-visible/recent:block"
                                                     >
-                                                        이 책을 추천할 당시 추천글을 연결하지
+                                                        이 자료을 추천할 당시 추천글을 연결하지
                                                         않았거나, 연결했던 추천글이 삭제된
                                                         경우입니다.
                                                     </span>
@@ -142,7 +142,7 @@ export default function RecentRecommendations({
                                     </div>
                                     {!book && (
                                         <div className="text-xs text-gray-400 mt-1">
-                                            삭제된 도서입니다. 선정 이력은 보존됩니다.
+                                            삭제된 자료입니다. 선정 이력은 보존됩니다.
                                         </div>
                                     )}
                                     {onSelect && book && !selectable && (

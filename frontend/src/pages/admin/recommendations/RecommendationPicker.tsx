@@ -194,7 +194,7 @@ export default function RecommendationPicker({
                                         autoComplete="off"
                                         value={query}
                                         onChange={(event) => setQuery(event.target.value)}
-                                        placeholder="책 제목 검색"
+                                        placeholder="자료 제목 검색"
                                         className="min-w-0 flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
                                     />
                                     <button
@@ -295,8 +295,8 @@ export default function RecommendationPicker({
                                     </div>
                                 ) : !posts.length ? (
                                     <div className="rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-500">
-                                        이 책에 등록된 추천글이 없습니다. 추천 책 관리에서 추천글을
-                                        작성한 뒤 선정해 주세요.
+                                        이 자료에 등록된 추천글이 없습니다. 추천 자료 관리에서
+                                        추천글을 작성한 뒤 선정해 주세요.
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
@@ -361,7 +361,7 @@ export default function RecommendationPicker({
                             }
                             className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            책과 추천글 선택
+                            작품과 추천글 선택
                         </button>
                     </div>
                 </footer>

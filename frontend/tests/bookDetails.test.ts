@@ -15,3 +15,9 @@ test("old ISBN-10 and new ISBN-13 results compare as the same book", () => {
     assert.equal(comparableIsbn("8937480255"), comparableIsbn("978-89-374-8025-6"));
     assert.notEqual(comparableIsbn("9788937480256"), comparableIsbn("9791190090018"));
 });
+
+test("external catalogue keys retain case and do not collide across media", () => {
+    assert.equal(comparableIsbn("google-books-abC_12"), "google-books-abC_12");
+    assert.notEqual(comparableIsbn("google-books-abC_12"), comparableIsbn("google-books-abc_12"));
+    assert.notEqual(comparableIsbn("tmdb-tv-7"), comparableIsbn("tmdb-movie-7"));
+});

@@ -99,6 +99,39 @@ test("book search distinguishes provider failures from empty results and preserv
         assert.equal(filteredPage.page, 2);
         assert.equal(filteredPage.total, 61);
         assert.equal(filteredPage.hasMore, true);
+        api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+            const external = config.url === "books/api/catalog";
+            if (external) {
+                assert.equal(config.params.mediaType, "TV");
+                assert.equal(config.params.provider, "TMDB");
+            }
+            return {
+                config,
+                status: 200,
+                statusText: "OK",
+                headers: {},
+                data: external
+                    ? {
+                          items: [{ isbn: "tmdb-tv-7", mediaType: "TV", title: "작품" }],
+                          page: 1,
+                          total: 1,
+                          hasMore: false
+                      }
+                    : [
+                          { isbn: "legacy-isbn", title: "책" },
+                          { isbn: "tmdb-tv-7", mediaType: "TV", title: "작품" }
+                      ]
+            };
+        };
+        const media = await searchBookSources("작품", undefined, {
+            author: "",
+            page: 1,
+            mediaType: "TV",
+            provider: "TMDB"
+        });
+        assert.equal(media.registered.length, 1);
+        assert.equal(media.registered[0].isbn, "tmdb-tv-7");
+        assert.equal(media.external[0].mediaType, "TV");
     } finally {
         await server.close();
     }

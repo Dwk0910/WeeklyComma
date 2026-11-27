@@ -1,4 +1,5 @@
 import FontStyle from "../assets/fonts/fonts.tsx";
+import tmdbLogo from "../assets/tmdb-logo.svg";
 
 export default function About() {
     return (
@@ -133,6 +134,21 @@ export default function About() {
                 </section>
 
                 {/* 푸터 - 하단 좌측 정렬 */}
+                <section
+                    className="mt-20 border-t border-stone-200 pt-8 font-suite text-sm text-stone-500"
+                    aria-label="자료 제공처"
+                >
+                    <h2 className="mb-4 text-base text-stone-700">자료 제공처</h2>
+                    <p className="mb-4">
+                        도서 정보: Google Books · 국립중앙도서관
+                        <br />
+                        음악 정보: MusicBrainz · Cover Art Archive
+                    </p>
+                    <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">
+                        <img src={tmdbLogo} alt="TMDB" className="mb-3 h-auto w-24" />
+                    </a>
+                    <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                </section>
                 <footer className="mt-48 pb-24 border-t border-[#eee] pt-12">
                     <p className="break-keep">
                         모든 문장에는 끝이 있지만, <br />

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { LuBookOpen } from "react-icons/lu";
+import { LuBookOpen, LuMusic, LuFilm } from "react-icons/lu";
+import type { MediaType } from "../types/book.ts";
 import ServerImg from "./ServerImg.tsx";
 
 export default function BookCoverImage({
@@ -7,13 +8,24 @@ export default function BookCoverImage({
     className = "",
     loading = "lazy"
 }: {
-    book: { title: string; coverImg?: string | null; customCoverImg?: string | null };
+    book: {
+        title: string;
+        coverImg?: string | null;
+        customCoverImg?: string | null;
+        mediaType?: MediaType | null;
+    };
     className?: string;
     loading?: "lazy" | "eager";
 }) {
     const source = book.customCoverImg || book.coverImg || "";
     const [failedSource, setFailedSource] = useState<string | null>(null);
     const alt = `${book.title} 표지`;
+    const Icon =
+        book.mediaType === "MUSIC"
+            ? LuMusic
+            : book.mediaType === "TV" || book.mediaType === "MOVIE"
+              ? LuFilm
+              : LuBookOpen;
     if (!source || failedSource === source) {
         return (
             <div
@@ -21,7 +33,7 @@ export default function BookCoverImage({
                 role="img"
                 aria-label={`${book.title} · 표지 이미지 없음`}
             >
-                <LuBookOpen className="shrink-0 opacity-50" size={24} aria-hidden="true" />
+                <Icon className="shrink-0 opacity-50" size={24} aria-hidden="true" />
                 <span className="line-clamp-3 text-xs font-suite leading-relaxed">
                     {book.title}
                 </span>

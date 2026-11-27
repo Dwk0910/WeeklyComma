@@ -78,7 +78,7 @@ export default function Favorites() {
                     ...previous,
                     items: previous.items.filter((entry) => entry.book.isbn !== isbn)
                 }));
-                setAnnouncement("삭제된 도서를 내 책갈피 목록에서 정리했습니다.");
+                setAnnouncement("삭제된 자료를 내 책갈피 목록에서 정리했습니다.");
             } else {
                 setErrors((previous) => ({
                     ...previous,
@@ -102,7 +102,7 @@ export default function Favorites() {
                 <div>
                     <h1 className="font-seoulnamsan text-3xl text-neutral-900">내 책갈피</h1>
                     <p className="mt-3 text-sm text-neutral-500">
-                        책갈피를 꽂아 둔 책들을 다시 만나보세요.
+                        책갈피를 꽂아 둔 자료들을 다시 만나보세요.
                     </p>
                 </div>
                 {result.status === "success" && (
@@ -119,8 +119,8 @@ export default function Favorites() {
                     <BoardFeedback
                         title={
                             result.status === "loading"
-                                ? "책갈피를 꽂은 책을 불러오는 중입니다."
-                                : "책갈피를 꽂은 책을 불러오지 못했습니다."
+                                ? "책갈피를 꽂은 자료을 불러오는 중입니다."
+                                : "책갈피를 꽂은 자료을 불러오지 못했습니다."
                         }
                         error={result.status === "error"}
                         onRetry={
@@ -134,19 +134,19 @@ export default function Favorites() {
                     />
                 ) : result.items.length === 0 ? (
                     <div className="py-24 text-center">
-                        <p className="text-neutral-600">아직 책갈피를 꽂은 책이 없습니다.</p>
+                        <p className="text-neutral-600">아직 책갈피를 꽂은 자료이 없습니다.</p>
                         <p className="mt-3 text-sm text-neutral-500">
-                            다시 보고 싶은 책에 책갈피를 꽂아 나만의 책 목록을 만들어 보세요.
+                            다시 보고 싶은 자료에 책갈피를 꽂아 나만의 자료 목록을 만들어 보세요.
                         </p>
                         <Link
                             to="/recommendations"
                             className="mt-7 inline-block rounded-xs border border-neutral-300 px-6 py-2 text-sm hover:bg-neutral-50"
                         >
-                            추천 책 둘러보기
+                            추천 자료 둘러보기
                         </Link>
                     </div>
                 ) : (
-                    <ul className="grid grid-cols-2 gap-x-12" aria-label="내가 책갈피를 꽂은 책">
+                    <ul className="grid grid-cols-2 gap-x-12" aria-label="내가 책갈피를 꽂은 자료">
                         {visible.map((item) => {
                             const book = item.book;
                             const title = plainText(book.title);
