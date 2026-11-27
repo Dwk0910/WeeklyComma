@@ -22,6 +22,7 @@ public class BookService {
     private final DBFileService dbFileService;
     private final NationalLibraryBookClient bookClient;
     private final BookStarRepository bookStarRepository;
+    private final CatalogSearchService catalogSearch;
 
     public List<BookDto.BookResponse> searchBooks(String query) {
         if (BookIsbn.canonical(query) != null)
@@ -38,14 +39,24 @@ public class BookService {
         return new BookDto.SearchPage(resolveSavedBooks(result.items()), result.page(), result.total(), result.hasMore());
     }
 
+    public BookDto.SearchPage searchCatalog(String query, String author, int page,
+            org.neatore.weeklycomma.domain.MediaType type, String provider) {
+        var result = catalogSearch.search(query, author, page, type, provider);
+        return new BookDto.SearchPage(resolveSavedBooks(result.items()), result.page(), result.total(), result.hasMore());
+    }
+
+    public BookDto.BookResponse catalogDetails(String source, String sourceId) {
+        return resolveSavedBooks(List.of(catalogSearch.details(source, sourceId))).get(0);
+    }
+
     private List<BookDto.BookResponse> resolveSavedBooks(List<BookDto.BookResponse> results) {
         if (results.isEmpty()) return results;
         var identifiers = results.stream().flatMap(book -> BookIsbn.aliases(book.isbn()).stream()).distinct().toList();
         var saved = bookRepository.findByIsbnIn(identifiers).stream().collect(Collectors.toMap(
-                book -> BookIsbn.canonical(book.getIsbn()), Function.identity(), (first, ignored) -> first));
+                book -> org.neatore.weeklycomma.util.CatalogIdentity.comparable(book.getIsbn()), Function.identity(), (first, ignored) -> first));
         return results.stream().map(book -> {
             // Old Aladin records used ISBN-10. Keep their existing identifiers and history links.
-            Book existing = saved.get(BookIsbn.canonical(book.isbn()));
+            Book existing = saved.get(org.neatore.weeklycomma.util.CatalogIdentity.comparable(book.isbn()));
             return existing == null ? book : existing.toDto();
         }).toList();
     }
@@ -58,6 +69,7 @@ public class BookService {
 
     @Transactional
     public void upsertBook(BookDto.RegisterRequest request) {
+        org.neatore.weeklycomma.util.CatalogIdentity.validate(request);
         Book book = getBookByIsbn(request.isbn());
         if (book == null) book = bookRepository.save(new Book(request));
         else book.updateFrom(request);

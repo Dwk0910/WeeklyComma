@@ -73,7 +73,9 @@ public class BookController {
 
     @GetMapping("/{isbn}")
     public ResponseEntity<BookDto.BookResponse> getBook(@PathVariable String isbn) {
-        return ResponseEntity.ok(bookService.getBookByIsbn(isbn).toDto());
+        var book = bookService.getBookByIsbn(isbn);
+        if (book == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "자료를 찾을 수 없습니다.");
+        return ResponseEntity.ok(book.toDto());
     }
 
     @GetMapping("/api")
@@ -94,6 +96,21 @@ public class BookController {
     public ResponseEntity<Void> registerBook(@Valid @ModelAttribute BookDto.RegisterRequest request) {
         bookService.upsertBook(request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/api/catalog")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<BookDto.SearchPage> searchCatalog(@RequestParam String query,
+            @RequestParam(defaultValue = "") String author, @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "BOOK") org.neatore.weeklycomma.domain.MediaType mediaType,
+            @RequestParam(defaultValue = "GOOGLE_BOOKS") String provider) {
+        return ResponseEntity.ok(bookService.searchCatalog(query, author, page, mediaType, provider));
+    }
+
+    @GetMapping("/api/details")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<BookDto.BookResponse> catalogDetails(@RequestParam String source, @RequestParam String sourceId) {
+        return ResponseEntity.ok(bookService.catalogDetails(source, sourceId));
     }
 
     @DeleteMapping

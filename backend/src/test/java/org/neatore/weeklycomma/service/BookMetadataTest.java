@@ -36,7 +36,7 @@ class BookMetadataTest {
             context.registerBean(DataSource.class, () -> source);
             context.registerBean(Clock.class, Clock::systemUTC);
             context.registerBean(BookService.class,
-                    () -> new BookService(context.getBean(BookRepository.class), null, null, null, null));
+                    () -> new BookService(context.getBean(BookRepository.class), null, null, null, null, null));
             context.register(RecommendationExpirationServiceTest.TestConfiguration.class);
             context.refresh();
             var repository = context.getBean(BookRepository.class);
@@ -55,12 +55,24 @@ class BookMetadataTest {
             assertEquals("2026-11", saved.publicationDate());
             assertTrue(saved.tableOfContents().length() > 255);
             assertEquals("existing-cover", saved.customCoverImg());
+            assertEquals(org.neatore.weeklycomma.domain.MediaType.BOOK, saved.mediaType());
+            // Two providers' non-ISBN identifiers remain distinct, and survive SQLite persistence.
+            for (String kind : new String[]{"tv", "movie"}) {
+                var type = kind.equals("tv") ? org.neatore.weeklycomma.domain.MediaType.TV : org.neatore.weeklycomma.domain.MediaType.MOVIE;
+                service.upsertBook(new BookDto.RegisterRequest("tmdb-" + kind + "-7", "작품", "", "", "",
+                        null, "", null, "소개", "초급", false, "", "", "", "", "", "2026", false,
+                        type, "TMDB", kind + "/7", "javascript:alert(1)"));
+                var stored = service.getBookByIsbn("tmdb-" + kind + "-7").toDto();
+                assertEquals(type, stored.mediaType());
+                assertEquals("https://www.themoviedb.org/" + kind + "/7", stored.sourceUrl());
+            }
+            assertEquals(3, repository.count());
         }
     }
 
     @Test void registrationBindsMetadataWithoutRequiringMissingProviderFields() throws Exception {
         var captured = new AtomicReference<BookDto.RegisterRequest>();
-        var service = new BookService(null, null, null, null, null) {
+        var service = new BookService(null, null, null, null, null, null) {
             @Override public void upsertBook(BookDto.RegisterRequest request) { captured.set(request); }
         };
         var mvc = MockMvcBuilders.standaloneSetup(new BookController(service, null, null)).build();
@@ -75,5 +87,10 @@ class BookMetadataTest {
         assertNull(captured.get().coverImg());
         assertNull(captured.get().pubDate());
         assertFalse(captured.get().deleteCustomCover());
+        var media = mvc.perform(multipart("/books").param("isbn", "tmdb-tv-7").param("title", "작품")
+                .param("mediaType", "TV").param("source", "TMDB").param("sourceId", "tv/7")).andReturn();
+        assertEquals(200, media.getResponse().getStatus());
+        assertEquals(org.neatore.weeklycomma.domain.MediaType.TV, captured.get().mediaType());
+        assertNull(captured.get().publisher());
     }
 }

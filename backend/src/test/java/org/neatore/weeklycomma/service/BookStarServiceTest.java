@@ -266,6 +266,25 @@ class BookStarServiceTest {
         assertEquals("8937480255", service.searchBooks("9788937480256").get(0).isbn());
     }
 
+    @Test void mediaRegistrationKeepsBookmarksAndHistorySeparatedFromOtherMedia() {
+        var service = context.getBean(BookService.class);
+        var reader = user(700);
+        for (String kind : new String[]{"tv", "movie"}) {
+            var type = kind.equals("tv") ? org.neatore.weeklycomma.domain.MediaType.TV : org.neatore.weeklycomma.domain.MediaType.MOVIE;
+            service.upsertBook(new BookDto.RegisterRequest("tmdb-" + kind + "-7", "Title", "", "", "", null,
+                    "", null, "", "초급", false, "", "", "", "", "", "2026", false,
+                    type, "TMDB", kind + "/7", null));
+        }
+        stars.addStar("tmdb-tv-7", reader);
+        assertEquals(1, stars.getStatus("tmdb-tv-7", reader).starCount());
+        assertEquals(0, stars.getStatus("tmdb-movie-7", reader).starCount());
+        assertEquals(org.neatore.weeklycomma.domain.MediaType.TV, stars.getStarredBooks(reader).get(0).book().mediaType());
+        archive("tmdb-tv-7", 77);
+        assertNotNull(service.getBookByIsbn("tmdb-tv-7"));
+        stars.removeStar("tmdb-tv-7", reader);
+        assertTrue(stars.getStarredBooks(reader).isEmpty());
+    }
+
     private Book book(String isbn) {
         return books.save(new Book(new BookDto.RegisterRequest(isbn, "Title " + isbn, "Subtitle", "Author", "Publisher",
                 1767225600L, "https://example.test/cover.jpg", null, "Description", "상급", false, null, null, null, null, null, null, false)));
@@ -300,7 +319,7 @@ class BookStarServiceTest {
             return new BookStarService(books, stars, expiration);
         }
         @Bean BookService bookService(BookRepository books, BookStarRepository stars, AdminSettingService settings) {
-            return new BookService(books, null, null, stars, settings);
+            return new BookService(books, null, null, stars, null, settings);
         }
         @Bean DBFileService fileService(org.neatore.weeklycomma.repository.DBFileRepository files) {
             return new DBFileService(files, System.getProperty("java.io.tmpdir"));
