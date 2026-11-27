@@ -31,3 +31,7 @@ export function musicDuration(milliseconds?: number | null) {
     const seconds = Math.floor(milliseconds / 1000);
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
+
+export function coverAspect(book?: Pick<BookMetadata, "mediaType"> | null) {
+    return book?.mediaType === "MUSIC" ? "1 / 1" : "2 / 3";
+}

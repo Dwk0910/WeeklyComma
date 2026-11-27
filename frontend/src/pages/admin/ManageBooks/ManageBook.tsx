@@ -158,12 +158,12 @@ export default function ManageBook({
                                 coverImg: previewImg,
                                 customCoverImg: uploadFile ? null : book.customCoverImg
                             }}
-                            className="w-60 h-90 border border-gray-200 object-cover"
+                            className="w-60 border border-gray-200"
                             loading="eager"
                         />
 
                         <div
-                            className="absolute w-full h-90 inset-0 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 cursor-pointer"
+                            className="absolute w-full h-full inset-0 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 cursor-pointer"
                             onClick={handleImageClick}
                         >
                             <MdCameraAlt className="text-white text-[2rem]" />

@@ -1,7 +1,8 @@
 import { useEffect, useId, useState } from "react";
 import { LuCircleHelp } from "react-icons/lu";
 import { api } from "../../../index.tsx";
-import ServerImg from "../../../component/ServerImg.tsx";
+import BookCoverImage from "../../../component/BookCoverImage.tsx";
+import { coverAspect } from "../../../types/book.ts";
 import {
     COURSE_LABELS,
     plainText,
@@ -80,19 +81,12 @@ export default function RecentRecommendations({
                             !!book && (!course || book.difficulty === COURSE_LABELS[course]);
                         const content = (
                             <>
-                                <div className="w-10 h-14 shrink-0 overflow-hidden rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">
-                                    {book?.customCoverImg ? (
-                                        <ServerImg
-                                            fileId={book.customCoverImg}
-                                            alt=""
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : book?.coverImg ? (
-                                        <img
-                                            src={book.coverImg}
-                                            alt=""
-                                            className="w-full h-full object-cover"
-                                        />
+                                <div
+                                    style={{ aspectRatio: coverAspect(book) }}
+                                    className="w-10 shrink-0 overflow-hidden rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-400"
+                                >
+                                    {book ? (
+                                        <BookCoverImage book={book} className="w-full h-full" />
                                     ) : (
                                         "표지 없음"
                                     )}

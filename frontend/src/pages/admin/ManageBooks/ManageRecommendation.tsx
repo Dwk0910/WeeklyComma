@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "../../../lib/api.ts";
-import { MEDIA_LABELS, mediaLabel, type MediaType } from "../../../types/book.ts";
+import { MEDIA_LABELS, mediaLabel, coverAspect, type MediaType } from "../../../types/book.ts";
 import { MdSearch, MdExpandMore } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
 
@@ -172,7 +172,10 @@ export default function ManageRecommendation() {
                 }}
             >
                 {/* customCoverImg 유무에 따른 이미지 컴포넌트 분기 */}
-                <div className="w-15 h-20 overflow-hidden bg-blue-50 rounded flex items-center justify-center mr-4 shrink-0 border border-gray-200">
+                <div
+                    style={{ aspectRatio: coverAspect(item) }}
+                    className="w-15 overflow-hidden bg-blue-50 rounded flex items-center justify-center mr-4 shrink-0 border border-gray-200"
+                >
                     <BookCoverImage book={item} className="w-full h-full object-cover" />
                 </div>
 

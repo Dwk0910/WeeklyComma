@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { LoginRedirect } from "../component/RequireLogin.tsx";
 import { api } from "../index.tsx";
 import PageTitle from "../component/PageTitle.tsx";
-import ServerImg from "../component/ServerImg.tsx";
+import BookCoverImage from "../component/BookCoverImage.tsx";
 import BookStarButton, { type BookStarStatus } from "../component/BookStarButton.tsx";
 import { BoardFeedback } from "./boards/BoardShared.tsx";
 import { plainText, type Recommendation } from "./recommendations/types.ts";
@@ -150,29 +150,15 @@ export default function Favorites() {
                         {visible.map((item) => {
                             const book = item.book;
                             const title = plainText(book.title);
-                            const coverProps = {
-                                alt: `${title} 표지`,
-                                className: "h-42 w-28 shrink-0 object-cover shadow-sm",
-                                loading: "lazy" as const
-                            };
                             return (
                                 <li
                                     key={book.isbn}
                                     className="flex items-center gap-6 border-b border-neutral-200 py-7"
                                 >
-                                    {book.customCoverImg ? (
-                                        <ServerImg fileId={book.customCoverImg} {...coverProps} />
-                                    ) : book.coverImg ? (
-                                        <img src={book.coverImg} {...coverProps} />
-                                    ) : (
-                                        <div
-                                            className="flex h-42 w-28 shrink-0 items-center justify-center bg-neutral-100 p-3 text-sm text-neutral-500"
-                                            role="img"
-                                            aria-label={`${title} 표지 없음`}
-                                        >
-                                            {title}
-                                        </div>
-                                    )}
+                                    <BookCoverImage
+                                        book={{ ...book, title }}
+                                        className="w-28 shrink-0 shadow-sm"
+                                    />
                                     <div className="min-w-0 flex-1">
                                         {book.difficulty && (
                                             <span className="inline-block rounded-xs border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600">

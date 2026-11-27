@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LuBookOpen, LuMusic, LuFilm } from "react-icons/lu";
-import type { MediaType } from "../types/book.ts";
+import { coverAspect, type MediaType } from "../types/book.ts";
 import ServerImg from "./ServerImg.tsx";
 
 export default function BookCoverImage({
@@ -17,6 +17,7 @@ export default function BookCoverImage({
     className?: string;
     loading?: "lazy" | "eager";
 }) {
+    const style = { aspectRatio: coverAspect(book), objectFit: "contain" as const };
     const source = book.customCoverImg || book.coverImg || "";
     const [failedSource, setFailedSource] = useState<string | null>(null);
     const alt = `${book.title} 표지`;
@@ -30,6 +31,7 @@ export default function BookCoverImage({
         return (
             <div
                 className={`${className} flex flex-col items-center justify-center gap-3 bg-[#f3f1eb] px-3 text-center text-stone-500`}
+                style={style}
                 role="img"
                 aria-label={`${book.title} · 표지 이미지 없음`}
             >
@@ -45,6 +47,7 @@ export default function BookCoverImage({
             fileId={book.customCoverImg}
             alt={alt}
             className={className}
+            style={style}
             loading={loading}
             onLoadError={() => setFailedSource(source)}
         />
@@ -53,6 +56,7 @@ export default function BookCoverImage({
             src={source}
             alt={alt}
             className={className}
+            style={style}
             loading={loading}
             onError={() => setFailedSource(source)}
         />
