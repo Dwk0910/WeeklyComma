@@ -33,8 +33,36 @@ public class BookDto {
             String sourceId,
             String sourceUrl,
             String albumTitle,
-            Long durationMillis
+            Long durationMillis,
+            String originalTitle,
+            String originalLanguage
     ) {
+        public BookResponse(String title,
+            String subtitle,
+            String author,
+            String publisher,
+            String isbn,
+            Long pubDate,
+            String coverImg,
+            String customCoverImg,
+            String description,
+            String difficulty,
+            Boolean adult,
+            String pageCount,
+            String bookSize,
+            String seriesTitle,
+            String edition,
+            String tableOfContents,
+            String publicationDate,
+            MediaType mediaType,
+            String source,
+            String sourceId,
+            String sourceUrl,
+            String albumTitle,
+            Long durationMillis) {
+            this(title, subtitle, author, publisher, isbn, pubDate, coverImg, customCoverImg, description, difficulty, adult, pageCount, bookSize, seriesTitle, edition, tableOfContents, publicationDate, mediaType, source, sourceId, sourceUrl, albumTitle, durationMillis, null, null);
+        }
+
         public BookResponse(String title,
             String subtitle,
             String author,
@@ -88,8 +116,37 @@ public class BookDto {
             String sourceId,
             String sourceUrl,
             String albumTitle,
-            Long durationMillis
+            Long durationMillis,
+            String originalTitle,
+            String originalLanguage
     ) {
+        public RegisterRequest(String isbn,
+            String title,
+            String subtitle,
+            String author,
+            String publisher,
+            Long pubDate,
+            String coverImg,
+            MultipartFile customCoverImg,
+            String description,
+            String difficulty,
+            Boolean adult,
+            String pageCount,
+            String bookSize,
+            String seriesTitle,
+            String edition,
+            String tableOfContents,
+            String publicationDate,
+            Boolean deleteCustomCover,
+            MediaType mediaType,
+            String source,
+            String sourceId,
+            String sourceUrl,
+            String albumTitle,
+            Long durationMillis) {
+            this(isbn, title, subtitle, author, publisher, pubDate, coverImg, customCoverImg, description, difficulty, adult, pageCount, bookSize, seriesTitle, edition, tableOfContents, publicationDate, deleteCustomCover, mediaType, source, sourceId, sourceUrl, albumTitle, durationMillis, null, null);
+        }
+
         public RegisterRequest(String isbn,
             String title,
             String subtitle,

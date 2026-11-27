@@ -27,10 +27,14 @@ class CatalogSearchServiceTest {
     }
     @Test void mediaIdsDoNotCollideAndMissingArtworkIsSafe() {
         var raw = new JSONObject("{\"id\":7,\"name\":\"TV\",\"title\":\"Movie\",\"poster_path\":null}");
+        raw.put("original_title", "英雄").put("original_name", "Original TV").put("original_language", "zh");
         var tv = CatalogSearchService.tmdbItem(raw, MediaType.TV);
         var movie = CatalogSearchService.tmdbItem(raw, MediaType.MOVIE);
         assertEquals("tmdb-tv-7", tv.isbn());
         assertEquals("tmdb-movie-7", movie.isbn());
+        assertEquals("英雄", movie.originalTitle());
+        assertEquals("zh", movie.originalLanguage());
+        assertEquals("Original TV", tv.originalTitle());
         assertNotEquals(CatalogIdentity.comparable(tv.isbn()), CatalogIdentity.comparable(movie.isbn()));
         assertEquals("", tv.coverImg());
         assertEquals("", tv.author());

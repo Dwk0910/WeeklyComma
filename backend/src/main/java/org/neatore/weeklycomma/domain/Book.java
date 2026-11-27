@@ -40,6 +40,8 @@ public class Book {
     private String sourceUrl;
     private String albumTitle;
     private Long durationMillis;
+    private String originalTitle;
+    private String originalLanguage;
 
     public MediaType getMediaType() { return mediaType == null ? MediaType.BOOK : mediaType; }
 
@@ -69,6 +71,8 @@ public class Book {
         this.source = from.source();
         this.sourceId = from.sourceId();
         this.sourceUrl = org.neatore.weeklycomma.util.CatalogIdentity.sourceUrl(from.source(), from.sourceId());
+        this.originalTitle = from.originalTitle();
+        this.originalLanguage = from.originalLanguage();
         this.albumTitle = from.albumTitle();
         this.durationMillis = from.durationMillis();
         this.title = from.title();
@@ -91,6 +95,6 @@ public class Book {
     public BookDto.BookResponse toDto() {
         return new BookDto.BookResponse(title, subTitle, author, publisher, isbn, pubDate == null ? null : pubDate.getEpochSecond(),
                 coverImg, customCoverImg, description, difficulty, adult, pageCount, bookSize, seriesTitle,
-                edition, tableOfContents, publicationDate, getMediaType(), source, sourceId, sourceUrl, albumTitle, durationMillis);
+                edition, tableOfContents, publicationDate, getMediaType(), source, sourceId, sourceUrl, albumTitle, durationMillis, originalTitle, originalLanguage);
     }
 }

@@ -164,10 +164,15 @@ public class CatalogSearchService {
         if (CatalogIdentity.sourceUrl("TMDB", id) == null) invalid();
         String poster = v.optString("poster_path", "");
         String cover = poster.matches("/[A-Za-z0-9_.-]+") ? "https://image.tmdb.org/t/p/w500" + poster : "";
-        return row(v.optString(type == MediaType.TV ? "name" : "title"), v.optString("tagline"),
+        var base = row(v.optString(type == MediaType.TV ? "name" : "title"), v.optString("tagline"),
                 join(v.optJSONArray("created_by"), "name"), join(v.optJSONArray("production_companies"), "name"),
                 "tmdb-" + kind + "-" + v.getLong("id"), cover, v.optString("overview"),
                 v.optString(type == MediaType.TV ? "first_air_date" : "release_date"), "", type, "TMDB", id);
+        return new BookDto.BookResponse(base.title(), base.subtitle(), base.author(), base.publisher(), base.isbn(), base.pubDate(),
+                base.coverImg(), null, base.description(), null, false, "", "", "", "", "", base.publicationDate(),
+                base.mediaType(), base.source(), base.sourceId(), base.sourceUrl(), null,
+                v.optLong("runtime") > 0 ? v.getLong("runtime") * 60000 : null,
+                v.optString(type == MediaType.TV ? "original_name" : "original_title"), v.optString("original_language"));
     }
     private BookDto.SearchPage music(String query, String artist, int page) {
         String artistFilter = "";
