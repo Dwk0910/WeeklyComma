@@ -14,6 +14,11 @@ export type Book = ManagedBook;
 
 export default function ManageRecommendation() {
     const [searchQuery, setSearchQuery] = useState<string>("");
+    const [authorQuery, setAuthorQuery] = useState("");
+    const [searchPage, setSearchPage] = useState(1);
+    const [searchTotal, setSearchTotal] = useState(0);
+    const [hasMore, setHasMore] = useState(false);
+    const submittedSearch = useRef({ query: "", author: "" });
     const [searchResults_l, setSearchResults_l] = useState<Book[]>([]);
     const [searchResults_a, setSearchResults_a] = useState<Book[]>([]);
     const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -55,22 +60,29 @@ export default function ManageRecommendation() {
         );
     };
 
-    const handleSearch = async () => {
-        const query = searchQuery.trim();
+    const handleSearch = async (page = 1, reuseQuery = false) => {
+        const { query, author } = reuseQuery
+            ? submittedSearch.current
+            : { query: searchQuery.trim(), author: authorQuery.trim() };
         if (!query) return;
+        submittedSearch.current = { query, author };
         searchController.current?.abort();
         const controller = new AbortController();
         searchController.current = controller;
         setSearchedQuery(query);
         setIsSearching(true);
+        setSearchPage(page);
+        setHasMore(false);
         setSearchResults_l([]);
         setSearchResults_a([]);
         setSearchErrors({ registered: null, external: null });
-        const result = await searchBookSources(query, controller.signal);
+        const result = await searchBookSources(query, controller.signal, { author, page });
         if (controller.signal.aborted) return;
         setSearchResults_l(result.registered);
         setSearchResults_a(result.external);
         setSearchErrors(result.errors);
+        setSearchTotal(result.total);
+        setHasMore(result.hasMore);
         setIsSearching(false);
     };
 
@@ -155,11 +167,28 @@ export default function ManageRecommendation() {
                         />
                     </div>
                     <button
-                        onClick={handleSearch}
+                        onClick={() => handleSearch()}
                         className="h-12 px-8 bg-gray-800 text-white rounded-full font-bold hover:bg-black transition-all cursor-pointer"
                     >
                         검색
                     </button>
+                </div>
+
+                <div className="mt-3 w-[80%]">
+                    <label className="font-suite text-sm text-gray-600">
+                        저자명 <span className="text-gray-400">(선택)</span>
+                        <input
+                            value={authorQuery}
+                            onChange={(e) => setAuthorQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                            placeholder="예: 백은별"
+                            maxLength={200}
+                            className="ml-3 rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-gray-700"
+                        />
+                    </label>
+                    <p className="mt-2 font-suite text-xs text-gray-500">
+                        제목과 저자명을 나누어 입력하면 동명 작품을 쉽게 찾을 수 있습니다.
+                    </p>
                 </div>
 
                 <div className="flex items-center ml-5 mt-2 w-[80%]">
@@ -234,6 +263,34 @@ export default function ManageRecommendation() {
                     </div>
                 )}
             </div>
+            {searchedQuery &&
+                !searchErrors.external &&
+                !isSearching &&
+                (searchTotal > 0 || searchPage > 1) && (
+                    <nav
+                        aria-label="외부 도서 검색 페이지"
+                        className="mx-4 mb-6 flex items-center justify-center gap-5 font-suite text-sm"
+                    >
+                        <button
+                            disabled={searchPage <= 1}
+                            onClick={() => handleSearch(searchPage - 1, true)}
+                            className="rounded-full border px-4 py-2 disabled:opacity-30"
+                        >
+                            이전
+                        </button>
+                        <span>
+                            {searchPage.toLocaleString()}페이지 · 전체{" "}
+                            {searchTotal.toLocaleString()}건
+                        </span>
+                        <button
+                            disabled={!hasMore}
+                            onClick={() => handleSearch(searchPage + 1, true)}
+                            className="rounded-full border px-4 py-2 disabled:opacity-30"
+                        >
+                            다음
+                        </button>
+                    </nav>
+                )}
         </Component>
     ) : (
         <Component>

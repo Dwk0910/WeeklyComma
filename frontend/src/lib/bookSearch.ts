@@ -16,19 +16,41 @@ function searchFailure(error: unknown) {
     return "검색 요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 }
 
-export async function searchBookSources(query: string, signal?: AbortSignal) {
+export async function searchBookSources(
+    query: string,
+    signal?: AbortSignal,
+    options?: { author: string; page: number }
+) {
     const [registered, external] = await Promise.allSettled([
         api.get<RecommendationBook[]>("books", { params: { query }, signal }),
-        api.get<RecommendationBook[]>("books/api", { params: { query }, signal })
+        options
+            ? api.get<{
+                  items: RecommendationBook[];
+                  page: number;
+                  total: number;
+                  hasMore: boolean;
+              }>("books/api/search", { params: { query, ...options }, signal })
+            : api.get<RecommendationBook[]>("books/api", { params: { query }, signal })
     ]);
+    const externalData = external.status === "fulfilled" ? external.value.data : [];
+    const externalItems = Array.isArray(externalData) ? externalData : externalData.items;
     return {
+        page: Array.isArray(externalData) ? 1 : externalData.page,
+        total: Array.isArray(externalData) ? externalData.length : externalData.total,
+        hasMore: Array.isArray(externalData) ? false : externalData.hasMore,
         registered:
             registered.status === "fulfilled"
-                ? registered.value.data.map((book): ManagedBook => ({ ...book, dbExist: true }))
+                ? registered.value.data
+                      .filter(
+                          (book) =>
+                              !options?.author.trim() ||
+                              book.author?.includes(options.author.trim())
+                      )
+                      .map((book): ManagedBook => ({ ...book, dbExist: true }))
                 : [],
         external:
             external.status === "fulfilled"
-                ? external.value.data.map((book): ManagedBook => ({ ...book, dbExist: false }))
+                ? externalItems.map((book): ManagedBook => ({ ...book, dbExist: false }))
                 : [],
         errors: {
             registered: registered.status === "rejected" ? searchFailure(registered.reason) : null,

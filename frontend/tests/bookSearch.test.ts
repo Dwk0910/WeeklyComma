@@ -73,6 +73,32 @@ test("book search distinguishes provider failures from empty results and preserv
         const empty = await searchBookSources("데미안");
         assert.deepEqual(empty.external, []);
         assert.equal(empty.errors.external, null);
+
+        api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+            const external = config.url === "books/api/search";
+            if (external) {
+                assert.equal(config.params.author, "백은별");
+                assert.equal(config.params.page, 2);
+            }
+            return {
+                config,
+                status: 200,
+                statusText: "OK",
+                headers: {},
+                data: external
+                    ? { items: [], page: 2, total: 61, hasMore: true }
+                    : [{ isbn: "saved-book", author: "다른 저자" }]
+            };
+        };
+        const filteredPage = await searchBookSources("시한부", undefined, {
+            author: "백은별",
+            page: 2
+        });
+        assert.deepEqual(filteredPage.registered, []);
+        assert.deepEqual(filteredPage.external, []);
+        assert.equal(filteredPage.page, 2);
+        assert.equal(filteredPage.total, 61);
+        assert.equal(filteredPage.hasMore, true);
     } finally {
         await server.close();
     }
