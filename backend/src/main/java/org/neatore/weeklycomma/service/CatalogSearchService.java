@@ -20,6 +20,9 @@ import java.util.*;
 
 @Service
 public class CatalogSearchService {
+    private final java.util.concurrent.ExecutorService bookLookups = new java.util.concurrent.ThreadPoolExecutor(4, 4, 0L, java.util.concurrent.TimeUnit.MILLISECONDS, new java.util.concurrent.ArrayBlockingQueue<>(64));
+    @jakarta.annotation.PreDestroy
+    public void close() { bookLookups.shutdownNow(); }
     private final String googleKey;
     private final String tmdbToken;
     private final RestClient client;
@@ -49,15 +52,73 @@ public class CatalogSearchService {
         if (term.length() > 200 || creator.length() > 200 || page < 1 || page > 500)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "검색어 또는 페이지 범위를 확인해 주세요.");
         if (term.isBlank()) return new BookDto.SearchPage(List.of(), page, 0, false);
-        if (type == MediaType.BOOK && "NATIONAL_LIBRARY".equals(provider)) return nationalLibrary.searchPage(term, creator, page);
         try { return switch (type) {
-            case BOOK -> google(term, creator, page);
+            case BOOK -> unifiedBooks(term, creator, page);
             case TV, MOVIE -> tmdb(term, page, type);
             case MUSIC -> music(term, creator, page);
         }; } catch (org.json.JSONException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "외부 자료 검색 응답을 확인하지 못했습니다.");
         }
     }
+    private BookDto.SearchPage unifiedBooks(String term, String author, int page) {
+        // Null is only used by isolated provider tests; production always injects the library client.
+        if (nationalLibrary == null) return google(term, author, page);
+        long deadline = System.nanoTime() + 8_000_000_000L;
+        var googleFuture = bookLookup(() -> google(term, author, page));
+        var libraryFuture = bookLookup(() -> nationalLibrary.searchPage(term, author, page));
+        BookDto.SearchPage googlePage = available(googleFuture, deadline);
+        BookDto.SearchPage libraryPage = available(libraryFuture, deadline);
+        if (googlePage == null && libraryPage == null)
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "도서 검색에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        var library = new LinkedHashMap<String, BookDto.BookResponse>();
+        if (libraryPage != null) libraryPage.items().forEach(b -> library.put(CatalogIdentity.comparable(b.isbn()), b));
+        var merged = new LinkedHashMap<String, BookDto.BookResponse>();
+        if (googlePage != null) {
+            // Title pages differ between providers. Exact ISBN lookups avoid missing Korean metadata.
+            var lookups = new LinkedHashMap<String, java.util.concurrent.CompletableFuture<BookDto.SearchPage>>();
+            for (var book : googlePage.items()) {
+                String isbn = BookIsbn.canonical(book.isbn());
+                if (isbn != null && !library.containsKey(isbn))
+                    lookups.putIfAbsent(isbn, bookLookup(
+                            () -> nationalLibrary.searchPage(isbn, "", 1)));
+            }
+            lookups.forEach((isbn, future) -> {
+                var result = available(future, deadline);
+                if (result != null) result.items().stream().filter(b -> isbn.equals(BookIsbn.canonical(b.isbn())))
+                        .findFirst().ifPresent(b -> library.put(isbn, b));
+            });
+            for (var book : googlePage.items()) {
+                String key = CatalogIdentity.comparable(book.isbn());
+                merged.put(key, mergeBook(book, library.get(key)));
+            }
+        }
+        if (libraryPage != null) libraryPage.items().forEach(b -> merged.putIfAbsent(CatalogIdentity.comparable(b.isbn()), b));
+        // Provider totals overlap; use -1 for unknown unique count rather than adding duplicates.
+        return new BookDto.SearchPage(List.copyOf(merged.values()), page, -1,
+                page < 500 && ((googlePage != null && googlePage.hasMore()) || (libraryPage != null && libraryPage.hasMore())));
+    }
+    private java.util.concurrent.CompletableFuture<BookDto.SearchPage> bookLookup(java.util.function.Supplier<BookDto.SearchPage> request) {
+        try { return java.util.concurrent.CompletableFuture.supplyAsync(request, bookLookups); }
+        catch (java.util.concurrent.RejectedExecutionException busy) { return java.util.concurrent.CompletableFuture.failedFuture(busy); }
+    }
+    private static BookDto.SearchPage available(java.util.concurrent.CompletableFuture<BookDto.SearchPage> future, long deadline) {
+        try { return future.get(Math.max(0, deadline - System.nanoTime()), java.util.concurrent.TimeUnit.NANOSECONDS); }
+        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); future.cancel(true); return null; }
+        catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException failure) { future.cancel(true); return null; }
+    }
+    static BookDto.BookResponse mergeBook(BookDto.BookResponse google, BookDto.BookResponse library) {
+        if (library == null || BookIsbn.canonical(google.isbn()) == null
+                || !BookIsbn.canonical(google.isbn()).equals(BookIsbn.canonical(library.isbn()))) return google;
+        return new BookDto.BookResponse(prefer(library.title(), google.title()), prefer(google.subtitle(), library.subtitle()),
+                prefer(library.author(), google.author()), prefer(library.publisher(), google.publisher()), google.isbn(),
+                library.pubDate() == null ? google.pubDate() : library.pubDate(), prefer(google.coverImg(), library.coverImg()),
+                google.customCoverImg(), prefer(google.description(), library.description()), google.difficulty(), google.adult(),
+                prefer(library.pageCount(), google.pageCount()), prefer(library.bookSize(), google.bookSize()),
+                prefer(library.seriesTitle(), google.seriesTitle()), prefer(library.edition(), google.edition()),
+                prefer(library.tableOfContents(), google.tableOfContents()), prefer(library.publicationDate(), google.publicationDate()),
+                MediaType.BOOK, google.source(), google.sourceId(), google.sourceUrl());
+    }
+    private static String prefer(String first, String fallback) { return first == null || first.isBlank() ? fallback : first; }
     private BookDto.SearchPage google(String term, String author, int page) {
         requireKey(googleKey, "Google Books");
         String isbn = BookIsbn.canonical(term);

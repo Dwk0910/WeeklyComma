@@ -17,7 +17,6 @@ export type Book = ManagedBook;
 export default function ManageRecommendation() {
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [mediaType, setMediaType] = useState<MediaType>("BOOK");
-    const [provider, setProvider] = useState("GOOGLE_BOOKS");
     const [selecting, setSelecting] = useState(false);
     const [selectionError, setSelectionError] = useState("");
     const selectionController = useRef<AbortController | null>(null);
@@ -28,8 +27,7 @@ export default function ManageRecommendation() {
     const submittedSearch = useRef({
         query: "",
         author: "",
-        mediaType: "BOOK" as MediaType,
-        provider: "GOOGLE_BOOKS"
+        mediaType: "BOOK" as MediaType
     });
     const [searchResults_l, setSearchResults_l] = useState<Book[]>([]);
     const [searchResults_a, setSearchResults_a] = useState<Book[]>([]);
@@ -51,14 +49,13 @@ export default function ManageRecommendation() {
         []
     );
 
-    const changeCategory = (type: MediaType, source = provider) => {
+    const changeCategory = (type: MediaType) => {
         searchController.current?.abort();
         selectionController.current?.abort();
         setSelecting(false);
         setSelectionError("");
         setIsSearching(false);
         setMediaType(type);
-        setProvider(source);
         setAuthorQuery("");
         setSearchResults_l([]);
         setSearchResults_a([]);
@@ -125,8 +122,7 @@ export default function ManageRecommendation() {
             : {
                   query: searchQuery.trim(),
                   author: mediaType === "BOOK" || mediaType === "MUSIC" ? authorQuery.trim() : "",
-                  mediaType,
-                  provider
+                  mediaType
               };
         const { query, author } = criteria;
         if (!query) return;
@@ -147,8 +143,7 @@ export default function ManageRecommendation() {
         const result = await searchBookSources(query, controller.signal, {
             author,
             page,
-            mediaType: criteria.mediaType,
-            provider: criteria.provider
+            mediaType: criteria.mediaType
         });
         if (controller.signal.aborted) return;
         setSearchResults_l(result.registered);
@@ -244,17 +239,6 @@ export default function ManageRecommendation() {
                         {MEDIA_LABELS[type]}
                     </button>
                 ))}
-                {mediaType === "BOOK" && (
-                    <select
-                        aria-label="도서 검색 제공처"
-                        value={provider}
-                        onChange={(e) => changeCategory("BOOK", e.target.value)}
-                        className="ml-auto rounded-lg border border-stone-200 p-2 font-suite text-sm"
-                    >
-                        <option value="GOOGLE_BOOKS">Google Books · 국내/외</option>
-                        <option value="NATIONAL_LIBRARY">국립중앙도서관 · 국내 ISBN</option>
-                    </select>
-                )}
             </div>
             {selecting && (
                 <p role="status" className="mx-4 font-suite">
@@ -398,7 +382,7 @@ export default function ManageRecommendation() {
                                     : searchErrors.registered || searchErrors.external
                                       ? "검색을 완료하지 못했습니다. 위 안내를 확인해 주세요."
                                       : searchedQuery
-                                        ? "검색 결과가 없습니다. 다른 검색어나 제공처로 검색해 주세요."
+                                        ? "검색 결과가 없습니다. 다른 검색어로 검색해 주세요."
                                         : "자료 제목을 입력하고 검색해 주세요."}
                             </p>
                         </div>
@@ -408,7 +392,7 @@ export default function ManageRecommendation() {
             {searchedQuery &&
                 !searchErrors.external &&
                 !isSearching &&
-                (searchTotal > 0 || searchPage > 1) && (
+                (searchTotal > 0 || hasMore || searchPage > 1) && (
                     <nav
                         aria-label="외부 도서 검색 페이지"
                         className="mx-4 mb-6 flex items-center justify-center gap-5 font-suite text-sm"
@@ -421,8 +405,8 @@ export default function ManageRecommendation() {
                             이전
                         </button>
                         <span>
-                            {searchPage.toLocaleString()}페이지 · 전체{" "}
-                            {searchTotal.toLocaleString()}건
+                            {searchPage.toLocaleString()}페이지
+                            {searchTotal >= 0 && ` · 전체 ${searchTotal.toLocaleString()}건`}
                         </span>
                         <button
                             disabled={!hasMore}

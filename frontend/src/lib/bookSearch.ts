@@ -20,21 +20,24 @@ function searchFailure(error: unknown) {
 export async function searchBookSources(
     query: string,
     signal?: AbortSignal,
-    options?: { author: string; page: number; mediaType?: MediaType; provider?: string }
+    options?: { author: string; page: number; mediaType?: MediaType }
 ) {
     const [registered, external] = await Promise.allSettled([
         api.get<RecommendationBook[]>("books", { params: { query }, signal }),
-        options
-            ? api.get<{
-                  items: RecommendationBook[];
-                  page: number;
-                  total: number;
-                  hasMore: boolean;
-              }>(options.mediaType ? "books/api/catalog" : "books/api/search", {
-                  params: { query, ...options },
-                  signal
-              })
-            : api.get<RecommendationBook[]>("books/api", { params: { query }, signal })
+        api.get<{
+            items: RecommendationBook[];
+            page: number;
+            total: number;
+            hasMore: boolean;
+        }>("books/api/catalog", {
+            params: {
+                query,
+                author: options?.author ?? "",
+                page: options?.page ?? 1,
+                mediaType: options?.mediaType ?? "BOOK"
+            },
+            signal
+        })
     ]);
     const externalData = external.status === "fulfilled" ? external.value.data : [];
     const externalItems = Array.isArray(externalData) ? externalData : externalData.items;

@@ -26,7 +26,7 @@ test("book search distinguishes provider failures from empty results and preserv
         api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
             calls.push(config.url!);
             assert.equal(config.params.query, "데미안");
-            const external = config.url === "books/api";
+            const external = config.url === "books/api/catalog";
             if (external ? externalFails : registeredFails) {
                 throw {
                     isAxiosError: true,
@@ -45,10 +45,14 @@ test("book search distinguishes provider failures from empty results and preserv
                 status: 200,
                 statusText: "OK",
                 headers: {},
-                data:
-                    external && externalEmpty
-                        ? []
-                        : [{ isbn: external ? "new-book" : "saved-book", title: "데미안" }]
+                data: external
+                    ? {
+                          items: externalEmpty ? [] : [{ isbn: "new-book", title: "데미안" }],
+                          page: 1,
+                          total: -1,
+                          hasMore: false
+                      }
+                    : [{ isbn: "saved-book", title: "데미안" }]
             };
         };
 
@@ -58,7 +62,7 @@ test("book search distinguishes provider failures from empty results and preserv
         assert.equal(partial.errors.registered, null);
         assert.match(partial.errors.external, /인증키/);
         assert.deepEqual(partial.external, []);
-        assert.deepEqual(calls, ["books", "books/api"]);
+        assert.deepEqual(calls, ["books", "books/api/catalog"]);
 
         externalFails = false;
         registeredFails = true;
@@ -75,7 +79,7 @@ test("book search distinguishes provider failures from empty results and preserv
         assert.equal(empty.errors.external, null);
 
         api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
-            const external = config.url === "books/api/search";
+            const external = config.url === "books/api/catalog";
             if (external) {
                 assert.equal(config.params.author, "백은별");
                 assert.equal(config.params.page, 2);
@@ -103,7 +107,7 @@ test("book search distinguishes provider failures from empty results and preserv
             const external = config.url === "books/api/catalog";
             if (external) {
                 assert.equal(config.params.mediaType, "TV");
-                assert.equal(config.params.provider, "TMDB");
+                assert.equal(config.params.provider, undefined);
             }
             return {
                 config,
@@ -126,8 +130,7 @@ test("book search distinguishes provider failures from empty results and preserv
         const media = await searchBookSources("작품", undefined, {
             author: "",
             page: 1,
-            mediaType: "TV",
-            provider: "TMDB"
+            mediaType: "TV"
         });
         assert.equal(media.registered.length, 1);
         assert.equal(media.registered[0].isbn, "tmdb-tv-7");

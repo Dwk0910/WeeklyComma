@@ -102,9 +102,8 @@ public class BookController {
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<BookDto.SearchPage> searchCatalog(@RequestParam String query,
             @RequestParam(defaultValue = "") String author, @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "BOOK") org.neatore.weeklycomma.domain.MediaType mediaType,
-            @RequestParam(defaultValue = "GOOGLE_BOOKS") String provider) {
-        return ResponseEntity.ok(bookService.searchCatalog(query, author, page, mediaType, provider));
+            @RequestParam(defaultValue = "BOOK") org.neatore.weeklycomma.domain.MediaType mediaType) {
+        return ResponseEntity.ok(bookService.searchCatalog(query, author, page, mediaType, null));
     }
 
     @GetMapping("/api/details")

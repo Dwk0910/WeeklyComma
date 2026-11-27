@@ -28,6 +28,20 @@ class CatalogLiveSmokeTest {
             assertFalse(details.description().isBlank());
         }
     }
+    @Test void mergesSihanbuKoreanMetadataWithCoverAndDescription() {
+        var client = new CatalogSearchService(System.getenv("GOOGLE_BOOKS_API_KEY"), "",
+                new NationalLibraryBookClient(System.getenv("NL_API_KEY")));
+        try {
+            var result = client.search("시한부", "", 1, MediaType.BOOK, null);
+            var book = result.items().stream().filter(b -> "9791193647646".equals(b.isbn())).findFirst().orElseThrow();
+            assertTrue(book.author().contains("백은별"));
+            assertTrue(book.publisher().contains("바른북스"));
+            assertFalse(book.coverImg().isBlank());
+            assertFalse(book.description().isBlank());
+            System.out.printf("MERGED title=%s author=%s publisher=%s cover=%s descriptionLength=%d%n",
+                    book.title(), book.author(), book.publisher(), book.coverImg(), book.description().length());
+        } finally { client.close(); }
+    }
     @Test void searchesKoreanAndForeignMusicWithArtistAliases() {
         var client = new CatalogSearchService("", "", null);
         var music = client.search("밤편지", "아이유", 1, MediaType.MUSIC, "MUSICBRAINZ");
