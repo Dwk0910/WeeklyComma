@@ -11,6 +11,8 @@ export type BookMetadata = {
     source?: string | null;
     sourceId?: string | null;
     sourceUrl?: string | null;
+    originalTitle?: string | null;
+    originalLanguage?: string | null;
     albumTitle?: string | null;
     durationMillis?: number | null;
     pageCount?: string | null;

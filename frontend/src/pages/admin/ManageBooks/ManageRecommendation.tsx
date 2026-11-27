@@ -9,7 +9,7 @@ import { searchBookSources, type ManagedBook } from "../../../lib/bookSearch.ts"
 import Component, { Title, SubTitle } from "../lib_component/Component";
 import ManageBook from "./ManageBook.tsx";
 import BookCoverImage from "../../../component/BookCoverImage.tsx";
-import { bookPublicationDate, comparableIsbn } from "../../../lib/bookDetails.ts";
+import { searchFacts, comparableIsbn } from "../../../lib/bookDetails.ts";
 import RecentRecommendations from "../recommendations/RecentRecommendations.tsx";
 
 export type Book = ManagedBook;
@@ -189,20 +189,26 @@ export default function ManageRecommendation() {
                         </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-y-1 text-sm text-gray-500 mt-1">
-                        <span className="font-semibold text-gray-600 mr-2">
-                            {decodeHtml(item.author)}
-                        </span>
-                        <span className="mr-3">|</span>
-                        <span className="font-semibold text-gray-600 mr-3">
-                            {decodeHtml(item.publisher)}
-                        </span>
-                        <span className="mr-3">|</span>
-                        <span>{bookPublicationDate(item) || "공개일 미상"}</span>
-                        <span className="mx-3">|</span>
-                        <span>{item.isbn}</span>
+                        {searchFacts(item)
+                            .filter(({ value }) => decodeHtml(value).trim())
+                            .map(({ label, value }, index) => (
+                                <span key={label} className="inline-flex items-center">
+                                    {index > 0 && (
+                                        <span className="mx-3" aria-hidden="true">
+                                            |
+                                        </span>
+                                    )}
+                                    <span>
+                                        <span className="mr-1 text-gray-400">{label}</span>
+                                        {decodeHtml(value)}
+                                    </span>
+                                </span>
+                            ))}
                     </div>
-                    {item.albumTitle && (
-                        <p className="mt-1 text-sm text-stone-500">수록 앨범 · {item.albumTitle}</p>
+                    {decodeHtml(item.description).trim() && (
+                        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-stone-500">
+                            {decodeHtml(item.description)}
+                        </p>
                     )}
                     {[item.pageCount, item.bookSize, item.edition, item.seriesTitle].some(
                         Boolean

@@ -21,3 +21,50 @@ export function comparableIsbn(value: string) {
     );
     return `${prefix}${(10 - (sum % 10)) % 10}`;
 }
+
+export function languageName(code?: string | null) {
+    if (!code?.trim()) return "";
+    try {
+        return new Intl.DisplayNames(["ko"], { type: "language" }).of(code) || code;
+    } catch {
+        return code;
+    }
+}
+
+export function searchFacts(
+    book: BookMetadata & { title: string; author?: string | null; publisher?: string | null }
+) {
+    const date = bookPublicationDate(book);
+    const duration =
+        book.durationMillis && book.durationMillis > 0
+            ? `${Math.floor(book.durationMillis / 60000)}:${String(Math.floor(book.durationMillis / 1000) % 60).padStart(2, "0")}`
+            : "";
+    const facts =
+        book.mediaType === "MUSIC"
+            ? [
+                  ["아티스트", book.author],
+                  ["수록 앨범", book.albumTitle],
+                  ["재생시간", duration],
+                  ["발매", date],
+                  ["레이블", book.publisher]
+              ]
+            : book.mediaType === "TV" || book.mediaType === "MOVIE"
+              ? [
+                    [
+                        "원제",
+                        book.originalTitle?.trim() !== book.title.trim() ? book.originalTitle : ""
+                    ],
+                    ["언어", languageName(book.originalLanguage)],
+                    [book.mediaType === "TV" ? "첫 방영" : "개봉", date],
+                    ["제작", book.author],
+                    ["제작사", book.publisher]
+                ]
+              : [
+                    ["저자", book.author],
+                    ["출판사", book.publisher],
+                    ["출간", date]
+                ];
+    return facts
+        .filter(([, value]) => value?.trim())
+        .map(([label, value]) => ({ label: label!, value: value!.trim() }));
+}

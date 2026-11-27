@@ -1,11 +1,13 @@
 import { mediaLabel, musicDuration, type BookMetadata } from "../types/book.ts";
-import { bookPublicationDate } from "../lib/bookDetails.ts";
+import { bookPublicationDate, languageName } from "../lib/bookDetails.ts";
 import { plainText } from "../pages/admin/recommendations/types.ts";
 
 export default function BookDetails({ book }: { book: BookMetadata & { isbn: string } }) {
     const isBook = !book.mediaType || book.mediaType === "BOOK";
     const facts = [
         ["종류", mediaLabel(book)],
+        ["원제", book.originalTitle],
+        ["언어", languageName(book.originalLanguage)],
         ["수록 앨범", book.albumTitle],
         ["재생시간", musicDuration(book.durationMillis)],
         [isBook ? "출간" : "공개", bookPublicationDate(book)],
