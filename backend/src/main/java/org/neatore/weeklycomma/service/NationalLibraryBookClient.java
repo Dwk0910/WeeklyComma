@@ -47,20 +47,38 @@ public class NationalLibraryBookClient {
     }
 
     public List<BookDto.BookResponse> searchBooks(String query) {
+        return searchPage(query, "", 1).items();
+    }
+
+    public BookDto.SearchPage searchPage(String query, String author, int page) {
+        if (page < 1 || page > 10000) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "페이지 범위를 확인해 주세요.");
+        String authorTerm = author == null ? "" : author.trim();
+        if (authorTerm.length() > 200) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "저자명은 200자 이내로 입력해 주세요.");
         if (key.isBlank()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                 "국립중앙도서관 API 인증키가 설정되지 않았습니다.");
         String term = query.trim();
-        if (term.isEmpty()) return List.of();
+        if (term.isEmpty()) return new BookDto.SearchPage(List.of(), page, 0, false);
         if (term.length() > 200) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "검색어는 200자 이내로 입력해 주세요.");
         String isbn = BookIsbn.canonical(term);
-        URI uri = UriComponentsBuilder.fromUriString("https://www.nl.go.kr/seoji/SearchApi.do")
+        var builder = UriComponentsBuilder.fromUriString("https://www.nl.go.kr/seoji/SearchApi.do")
                 .queryParam("cert_key", "{key}")
                 .queryParam("result_style", "json")
-                .queryParam("page_no", 1).queryParam("page_size", 30)
-                .queryParam(isbn == null ? "title" : "isbn", "{query}")
-                .encode().buildAndExpand(key, isbn == null ? term : isbn).toUri();
+                .queryParam("page_no", page).queryParam("page_size", 30)
+                .queryParam(isbn == null ? "title" : "isbn", "{query}");
+        var variables = new java.util.HashMap<String, String>();
+        variables.put("key", key);
+        variables.put("query", isbn == null ? term : isbn);
+        if (isbn == null && !authorTerm.isBlank()) {
+            builder.queryParam("author", "{author}");
+            variables.put("author", authorTerm);
+        }
+        URI uri = builder.encode().buildAndExpand(variables).toUri();
         try {
-            return parseResponse(client.get().uri(uri).retrieve().body(String.class));
+            String response = client.get().uri(uri).retrieve().body(String.class);
+            var items = parseResponse(response);
+            long total = new JSONObject(response).optLong("TOTAL_COUNT", 0);
+            // Pagination follows source rows, not the count remaining after ISBN filtering.
+            return new BookDto.SearchPage(items, page, total, (long) page * 30 < total);
         } catch (RestClientException exception) {
             // Request exceptions can contain the credential-bearing URL or provider response.
             LOGGER.warn("National Library book search failed: type={}", exception.getClass().getSimpleName());

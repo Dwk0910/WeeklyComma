@@ -26,7 +26,7 @@ test("book search distinguishes provider failures from empty results and preserv
         api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
             calls.push(config.url!);
             assert.equal(config.params.query, "데미안");
-            const external = config.url === "books/api";
+            const external = config.url === "books/api/catalog";
             if (external ? externalFails : registeredFails) {
                 throw {
                     isAxiosError: true,
@@ -45,10 +45,14 @@ test("book search distinguishes provider failures from empty results and preserv
                 status: 200,
                 statusText: "OK",
                 headers: {},
-                data:
-                    external && externalEmpty
-                        ? []
-                        : [{ isbn: external ? "new-book" : "saved-book", title: "데미안" }]
+                data: external
+                    ? {
+                          items: externalEmpty ? [] : [{ isbn: "new-book", title: "데미안" }],
+                          page: 1,
+                          total: -1,
+                          hasMore: false
+                      }
+                    : [{ isbn: "saved-book", title: "데미안" }]
             };
         };
 
@@ -58,7 +62,7 @@ test("book search distinguishes provider failures from empty results and preserv
         assert.equal(partial.errors.registered, null);
         assert.match(partial.errors.external, /인증키/);
         assert.deepEqual(partial.external, []);
-        assert.deepEqual(calls, ["books", "books/api"]);
+        assert.deepEqual(calls, ["books", "books/api/catalog"]);
 
         externalFails = false;
         registeredFails = true;
@@ -73,6 +77,64 @@ test("book search distinguishes provider failures from empty results and preserv
         const empty = await searchBookSources("데미안");
         assert.deepEqual(empty.external, []);
         assert.equal(empty.errors.external, null);
+
+        api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+            const external = config.url === "books/api/catalog";
+            if (external) {
+                assert.equal(config.params.author, "백은별");
+                assert.equal(config.params.page, 2);
+            }
+            return {
+                config,
+                status: 200,
+                statusText: "OK",
+                headers: {},
+                data: external
+                    ? { items: [], page: 2, total: 61, hasMore: true }
+                    : [{ isbn: "saved-book", author: "다른 저자" }]
+            };
+        };
+        const filteredPage = await searchBookSources("시한부", undefined, {
+            author: "백은별",
+            page: 2
+        });
+        assert.deepEqual(filteredPage.registered, []);
+        assert.deepEqual(filteredPage.external, []);
+        assert.equal(filteredPage.page, 2);
+        assert.equal(filteredPage.total, 61);
+        assert.equal(filteredPage.hasMore, true);
+        api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+            const external = config.url === "books/api/catalog";
+            if (external) {
+                assert.equal(config.params.mediaType, "TV");
+                assert.equal(config.params.provider, undefined);
+            }
+            return {
+                config,
+                status: 200,
+                statusText: "OK",
+                headers: {},
+                data: external
+                    ? {
+                          items: [{ isbn: "tmdb-tv-7", mediaType: "TV", title: "작품" }],
+                          page: 1,
+                          total: 1,
+                          hasMore: false
+                      }
+                    : [
+                          { isbn: "legacy-isbn", title: "책" },
+                          { isbn: "tmdb-tv-7", mediaType: "TV", title: "작품" }
+                      ]
+            };
+        };
+        const media = await searchBookSources("작품", undefined, {
+            author: "",
+            page: 1,
+            mediaType: "TV"
+        });
+        assert.equal(media.registered.length, 1);
+        assert.equal(media.registered[0].isbn, "tmdb-tv-7");
+        assert.equal(media.external[0].mediaType, "TV");
     } finally {
         await server.close();
     }

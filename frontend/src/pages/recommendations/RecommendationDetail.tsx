@@ -101,7 +101,7 @@ function Detail({ id, weekly }: { id: string; weekly: boolean }) {
                         <div className="recommendation-reading">
                             <aside
                                 className="recommendation-book-aside"
-                                aria-label="추천 도서 정보"
+                                aria-label="추천 자료 정보"
                             >
                                 <BookCover item={item} />
                                 <BookInfo item={item} />

@@ -32,6 +32,19 @@ public class Book {
     @Column(unique = true)
     private String isbn;
 
+    // Legacy ISBN column remains the stable recommendation key for existing links.
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    private MediaType mediaType;
+    private String source;
+    private String sourceId;
+    private String sourceUrl;
+    private String albumTitle;
+    private Long durationMillis;
+    private String originalTitle;
+    private String originalLanguage;
+
+    public MediaType getMediaType() { return mediaType == null ? MediaType.BOOK : mediaType; }
+
     private String title;
     private String subTitle;
     private String author;
@@ -54,10 +67,18 @@ public class Book {
     private String publicationDate;
 
     public void updateFrom(BookDto.RegisterRequest from) {
+        this.mediaType = from.mediaType() == null ? MediaType.BOOK : from.mediaType();
+        this.source = from.source();
+        this.sourceId = from.sourceId();
+        this.sourceUrl = org.neatore.weeklycomma.util.CatalogIdentity.sourceUrl(from.source(), from.sourceId());
+        this.originalTitle = from.originalTitle();
+        this.originalLanguage = from.originalLanguage();
+        this.albumTitle = from.albumTitle();
+        this.durationMillis = from.durationMillis();
         this.title = from.title();
         this.subTitle = from.subtitle();
-        this.author = from.author();
-        this.publisher = from.publisher();
+        this.author = from.author() == null ? "" : from.author();
+        this.publisher = from.publisher() == null ? "" : from.publisher();
         this.pubDate = from.getPubDateAsInstant();
         this.description = from.description();
         this.coverImg = from.coverImg();
@@ -74,6 +95,6 @@ public class Book {
     public BookDto.BookResponse toDto() {
         return new BookDto.BookResponse(title, subTitle, author, publisher, isbn, pubDate == null ? null : pubDate.getEpochSecond(),
                 coverImg, customCoverImg, description, difficulty, adult, pageCount, bookSize, seriesTitle,
-                edition, tableOfContents, publicationDate);
+                edition, tableOfContents, publicationDate, getMediaType(), source, sourceId, sourceUrl, albumTitle, durationMillis, originalTitle, originalLanguage);
     }
 }

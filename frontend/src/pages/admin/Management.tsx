@@ -19,7 +19,7 @@ const menu: Menu[] = [
     },
     {
         name: "책 관리",
-        submenus: [{ name: "추천 책 관리", path: "/management/recommendations" }]
+        submenus: [{ name: "추천 자료 관리", path: "/management/recommendations" }]
     }
 ];
 const menuStyle =

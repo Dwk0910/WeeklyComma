@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MdCameraAlt } from "react-icons/md";
 
+import { mediaLabel, musicDuration } from "../../../types/book.ts";
 import { type Book } from "./ManageRecommendation.tsx";
 import { api } from "../../../lib/api.ts";
 
@@ -26,6 +27,7 @@ export default function ManageBook({
     setSelectedBook: React.Dispatch<React.SetStateAction<Book | null>>;
     refreshSearchResult: () => void;
 }) {
+    const isBook = !book.mediaType || book.mediaType === "BOOK";
     // 미리보기 이미지: customCoverImg가 있으면 그걸 쓰고, 없으면 coverImg
     const [previewImg, setPreviewImg] = useState<string>(
         book.customCoverImg || book.coverImg || ""
@@ -76,7 +78,7 @@ export default function ManageBook({
         }
     };
 
-    const requiredFields = ["title", "isbn", "author", "publisher", "difficulty"];
+    const requiredFields = ["title", "isbn", "difficulty"];
 
     const serverUpload = () => {
         // 필수 값 검증
@@ -86,7 +88,7 @@ export default function ManageBook({
         });
 
         if (isLack) {
-            alert("책에 대한 필수 정보가 비어 있습니다.");
+            alert("자료의 필수 정보가 비어 있습니다.");
             return;
         }
 
@@ -115,12 +117,12 @@ export default function ManageBook({
                 refreshSearchResult();
             })
             .catch(() => {
-                alert("책 정보를 저장하지 못했습니다. 필수 정보와 연결 상태를 확인해 주세요.");
+                alert("자료 정보를 저장하지 못했습니다. 필수 정보와 연결 상태를 확인해 주세요.");
             });
     };
 
     const removeBook = () => {
-        if (confirm("정말 이 책을 삭제하시겠습니까? 등록한 정보가 모두 삭제됩니다.")) {
+        if (confirm("정말 이 자료를 삭제하시겠습니까? 등록한 정보가 모두 삭제됩니다.")) {
             api.delete(`books?isbn=${book.isbn}`).then(() => {
                 setSelectedBook(null);
                 refreshSearchResult();
@@ -156,12 +158,12 @@ export default function ManageBook({
                                 coverImg: previewImg,
                                 customCoverImg: uploadFile ? null : book.customCoverImg
                             }}
-                            className="w-60 h-90 border border-gray-200 object-cover"
+                            className="w-60 border border-gray-200"
                             loading="eager"
                         />
 
                         <div
-                            className="absolute w-full h-90 inset-0 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 cursor-pointer"
+                            className="absolute w-full h-full inset-0 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 cursor-pointer"
                             onClick={handleImageClick}
                         >
                             <MdCameraAlt className="text-white text-[2rem]" />
@@ -189,15 +191,29 @@ export default function ManageBook({
                 </div>
 
                 <div className="ml-6 flex flex-col flex-1">
+                    <p className="mb-2 font-suite text-sm text-stone-500">
+                        {mediaLabel(book)} · 제목과 추천 코스는 필수이며, 제공되지 않은 정보는
+                        비워둘 수 있습니다.
+                    </p>
+                    {book.mediaType === "MUSIC" && (book.albumTitle || book.durationMillis) && (
+                        <p className="mb-3 font-suite text-sm text-stone-500">
+                            {[
+                                book.albumTitle && `수록 앨범 · ${book.albumTitle}`,
+                                musicDuration(book.durationMillis)
+                            ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                        </p>
+                    )}
                     <SubTitle description="각각의 정보를 클릭하여 수정할 수 있습니다.">
-                        책 정보 확인
+                        자료 정보 확인
                     </SubTitle>
                     <input
                         name="title"
                         value={book.title || ""}
                         onChange={handleChange}
                         className={`${inputStyle} text-[1.8rem] font-[HCRBatang] font-bold`}
-                        placeholder="책 제목"
+                        placeholder="작품 제목"
                     />
                     <div className="flex items-center ml-2">
                         <input
@@ -209,17 +225,33 @@ export default function ManageBook({
                         />
                     </div>
 
-                    <span className="text-gray-700 font-suite mt-6 font-bold">책 사양</span>
+                    <span className="text-gray-700 font-suite mt-6 font-bold">자료 정보</span>
 
                     <div className="flex font-suite mt-3 text-gray-500">
-                        <span>ISBN</span>
+                        <span>
+                            {isBook && !book.isbn.startsWith("google-books-") ? "ISBN" : "자료 ID"}
+                        </span>
                         <span className="ml-3 font-bold">{book.isbn}</span>
                     </div>
 
                     <div className="flex flex-col mt-2">
                         {[
-                            { label: "저자", name: "author" },
-                            { label: "출판사", name: "publisher" }
+                            {
+                                label: isBook
+                                    ? "저자"
+                                    : book.mediaType === "MUSIC"
+                                      ? "아티스트"
+                                      : "창작자",
+                                name: "author"
+                            },
+                            {
+                                label: isBook
+                                    ? "출판사"
+                                    : book.mediaType === "MUSIC"
+                                      ? "레이블"
+                                      : "제작사",
+                                name: "publisher"
+                            }
                         ].map((field) => (
                             <div key={field.name} className="flex font-suite items-center">
                                 <div className="text-gray-500 w-28 shrink-0">{field.label}</div>
@@ -234,14 +266,17 @@ export default function ManageBook({
                         ))}
 
                         <div className="flex font-suite items-center">
-                            <div className="text-gray-500 w-28 shrink-0">출간일</div>
+                            <div className="text-gray-500 w-28 shrink-0">
+                                {isBook ? "출간일" : "공개일"}
+                            </div>
                             <input
                                 type="date"
                                 name="pubDate"
                                 value={
                                     book.publicationDate && book.publicationDate.length < 10
                                         ? ""
-                                        : formatTimestampToDate(book.pubDate)
+                                        : book.publicationDate ||
+                                          formatTimestampToDate(book.pubDate)
                                 }
                                 onChange={handleChange}
                                 className={`${inputStyle} font-bold cursor-pointer`}
@@ -256,7 +291,7 @@ export default function ManageBook({
 
                         <div className="flex items-center gap-6 mt-3">
                             <span className="text-gray-700 font-bold w-30 shrink-0 font-suite">
-                                추천 도서 난이도
+                                추천 코스
                             </span>
                             <div className="flex items-center gap-4">
                                 {["초급", "중급", "상급"].map((level) => (
@@ -279,48 +314,50 @@ export default function ManageBook({
                         </div>
                     </div>
 
-                    <details className="mt-5 border-y border-stone-200 py-4 font-suite">
-                        <summary className="cursor-pointer text-sm text-stone-600">
-                            추가 도서 정보
-                        </summary>
-                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            {[
-                                ["쪽수", "pageCount", "예: 320 p."],
-                                ["판형", "bookSize", "예: 21 cm"],
-                                ["시리즈", "seriesTitle", "시리즈 이름"],
-                                ["판 정보", "edition", "예: 개정판"]
-                            ].map(([label, name, placeholder]) => (
-                                <label key={name} className="text-xs text-stone-500">
-                                    {label}
-                                    <input
-                                        name={name}
-                                        value={String(book[name as keyof Book] ?? "")}
-                                        onChange={handleChange}
-                                        placeholder={placeholder}
-                                        className={`${inputStyle} mt-1 text-sm text-stone-700`}
-                                    />
-                                </label>
-                            ))}
-                        </div>
-                        <label className="mt-4 block text-xs text-stone-500">
-                            목차
-                            <textarea
-                                name="tableOfContents"
-                                value={decodeHtml(book.tableOfContents)}
-                                onChange={handleChange}
-                                rows={5}
-                                placeholder="제공된 목차가 없으면 직접 입력할 수 있습니다."
-                                className="mt-2 w-full resize-y rounded border border-stone-200 bg-transparent p-3 text-sm leading-relaxed outline-none focus:border-stone-500"
-                            />
-                        </label>
-                    </details>
-                    <span className="text-gray-700 font-suite font-bold mt-3">책 설명</span>
+                    {isBook && (
+                        <details className="mt-5 border-y border-stone-200 py-4 font-suite">
+                            <summary className="cursor-pointer text-sm text-stone-600">
+                                추가 도서 정보
+                            </summary>
+                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                {[
+                                    ["쪽수", "pageCount", "예: 320 p."],
+                                    ["판형", "bookSize", "예: 21 cm"],
+                                    ["시리즈", "seriesTitle", "시리즈 이름"],
+                                    ["판 정보", "edition", "예: 개정판"]
+                                ].map(([label, name, placeholder]) => (
+                                    <label key={name} className="text-xs text-stone-500">
+                                        {label}
+                                        <input
+                                            name={name}
+                                            value={String(book[name as keyof Book] ?? "")}
+                                            onChange={handleChange}
+                                            placeholder={placeholder}
+                                            className={`${inputStyle} mt-1 text-sm text-stone-700`}
+                                        />
+                                    </label>
+                                ))}
+                            </div>
+                            <label className="mt-4 block text-xs text-stone-500">
+                                목차
+                                <textarea
+                                    name="tableOfContents"
+                                    value={decodeHtml(book.tableOfContents)}
+                                    onChange={handleChange}
+                                    rows={5}
+                                    placeholder="제공된 목차가 없으면 직접 입력할 수 있습니다."
+                                    className="mt-2 w-full resize-y rounded border border-stone-200 bg-transparent p-3 text-sm leading-relaxed outline-none focus:border-stone-500"
+                                />
+                            </label>
+                        </details>
+                    )}
+                    <span className="text-gray-700 font-suite font-bold mt-3">자료 소개</span>
                     <textarea
                         name="description"
                         value={decodeHtml(book.description)}
                         onChange={handleChange}
                         rows={6}
-                        placeholder="책 소개가 제공되지 않았다면 직접 작성해 주세요."
+                        placeholder="소개가 제공되지 않았다면 직접 작성해 주세요."
                         className="mt-2 font-[HCRBatang] mr-4 p-2 bg-gray-50/50 border border-gray-200 rounded-sm outline-none focus:border-blue-400 transition-all resize-none overflow-y-auto leading-relaxed"
                     />
                 </div>
@@ -332,19 +369,19 @@ export default function ManageBook({
                         className="cursor-pointer mr-5 bg-gray-500 p-4 text-white rounded-[5px] font-suite transition-transform hover:scale-105 ease-in-out"
                         onClick={removeBook}
                     >
-                        책 정보 삭제
+                        자료 정보 삭제
                     </button>
                 )}
                 <button
                     className="cursor-pointer mr-5 bg-gray-500 p-4 text-white rounded-[5px] font-suite transition-transform hover:scale-105 ease-in-out"
                     onClick={serverUpload}
                 >
-                    {`책 정보 ${book.dbExist ? "수정" : "저장"}`}
+                    {`자료 정보 ${book.dbExist ? "수정" : "저장"}`}
                 </button>
             </div>
 
             <div className="my-6 mr-4 max-h-72 overflow-y-auto rounded-lg border border-gray-200 p-4">
-                <RecentRecommendations isbn={book.isbn} title="이 책의 최근 추천 이력" />
+                <RecentRecommendations isbn={book.isbn} title="이 자료의 최근 추천 이력" />
             </div>
             <div className="mt-2">
                 {book.dbExist ? (
@@ -356,7 +393,7 @@ export default function ManageBook({
                 ) : (
                     <div className="mb-10">
                         <Title>추천글 관리</Title>
-                        <SubTitle>책을 등록해야 추천글을 작성할 수 있습니다.</SubTitle>
+                        <SubTitle>자료를 등록해야 추천글을 작성할 수 있습니다.</SubTitle>
                     </div>
                 )}
             </div>

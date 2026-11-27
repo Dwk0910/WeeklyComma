@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { mediaLabel } from "../../types/book.ts";
 import BookCoverImage from "../../component/BookCoverImage.tsx";
 import BookStarButton from "../../component/BookStarButton.tsx";
 import { PostDate } from "../boards/BoardShared.tsx";
@@ -28,6 +29,7 @@ export function RecommendationTags({ item, issue }: { item: Recommendation; issu
     const difficulty = issue?.difficulty || item.book.difficulty;
     return (
         <div className="recommendation-tags">
+            <span className="recommendation-designation">{mediaLabel(item.book)}</span>
             {difficulty && <span className="recommendation-difficulty">{difficulty}</span>}
             {latest && (
                 <span className="recommendation-designation">{designationLabel(latest)}</span>
@@ -65,7 +67,7 @@ export function BookInfo({ item }: { item: Recommendation }) {
     return (
         <p className="recommendation-book-info">
             <span>{plainText(item.book.title)}</span>
-            <span> · {plainText(item.book.author)}</span>
+            {item.book.author && <span> · {plainText(item.book.author)}</span>}
             {item.book.publisher && <span> · {plainText(item.book.publisher)}</span>}
         </p>
     );

@@ -1,3 +1,4 @@
+import { coverAspect, type BookMetadata } from "../types/book.ts";
 import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { MdPause, MdPlayArrow, MdArrowForwardIos, MdArrowBackIosNew } from "react-icons/md";
 import { useCallback, useEffect, useState, useRef } from "react";
@@ -42,7 +43,7 @@ type RecommendationPost = {
     };
 };
 
-type BookResponse = {
+type BookResponse = BookMetadata & {
     title: string;
     subtitle: string;
     author: string;
@@ -56,7 +57,10 @@ type BookResponse = {
     adult: boolean;
 };
 
-type PopularBook = Pick<BookResponse, "isbn" | "title" | "coverImg" | "customCoverImg"> & {
+type PopularBook = Pick<
+    BookResponse,
+    "isbn" | "title" | "coverImg" | "customCoverImg" | "mediaType"
+> & {
     starCount: number;
 };
 
@@ -598,7 +602,10 @@ export default function Main() {
             ) : (
                 <div className={"flex mt-5"}>
                     <div className="flex flex-col">
-                        <div className={"w-60 h-90 border border-gray-500 overflow-hidden"}>
+                        <div
+                            style={{ aspectRatio: coverAspect(recommendationBook) }}
+                            className={"w-60 border border-gray-500 overflow-hidden"}
+                        >
                             <BookCoverImage
                                 book={recommendationBook}
                                 className="w-full h-full object-cover"
@@ -741,9 +748,8 @@ export default function Main() {
                                 className={clsx("flex flex-col", index > 0 && "ml-8")}
                             >
                                 <div
-                                    className={
-                                        "w-40 shrink-0 h-60 border border-black overflow-hidden"
-                                    }
+                                    style={{ aspectRatio: coverAspect(book) }}
+                                    className={"w-40 shrink-0 border border-black overflow-hidden"}
                                 >
                                     <BookCoverImage
                                         book={book}
