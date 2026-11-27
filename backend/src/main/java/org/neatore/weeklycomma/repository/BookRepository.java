@@ -17,10 +17,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("""
             SELECT new org.neatore.weeklycomma.dto.PopularBookDto(
-                b.isbn, b.title, b.coverImg, b.customCoverImg, COUNT(s))
+                b.isbn, b.title, b.coverImg, b.customCoverImg, COUNT(s), b.mediaType)
             FROM Book b JOIN BookStar s ON s.book = b
             WHERE EXISTS (SELECT h.id FROM RecommendationHistory h WHERE h.isbn = b.isbn)
-            GROUP BY b.id, b.isbn, b.title, b.coverImg, b.customCoverImg
+            GROUP BY b.id, b.isbn, b.title, b.coverImg, b.customCoverImg, b.mediaType
             HAVING COUNT(s) > 10
             ORDER BY COUNT(s) DESC, b.isbn ASC
             """)
