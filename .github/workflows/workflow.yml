@@ -8,6 +8,8 @@
 name: WeeklyComma CI
 
 on:
+  pull_request:
+    branches: [ "master", "Development" ]
   push:
     branches: [ "master", "Development" ]
 
