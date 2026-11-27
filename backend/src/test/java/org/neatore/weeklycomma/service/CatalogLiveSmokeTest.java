@@ -42,6 +42,23 @@ class CatalogLiveSmokeTest {
                     book.title(), book.author(), book.publisher(), book.coverImg(), book.description().length());
         } finally { client.close(); }
     }
+    @Test void findsIoiSuddenlyInKoreanWithAlbumArtwork() throws Exception {
+        var client = new CatalogSearchService("", "", null);
+        try {
+            var result = client.search("갑자기", "아이오아이", 1, MediaType.MUSIC, null);
+            var song = result.items().stream().filter(b -> "MUSICBRAINZ_RECORDING".equals(b.source()) && "갑자기".equals(b.title())).findFirst().orElseThrow();
+            assertTrue(song.author().contains("아이오아이"));
+            assertTrue(song.albumTitle().contains("LOOP"));
+            assertTrue(song.durationMillis() > 0);
+            var http = java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build();
+            var response = http.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(song.coverImg())).timeout(java.time.Duration.ofSeconds(25)).GET().build(), java.net.http.HttpResponse.BodyHandlers.discarding());
+            assertEquals(200, response.statusCode());
+            assertTrue(response.headers().firstValue("content-type").orElse("").startsWith("image/"));
+            System.out.printf("MUSIC song=%s artist=%s album=%s duration=%d artworkHTTP=%d%n", song.title(), song.author(), song.albumTitle(), song.durationMillis(), response.statusCode());
+            var album = client.search("I.O.I : LOOP", "아이오아이", 1, MediaType.MUSIC, null);
+            assertTrue(album.items().stream().anyMatch(b -> "MUSICBRAINZ".equals(b.source())));
+        } finally { client.close(); }
+    }
     @Test void searchesKoreanAndForeignMusicWithArtistAliases() {
         var client = new CatalogSearchService("", "", null);
         var music = client.search("밤편지", "아이유", 1, MediaType.MUSIC, "MUSICBRAINZ");

@@ -81,8 +81,19 @@ class CatalogSearchServiceTest {
                 {"count":1,"releases":[{"id":"12345678-1234-1234-1234-123456789012","title":"밤편지",
                 "artist-credit":[{"name":"아이유"}],"date":"2017-03-24"}]}
                 """, org.springframework.http.MediaType.APPLICATION_JSON));
+        server.expect(r -> assertEquals("/ws/2/recording/", r.getURI().getPath())).andRespond(withSuccess("""
+                {"count":1,"recordings":[{"id":"12345678-1234-1234-1234-123456789012","title":"밤편지","length":195000,
+                "artist-credit":[{"name":"IU","artist":{"aliases":[{"locale":"ko","primary":true,"name":"아이유"}]}}],
+                "releases":[{"id":"12345678-1234-1234-1234-123456789012","title":"Palette","status":"Official"}]}]}
+                """, org.springframework.http.MediaType.APPLICATION_JSON));
         var first = client.search("밤편지", "아이유", 1, MediaType.MUSIC, "MUSICBRAINZ");
         var second = client.search("밤편지", "아이유", 1, MediaType.MUSIC, "MUSICBRAINZ");
+        assertEquals(2, first.items().size());
+        var song = first.items().get(1);
+        assertNotEquals(first.items().get(0).isbn(), song.isbn());
+        assertEquals("아이유", song.author()); assertEquals("Palette", song.albumTitle());
+        assertEquals(195000L, song.durationMillis()); assertTrue(song.sourceUrl().contains("/recording/"));
+        assertTrue(song.coverImg().contains("/release/"));
         assertEquals(first, second); assertEquals("아이유", first.items().get(0).author());
         assertTrue(first.items().get(0).isbn().startsWith("musicbrainz-"));
         assertEquals("", first.items().get(0).description()); server.verify();
@@ -92,6 +103,7 @@ class CatalogSearchServiceTest {
         var client = new CatalogSearchService("", "", null, builder.build());
         server.expect(r -> {}).andRespond(withStatus(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE));
         server.expect(r -> {}).andRespond(withSuccess("{\"count\":0,\"releases\":[]}", org.springframework.http.MediaType.APPLICATION_JSON));
+        server.expect(r -> {}).andRespond(withSuccess("{\"count\":0,\"recordings\":[]}", org.springframework.http.MediaType.APPLICATION_JSON));
         assertTrue(client.search("Album", "", 1, MediaType.MUSIC, "MUSICBRAINZ").items().isEmpty());
         server.verify();
     }

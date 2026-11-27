@@ -66,7 +66,19 @@ class BookMetadataTest {
                 assertEquals(type, stored.mediaType());
                 assertEquals("https://www.themoviedb.org/" + kind + "/7", stored.sourceUrl());
             }
-            assertEquals(3, repository.count());
+            String id = "12345678-1234-1234-1234-123456789012";
+            for (boolean song : new boolean[]{false, true}) {
+                String key = (song ? "musicbrainz-recording-" : "musicbrainz-") + id;
+                service.upsertBook(new BookDto.RegisterRequest(key, "갑자기", "", "아이오아이", "", null, "https://coverartarchive.org/release/" + id + "/front-500",
+                        null, "", "초급", false, "", "", "", "", "", "2026", false,
+                        org.neatore.weeklycomma.domain.MediaType.MUSIC, song ? "MUSICBRAINZ_RECORDING" : "MUSICBRAINZ", id, null,
+                        song ? "I.O.I : LOOP" : null, song ? 195000L : null));
+                var stored = service.getBookByIsbn(key).toDto();
+                assertEquals(song ? "I.O.I : LOOP" : null, stored.albumTitle());
+                assertEquals(song ? 195000L : null, stored.durationMillis());
+                assertTrue(stored.sourceUrl().contains(song ? "/recording/" : "/release/"));
+            }
+            assertEquals(5, repository.count());
         }
     }
 

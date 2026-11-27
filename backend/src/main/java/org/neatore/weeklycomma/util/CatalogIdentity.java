@@ -16,6 +16,7 @@ public final class CatalogIdentity {
         return switch (source) {
             case "GOOGLE_BOOKS" -> id.matches("[A-Za-z0-9_-]{1,100}") ? "https://books.google.com/books?id=" + id : null;
             case "TMDB" -> id.matches("(tv|movie)/[1-9][0-9]*") ? "https://www.themoviedb.org/" + id : null;
+            case "MUSICBRAINZ_RECORDING" -> id.matches("[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}") ? "https://musicbrainz.org/recording/" + id : null;
             case "MUSICBRAINZ" -> id.matches("[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}") ? "https://musicbrainz.org/release/" + id : null;
             default -> null;
         };
@@ -24,13 +25,13 @@ public final class CatalogIdentity {
         MediaType type = request.mediaType() == null ? MediaType.BOOK : request.mediaType();
         String expected = switch (type) {
             case BOOK -> "google-books-" + request.sourceId();
-            case MUSIC -> "musicbrainz-" + request.sourceId();
+            case MUSIC -> ("MUSICBRAINZ_RECORDING".equals(request.source()) ? "musicbrainz-recording-" : "musicbrainz-") + request.sourceId();
             case TV -> "tmdb-tv-" + suffix(request.sourceId());
             case MOVIE -> "tmdb-movie-" + suffix(request.sourceId());
         };
         // Existing books, including legacy ISBN-10 links, keep their identifiers.
         if (type == MediaType.BOOK && BookIsbn.canonical(request.isbn()) != null) return;
-        String provider = switch (type) { case BOOK -> "GOOGLE_BOOKS"; case MUSIC -> "MUSICBRAINZ"; default -> "TMDB"; };
+        String provider = switch (type) { case BOOK -> "GOOGLE_BOOKS"; case MUSIC -> "MUSICBRAINZ_RECORDING".equals(request.source()) ? "MUSICBRAINZ_RECORDING" : "MUSICBRAINZ"; default -> "TMDB"; };
         boolean kindMatches = type != MediaType.TV && type != MediaType.MOVIE
                 || request.sourceId() != null && request.sourceId().startsWith(type == MediaType.TV ? "tv/" : "movie/");
         if (!expected.equals(request.isbn()) || !provider.equals(request.source()) || !kindMatches

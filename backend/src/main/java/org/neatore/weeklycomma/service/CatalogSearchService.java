@@ -170,7 +170,7 @@ public class CatalogSearchService {
                 v.optString(type == MediaType.TV ? "first_air_date" : "release_date"), "", type, "TMDB", id);
     }
     private BookDto.SearchPage music(String query, String artist, int page) {
-        String expression = "release:\"" + escapeLucene(query) + "\"";
+        String artistFilter = "";
         if (!artist.isBlank()) {
             // Release search indexes credited names, not artist aliases (e.g. 아이유 -> IU).
             JSONObject matches = musicRequest("artist", "artist:\"" + escapeLucene(artist) + "\" OR alias:\"" + escapeLucene(artist) + "\"", 1);
@@ -181,13 +181,72 @@ public class CatalogSearchService {
                 if (id.matches("[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}")) ids.add("arid:" + id);
             }
             if (ids.isEmpty()) return new BookDto.SearchPage(List.of(), page, 0, false);
-            expression += " AND (" + String.join(" OR ", ids) + ")";
+            artistFilter = " AND (" + String.join(" OR ", ids) + ")";
         }
-        JSONObject data = musicRequest("release", expression, page);
-        JSONArray items = data.getJSONArray("releases");
         List<BookDto.BookResponse> rows = new ArrayList<>();
-        for (int i = 0; i < items.length(); i++) rows.add(musicItem(items.getJSONObject(i)));
-        return page(rows, page, data.optLong("count"), 30);
+        boolean hasMore = false;
+        int succeeded = 0;
+        ResponseStatusException lastFailure = null;
+        for (String kind : List.of("release", "recording")) {
+            try {
+                JSONObject data = musicRequest(kind, kind + ":\"" + escapeLucene(query) + "\"" + artistFilter, page);
+                JSONArray items = data.getJSONArray(kind + "s");
+                for (int i = 0; i < items.length(); i++) rows.add(kind.equals("release")
+                        ? musicItem(items.getJSONObject(i)) : musicRecording(items.getJSONObject(i)));
+                hasMore |= (long) page * 30 < data.optLong("count");
+                succeeded++;
+            } catch (ResponseStatusException failure) { lastFailure = failure; }
+        }
+        if (succeeded == 0) throw lastFailure;
+        var distinct = new LinkedHashMap<String, BookDto.BookResponse>();
+        rows.forEach(row -> distinct.putIfAbsent(row.isbn(), row));
+        return new BookDto.SearchPage(List.copyOf(distinct.values()), page, -1, hasMore && page < 500);
+    }
+    static String musicArtists(JSONArray credits) {
+        if (credits == null) return "";
+        StringBuilder names = new StringBuilder();
+        for (int i = 0; i < credits.length(); i++) {
+            var credit = credits.getJSONObject(i);
+            String name = credit.optString("name");
+            JSONObject artist = credit.optJSONObject("artist");
+            if (name.isBlank() && artist != null) name = artist.optString("name");
+            JSONArray aliases = artist == null ? null : artist.optJSONArray("aliases");
+            if (aliases != null) for (int j = 0; j < aliases.length(); j++) {
+                var alias = aliases.getJSONObject(j);
+                if ("ko".equals(alias.optString("locale")) && !alias.optString("name").isBlank()) {
+                    name = alias.getString("name");
+                    if (alias.optBoolean("primary")) break;
+                }
+            }
+            names.append(name);
+            names.append(credit.optString("joinphrase", i < credits.length() - 1 ? ", " : ""));
+        }
+        return names.toString();
+    }
+    static BookDto.BookResponse musicRecording(JSONObject recording) {
+        String id = recording.getString("id");
+        if (CatalogIdentity.sourceUrl("MUSICBRAINZ_RECORDING", id) == null) invalid();
+        JSONArray releases = recording.optJSONArray("releases");
+        List<JSONObject> candidates = new ArrayList<>();
+        if (releases != null) for (int i = 0; i < releases.length(); i++) {
+            var release = releases.getJSONObject(i);
+            if (CatalogIdentity.sourceUrl("MUSICBRAINZ", release.optString("id")) != null) candidates.add(release);
+        }
+        candidates.sort(Comparator.comparingInt((JSONObject r) -> "Official".equals(r.optString("status")) ? 0 : 1)
+                .thenComparingInt(r -> {
+                    var group = r.optJSONObject("release-group");
+                    return group != null && group.optJSONArray("secondary-types") != null
+                            && group.getJSONArray("secondary-types").toList().contains("Compilation") ? 1 : 0;
+                }).thenComparing(r -> r.optString("date", "9999")));
+        JSONObject release = candidates.isEmpty() ? new JSONObject() : candidates.get(0);
+        String releaseId = release.optString("id");
+        var base = row(recording.optString("title"), "", musicArtists(recording.optJSONArray("artist-credit")), "",
+                "musicbrainz-recording-" + id, releaseId.isBlank() ? "" : "https://coverartarchive.org/release/" + releaseId + "/front-500",
+                "", recording.optString("first-release-date", release.optString("date")), "", MediaType.MUSIC, "MUSICBRAINZ_RECORDING", id);
+        return new BookDto.BookResponse(base.title(), base.subtitle(), base.author(), base.publisher(), base.isbn(), base.pubDate(),
+                base.coverImg(), null, base.description(), null, false, "", "", "", "", "", base.publicationDate(),
+                base.mediaType(), base.source(), base.sourceId(), base.sourceUrl(), release.optString("title"),
+                recording.optLong("length") > 0 ? recording.getLong("length") : null);
     }
     // MusicBrainz requires at most one request per second per client. Repeated pages use a bounded cache.
     private synchronized JSONObject musicRequest(String entity, String query, int page) {
@@ -219,7 +278,7 @@ public class CatalogSearchService {
             JSONObject label = labelInfo.getJSONObject(i).optJSONObject("label");
             if (label != null && !label.optString("name").isBlank()) labels.add(label.optString("name"));
         }
-        return row(v.optString("title"), "", join(v.optJSONArray("artist-credit"), "name"),
+        return row(v.optString("title"), "", musicArtists(v.optJSONArray("artist-credit")),
                 String.join(", ", labels), "musicbrainz-" + id,
                 "https://coverartarchive.org/release/" + id + "/front-500", "", v.optString("date"), "",
                 MediaType.MUSIC, "MUSICBRAINZ", id);
