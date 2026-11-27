@@ -7,6 +7,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 
 public class BookDto {
+    public record SearchPage(java.util.List<BookResponse> items, int page, long total, boolean hasMore) {}
+
     public record BookResponse(
             String title,
             String subtitle,

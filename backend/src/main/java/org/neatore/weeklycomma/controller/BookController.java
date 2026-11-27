@@ -82,6 +82,13 @@ public class BookController {
         return ResponseEntity.ok(bookService.searchBooksAPI(query));
     }
 
+    @GetMapping("/api/search")
+    @RequiresAuthentication(User.UserType.CURATOR)
+    public ResponseEntity<BookDto.SearchPage> searchBookPage(@RequestParam String query,
+            @RequestParam(defaultValue = "") String author, @RequestParam(defaultValue = "1") int page) {
+        return ResponseEntity.ok(bookService.searchBookPage(query, author, page));
+    }
+
     @PostMapping
     @RequiresAuthentication(User.UserType.CURATOR)
     public ResponseEntity<Void> registerBook(@Valid @ModelAttribute BookDto.RegisterRequest request) {

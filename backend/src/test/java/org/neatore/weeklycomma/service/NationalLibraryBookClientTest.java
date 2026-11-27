@@ -121,4 +121,41 @@ class NationalLibraryBookClientTest {
         assertFalse(error.toString().contains("test-secret"));
         server.verify();
     }
+
+    @Test void sendsAuthorAndPageAndKeepsPaginationWhenAllRowsAreFiltered() {
+        server.expect(request -> {
+            var query = request.getURI().getQuery();
+            assertTrue(query.contains("author=백은별"));
+            assertTrue(query.contains("page_no=2"));
+            assertTrue(query.contains("title=시한부"));
+        }).andRespond(withSuccess("""
+                {"TOTAL_COUNT":"61","PAGE_NO":"2","docs":[{"TITLE":"세트","SET_ISBN":"9791193647646"}]}
+                """, MediaType.APPLICATION_JSON));
+        var page = client.searchPage("시한부", " 백은별 ", 2);
+        assertTrue(page.items().isEmpty());
+        assertTrue(page.hasMore());
+        assertEquals(61, page.total());
+        assertEquals(2, page.page());
+        server.verify();
+    }
+
+    @Test void isbnSearchIgnoresAuthorAndLastPageHasNoNextPage() {
+        server.expect(request -> {
+            assertTrue(request.getURI().getQuery().contains("isbn=9791193647646"));
+            assertFalse(request.getURI().getQuery().contains("author="));
+        }).andRespond(withSuccess("""
+                {"TOTAL_COUNT":"1","docs":[{"TITLE":"시한부","EA_ISBN":"9791193647646"}]}
+                """, MediaType.APPLICATION_JSON));
+        assertFalse(client.searchPage("9791193647646", "백은별", 1).hasMore());
+        server.verify();
+    }
+
+    @Test void rejectsInvalidPageAndOversizedAuthorBeforeRequest() {
+        for (int page : new int[]{0, -1, 10001})
+            assertEquals(400, assertThrows(ResponseStatusException.class,
+                    () -> client.searchPage("고래", "", page)).getStatusCode().value());
+        assertEquals(400, assertThrows(ResponseStatusException.class,
+                () -> client.searchPage("고래", "a".repeat(201), 1)).getStatusCode().value());
+        server.verify();
+    }
 }

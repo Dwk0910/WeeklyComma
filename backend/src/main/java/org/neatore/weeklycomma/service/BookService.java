@@ -30,7 +30,15 @@ public class BookService {
     }
 
     public List<BookDto.BookResponse> searchBooksAPI(String query) {
-        var results = bookClient.searchBooks(query);
+        return resolveSavedBooks(bookClient.searchBooks(query));
+    }
+
+    public BookDto.SearchPage searchBookPage(String query, String author, int page) {
+        var result = bookClient.searchPage(query, author, page);
+        return new BookDto.SearchPage(resolveSavedBooks(result.items()), result.page(), result.total(), result.hasMore());
+    }
+
+    private List<BookDto.BookResponse> resolveSavedBooks(List<BookDto.BookResponse> results) {
         if (results.isEmpty()) return results;
         var identifiers = results.stream().flatMap(book -> BookIsbn.aliases(book.isbn()).stream()).distinct().toList();
         var saved = bookRepository.findByIsbnIn(identifiers).stream().collect(Collectors.toMap(
