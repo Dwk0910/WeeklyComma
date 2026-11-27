@@ -11,6 +11,8 @@ export type BookMetadata = {
     source?: string | null;
     sourceId?: string | null;
     sourceUrl?: string | null;
+    albumTitle?: string | null;
+    durationMillis?: number | null;
     pageCount?: string | null;
     bookSize?: string | null;
     seriesTitle?: string | null;
@@ -19,3 +21,13 @@ export type BookMetadata = {
     publicationDate?: string | null;
     pubDate?: number | null;
 };
+
+export function mediaLabel(book: BookMetadata) {
+    if (book.mediaType === "MUSIC") return book.source === "MUSICBRAINZ_RECORDING" ? "곡" : "앨범";
+    return MEDIA_LABELS[book.mediaType ?? "BOOK"];
+}
+export function musicDuration(milliseconds?: number | null) {
+    if (!milliseconds || milliseconds <= 0) return "";
+    const seconds = Math.floor(milliseconds / 1000);
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}

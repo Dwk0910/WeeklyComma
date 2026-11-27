@@ -1,11 +1,13 @@
-import { MEDIA_LABELS, type BookMetadata } from "../types/book.ts";
+import { mediaLabel, musicDuration, type BookMetadata } from "../types/book.ts";
 import { bookPublicationDate } from "../lib/bookDetails.ts";
 import { plainText } from "../pages/admin/recommendations/types.ts";
 
 export default function BookDetails({ book }: { book: BookMetadata & { isbn: string } }) {
     const isBook = !book.mediaType || book.mediaType === "BOOK";
     const facts = [
-        ["종류", MEDIA_LABELS[book.mediaType ?? "BOOK"]],
+        ["종류", mediaLabel(book)],
+        ["수록 앨범", book.albumTitle],
+        ["재생시간", musicDuration(book.durationMillis)],
         [isBook ? "출간" : "공개", bookPublicationDate(book)],
         ["쪽수", book.pageCount],
         ["판형", book.bookSize],
@@ -39,7 +41,7 @@ export default function BookDetails({ book }: { book: BookMetadata & { isbn: str
                     >
                         {book.source === "TMDB"
                             ? "TMDB"
-                            : book.source === "MUSICBRAINZ"
+                            : book.source?.startsWith("MUSICBRAINZ")
                               ? "MusicBrainz"
                               : "Google Books"}
                         에서 원본 정보 보기 ↗

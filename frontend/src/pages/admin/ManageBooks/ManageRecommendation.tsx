@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "../../../lib/api.ts";
-import { MEDIA_LABELS, type MediaType } from "../../../types/book.ts";
+import { MEDIA_LABELS, mediaLabel, type MediaType } from "../../../types/book.ts";
 import { MdSearch, MdExpandMore } from "react-icons/md";
 import { GoArrowLeft } from "react-icons/go";
 
@@ -180,7 +180,7 @@ export default function ManageRecommendation() {
                     <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-900 truncate">
                             <span className="mr-2 rounded bg-stone-100 px-2 py-1 text-xs font-normal">
-                                {MEDIA_LABELS[item.mediaType ?? "BOOK"]}
+                                {mediaLabel(item)}
                             </span>
                             {highlightText(item.title, searchedQuery)}
                         </span>
@@ -198,6 +198,9 @@ export default function ManageRecommendation() {
                         <span className="mx-3">|</span>
                         <span>{item.isbn}</span>
                     </div>
+                    {item.albumTitle && (
+                        <p className="mt-1 text-sm text-stone-500">수록 앨범 · {item.albumTitle}</p>
+                    )}
                     {[item.pageCount, item.bookSize, item.edition, item.seriesTitle].some(
                         Boolean
                     ) && (
@@ -317,7 +320,7 @@ export default function ManageRecommendation() {
                         )}
                         {mediaType === "MUSIC" && (
                             <p className="text-xs text-stone-500">
-                                음악은 앨범·싱글 제목으로 검색합니다.
+                                곡 제목과 앨범 제목을 함께 검색합니다.
                             </p>
                         )}
                         <label className="flex cursor-pointer items-center gap-2">

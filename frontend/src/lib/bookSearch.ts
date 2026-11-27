@@ -36,7 +36,8 @@ export async function searchBookSources(
                 page: options?.page ?? 1,
                 mediaType: options?.mediaType ?? "BOOK"
             },
-            signal
+            signal,
+            timeout: options?.mediaType === "MUSIC" ? 30000 : 10000
         })
     ]);
     const externalData = external.status === "fulfilled" ? external.value.data : [];

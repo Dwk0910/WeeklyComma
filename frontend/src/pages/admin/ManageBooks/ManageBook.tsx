@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MdCameraAlt } from "react-icons/md";
 
-import { MEDIA_LABELS } from "../../../types/book.ts";
+import { mediaLabel, musicDuration } from "../../../types/book.ts";
 import { type Book } from "./ManageRecommendation.tsx";
 import { api } from "../../../lib/api.ts";
 
@@ -192,9 +192,19 @@ export default function ManageBook({
 
                 <div className="ml-6 flex flex-col flex-1">
                     <p className="mb-2 font-suite text-sm text-stone-500">
-                        {MEDIA_LABELS[book.mediaType ?? "BOOK"]} · 제목과 추천 코스는 필수이며,
-                        제공되지 않은 정보는 비워둘 수 있습니다.
+                        {mediaLabel(book)} · 제목과 추천 코스는 필수이며, 제공되지 않은 정보는
+                        비워둘 수 있습니다.
                     </p>
+                    {book.mediaType === "MUSIC" && (book.albumTitle || book.durationMillis) && (
+                        <p className="mb-3 font-suite text-sm text-stone-500">
+                            {[
+                                book.albumTitle && `수록 앨범 · ${book.albumTitle}`,
+                                musicDuration(book.durationMillis)
+                            ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                        </p>
+                    )}
                     <SubTitle description="각각의 정보를 클릭하여 수정할 수 있습니다.">
                         자료 정보 확인
                     </SubTitle>
