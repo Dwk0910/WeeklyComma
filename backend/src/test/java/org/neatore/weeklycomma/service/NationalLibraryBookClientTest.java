@@ -14,6 +14,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 class NationalLibraryBookClientTest {
+    @Test void normalizesResponsibilityAtTheProviderBoundary() {
+        var books = NationalLibraryBookClient.parseResponse("""
+                {"TOTAL_COUNT":"1","docs":[{"EA_ISBN":"9791193647646","TITLE":"시한부",
+                "AUTHOR":"지은이: 백은별"}]}
+                """);
+        assertEquals("백은별", books.get(0).author());
+    }
+
     private MockRestServiceServer server;
     private NationalLibraryBookClient client;
 

@@ -109,7 +109,7 @@ public class NationalLibraryBookClient {
                 if (isbn == null || title.isBlank()) continue;
                 String publicationDate = publicationDate(text(doc, "PUBLISH_PREDATE"));
                 books.putIfAbsent(isbn, new BookDto.BookResponse(
-                        title, "", text(doc, "AUTHOR"), text(doc, "PUBLISHER"), isbn,
+                        title, "", BibliographicResponsibility.display(text(doc, "AUTHOR")), text(doc, "PUBLISHER"), isbn,
                         timestamp(publicationDate), coverUrl(text(doc, "TITLE_URL")), null,
                         text(doc, "BOOK_INTRODUCTION"), null, false,
                         text(doc, "PAGE"), text(doc, "BOOK_SIZE"), text(doc, "SERIES_TITLE"),

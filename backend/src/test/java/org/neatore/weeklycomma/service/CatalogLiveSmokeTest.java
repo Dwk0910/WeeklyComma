@@ -34,7 +34,7 @@ class CatalogLiveSmokeTest {
         try {
             var result = client.search("시한부", "", 1, MediaType.BOOK, null);
             var book = result.items().stream().filter(b -> "9791193647646".equals(b.isbn())).findFirst().orElseThrow();
-            assertTrue(book.author().contains("백은별"));
+            assertEquals("백은별", book.author());
             assertTrue(book.publisher().contains("바른북스"));
             assertFalse(book.coverImg().isBlank());
             assertFalse(book.description().isBlank());
